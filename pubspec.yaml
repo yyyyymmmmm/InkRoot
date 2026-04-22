@@ -30,7 +30,7 @@ dependencies:
   flutter_image_compress: ^2.3.0
   
   # 国际化
-  intl: ^0.20.2
+  intl: 0.19.0
   
   # HTTP请求
   http: ^1.2.2
@@ -104,6 +104,15 @@ dependencies:
   
   # Google Fonts - 免费商用字体
   google_fonts: ^6.2.1
+
+  # 错误监控
+  sentry_flutter: ^7.18.0
+
+  # 录音 - 临时禁用以兼容 Gradle 8.9
+  # record: ^6.2.0
+
+  # WebDAV客户端
+  webdav_client: ^1.2.2
 
 dev_dependencies:
   flutter_test:

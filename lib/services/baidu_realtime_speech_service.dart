@@ -4,21 +4,25 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:record/record.dart';
+// 临时禁用 record 包以兼容 Gradle 8.9
+// import 'package:record/record.dart';
 import '../config/app_config.dart';
 import 'baidu_speech_service.dart';
 
 /// 百度实时语音识别服务（WebSocket 流式识别）
 /// 文档: https://ai.baidu.com/ai-doc/SPEECH/glzh8g8uc
+///
+/// 注意: 录音功能已临时禁用，需要替换为兼容 Gradle 8.9 的录音库
 class BaiduRealtimeSpeechService {
   factory BaiduRealtimeSpeechService() => _instance;
   BaiduRealtimeSpeechService._internal();
-  static final BaiduRealtimeSpeechService _instance = 
+  static final BaiduRealtimeSpeechService _instance =
       BaiduRealtimeSpeechService._internal();
 
   // WebSocket 连接
   WebSocket? _webSocket;
-  final AudioRecorder _recorder = AudioRecorder();
+  // 临时禁用 record 包
+  // final AudioRecorder _recorder = AudioRecorder();
   
   // 状态
   bool _isListening = false;
@@ -95,46 +99,51 @@ class BaiduRealtimeSpeechService {
           _isConnected = false;
         },
       );
-      
-      // 5. 开始录音并获取音频流
-      final hasPermission = await _recorder.hasPermission();
-      if (!hasPermission) {
-        debugPrint('百度实时识别: 没有麦克风权限');
-        onError?.call('没有麦克风权限');
-        await stopListening();
-        return false;
-      }
-      
-      debugPrint('百度实时识别: 开始录音...');
-      final stream = await _recorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: _sampleRate,
-          numChannels: 1,
-        ),
-      );
-      
-      // 6. 监听音频流并发送到 WebSocket
-      _isListening = true;
-      stream.listen(
-        (audioData) {
-          if (_isConnected && _webSocket != null) {
-            // 发送音频数据到 WebSocket
-            _webSocket!.add(audioData);
-            
-            // 计算音量（简化版）
-            final level = _calculateSoundLevel(audioData);
-            _soundLevelController?.add(level);
-          }
-        },
-        onError: (error) {
-          debugPrint('百度实时识别: 音频流错误: $error');
-          onError?.call(error.toString());
-        },
-        onDone: () {
-          debugPrint('百度实时识别: 音频流结束');
-        },
-      );
+
+      // 5. 开始录音并获取音频流（临时禁用）
+      // final hasPermission = await _recorder.hasPermission();
+      // if (!hasPermission) {
+      //   debugPrint('百度实时识别: 没有麦克风权限');
+      //   onError?.call('没有麦克风权限');
+      //   await stopListening();
+      //   return false;
+      // }
+
+      // debugPrint('百度实时识别: 开始录音...');
+      // final stream = await _recorder.startStream(
+      //   const RecordConfig(
+      //     encoder: AudioEncoder.pcm16bits,
+      //     sampleRate: _sampleRate,
+      //     numChannels: 1,
+      //   ),
+      // );
+
+      // 6. 监听音频流并发送到 WebSocket（临时禁用）
+      // _isListening = true;
+      // stream.listen(
+      //   (audioData) {
+      //     if (_isConnected && _webSocket != null) {
+      //       // 发送音频数据到 WebSocket
+      //       _webSocket!.add(audioData);
+      //
+      //       // 计算音量（简化版）
+      //       final level = _calculateSoundLevel(audioData);
+      //       _soundLevelController?.add(level);
+      //     }
+      //   },
+      //   onError: (error) {
+      //     debugPrint('百度实时识别: 音频流错误: $error');
+      //     onError?.call(error.toString());
+      //   },
+      //   onDone: () {
+      //     debugPrint('百度实时识别: 音频流结束');
+      //   },
+      // );
+
+      // 临时返回错误提示
+      debugPrint('百度实时识别: 录音功能暂时不可用（record 包已禁用）');
+      onError?.call('录音功能暂时不可用');
+      return false;
       
       debugPrint('百度实时识别: 开始监听');
       return true;
@@ -150,12 +159,12 @@ class BaiduRealtimeSpeechService {
   Future<void> stopListening() async {
     try {
       _isListening = false;
-      
-      // 停止录音
-      if (await _recorder.isRecording()) {
-        await _recorder.stop();
-        debugPrint('百度实时识别: 录音已停止');
-      }
+
+      // 停止录音（临时禁用）
+      // if (await _recorder.isRecording()) {
+      //   await _recorder.stop();
+      //   debugPrint('百度实时识别: 录音已停止');
+      // }
       
       // 发送结束标记
       if (_isConnected && _webSocket != null) {
