@@ -3,23 +3,28 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+// 临时禁用 speech_to_text 以兼容 Gradle 8.9
+// import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'baidu_speech_service.dart';
 import 'baidu_realtime_speech_service.dart';
 
 /// 语音识别服务
 /// 提供本地+云端混合语音转文字功能
-/// 
+///
+/// 注意：本地识别功能已临时禁用（speech_to_text 不兼容 Gradle 8.9）
+/// 当前仅支持百度云识别
+///
 /// 策略：
-/// 1. 优先使用本地识别（免费，实时）
+/// 1. 优先使用本地识别（免费，实时）- 已禁用
 /// 2. 本地不可用时降级到百度云识别（需配置 API Key）
 class SpeechService {
   factory SpeechService() => _instance;
   SpeechService._internal();
   static final SpeechService _instance = SpeechService._internal();
 
-  late stt.SpeechToText _speech;
+  // 临时禁用本地语音识别
+  // late stt.SpeechToText _speech;
   final BaiduSpeechService _baiduSpeech = BaiduSpeechService();
   final BaiduRealtimeSpeechService _baiduRealtime = BaiduRealtimeSpeechService();
   
@@ -53,16 +58,9 @@ class SpeechService {
       final prefs = await SharedPreferences.getInstance();
       _preferCloudRecognition = prefs.getBool(_prefKeyUseCloud) ?? false;
       
-      // 初始化本地语音识别
-      _speech = stt.SpeechToText();
-      _isInitialized = await _speech.initialize(
-        onError: (error) {},
-        onStatus: (status) {
-          _isListening = status == 'listening';
-        },
-      );
-
-      return _isInitialized;
+      // 本地语音识别已禁用（speech_to_text 不兼容 Gradle 8.9）
+      _isInitialized = false;
+      return false;
     } catch (e) {
       _isInitialized = false;
       return false;
@@ -96,112 +94,36 @@ class SpeechService {
 
   /// 开始语音识别
   /// 
-  /// 优先使用百度实时识别，失败时降级到本地识别
+  /// 本地识别已禁用，始终提示用户本地识别不可用
   Future<bool> startListening({
     Function(String)? onResult,
     Function(String)? onError,
-    Function(double)? onSoundLevel, // 🎤 音量变化回调
+    Function(double)? onSoundLevel,
     Duration? timeout,
     BuildContext? context,
   }) async {
     try {
-      // 🎯 暂时禁用百度实时识别（WebSocket 实现复杂）
-      // 直接使用本地识别，体验已经很好了
-      if (false && _preferCloudRecognition && _baiduSpeech.isConfigured()) {
-        debugPrint('SpeechService: 使用百度实时识别');
-        final success = await _baiduRealtime.startListening(
-          onResult: onResult!,
-          onError: onError,
-          onSoundLevel: onSoundLevel,
-        );
-        
-        if (success) {
-          _isListening = true;
-          return true;
-        }
-        
-        // 百度识别失败，降级到本地识别
-        debugPrint('SpeechService: 百度识别失败，降级到本地识别');
+      // 本地识别已禁用
+      debugPrint('SpeechService: 本地识别已禁用（speech_to_text 不兼容 Gradle 8.9）');
+      
+      if (context != null) {
+        _showLocalSpeechFailedDialog(context, onError);
       }
       
-      // 🎯 使用本地识别（已优化，体验很好）
-      debugPrint('SpeechService: 使用本地实时识别');
-      // iOS: speech_to_text的initialize()方法会自动触发权限请求
-      // 所以不需要提前请求权限，直接初始化即可
-      if (!_isInitialized) {
-        // 在iOS上，这个调用会触发麦克风和语音识别权限请求
-        final success = await initialize();
-
-        if (!success) {
-          // 如果初始化失败，提示用户
-          if (context != null) {
-            _showLocalSpeechFailedDialog(context, onError);
-          }
-          return false;
-        }
+      if (onError != null) {
+        onError('本地语音识别暂时不可用');
       }
-
-      if (!_isInitialized) {
-        // 本地识别不可用，提示用户
-        if (context != null) {
-          _showLocalSpeechFailedDialog(context, onError);
-        }
-        return false;
-      }
-
-      // 检查权限状态
-      final available = await _speech.hasPermission;
-      if (!available) {
-        if (context != null) {
-          _showPermissionDeniedDialog(context);
-        }
-        return false;
-      }
-
-      await _speech.listen(
-        onResult: (result) {
-          _lastRecognizedText = result.recognizedWords;
-          // 🎯 实时回调：不仅在 finalResult 时回调，中间结果也回调
-          if (onResult != null) {
-            onResult(_lastRecognizedText);
-          }
-        },
-        // 🎤 监听音量变化，用于动画效果
-        onSoundLevelChange: (level) {
-          // 🎯 只在有声音时回调（过滤静音）
-          if (onSoundLevel != null && level > 0.1) {
-            onSoundLevel(level);
-          } else if (onSoundLevel != null) {
-            onSoundLevel(0.0); // 静音时返回 0
-          }
-        },
-        listenFor: timeout ?? const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        localeId: 'zh_CN',
-        cancelOnError: true,
-      );
-
-      _isListening = true;
-      return true;
+      
+      return false;
     } catch (e) {
       if (onError != null) {
         onError(e.toString());
-      }
-      
-      // 本地识别失败，提示用户
-      if (context != null) {
-        _showLocalSpeechFailedDialog(context, onError);
       }
       return false;
     }
   }
   
   /// 识别音频文件（支持云端识别）
-  /// 
-  /// [audioPath] 音频文件路径
-  /// [onResult] 识别成功回调
-  /// [onError] 识别失败回调
-  /// [context] 用于显示对话框
   Future<bool> recognizeAudioFile({
     required String audioPath,
     Function(String)? onResult,
@@ -257,15 +179,11 @@ class SpeechService {
         await _baiduRealtime.stopListening();
       }
       
-      // 停止本地识别
-      if (_speech.isListening) {
-        // 🔥 Android: 确保完全释放麦克风资源
-        // stop() 只是停止识别，cancel() 会完全释放资源
-        await _speech.cancel();
-        
-        // 等待系统完全释放麦克风权限
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
+      // 本地识别已禁用
+      // if (_speech.isListening) {
+      //   await _speech.cancel();
+      //   await Future.delayed(const Duration(milliseconds: 100));
+      // }
     } catch (e) {
       debugPrint('停止语音识别失败: $e');
       _isListening = false;
@@ -275,7 +193,7 @@ class SpeechService {
   /// 取消语音识别
   Future<void> cancelListening() async {
     if (_isListening) {
-      await _speech.cancel();
+      // await _speech.cancel();
       _isListening = false;
       _lastRecognizedText = '';
     }
@@ -283,23 +201,14 @@ class SpeechService {
 
   /// 获取支持的语言列表
   Future<List<String>> getSupportedLanguages() async {
-    if (!_isInitialized) {
-      await initialize();
-    }
-
-    if (_isInitialized) {
-      final locales = await _speech.locales();
-      return locales.map((locale) => locale.localeId).toList();
-    }
+    // 本地识别已禁用，返回默认语言
     return ['zh-CN', 'en-US'];
   }
 
   /// 检查设备是否支持语音识别
   Future<bool> isDeviceSupported() async {
-    if (!_isInitialized) {
-      await initialize();
-    }
-    return _isInitialized;
+    // 本地识别已禁用
+    return false;
   }
 
   /// 测试语音权限和功能
@@ -307,17 +216,11 @@ class SpeechService {
     final result = <String, dynamic>{};
 
     try {
-      // 1. 检查初始化状态
-      if (!_isInitialized) {
-        await initialize();
-      }
-      result['initialized'] = _isInitialized;
+      result['initialized'] = false;
+      result['deviceSupported'] = false;
+      result['note'] = '本地语音识别已禁用（speech_to_text 不兼容 Gradle 8.9）';
 
-      // 2. 检查设备支持
-      final deviceSupported = await _speech.hasPermission;
-      result['deviceSupported'] = deviceSupported;
-
-      // 3. 检查权限状态
+      // 检查权限状态
       if (Platform.isIOS) {
         final micStatus = await Permission.microphone.status;
         final speechStatus = await Permission.speech.status;
@@ -325,13 +228,6 @@ class SpeechService {
         result['speechPermission'] = speechStatus.toString();
       }
 
-      // 4. 获取可用语言
-      final locales = await _speech.locales();
-      result['availableLocales'] = locales.map((l) => l.localeId).toList();
-      result['hasChineseSupport'] =
-          locales.any((l) => l.localeId.startsWith('zh'));
-
-      // 5. 检查当前状态
       result['isListening'] = _isListening;
       result['lastText'] = _lastRecognizedText;
     } catch (e) {
@@ -344,10 +240,6 @@ class SpeechService {
   /// 释放资源
   Future<void> dispose() async {
     try {
-      if (_isListening || _speech.isListening) {
-        // 🔥 确保完全释放麦克风资源
-        await _speech.cancel();
-      }
       _isListening = false;
       _lastRecognizedText = '';
     } catch (e) {
@@ -433,7 +325,7 @@ class SpeechService {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('本地语音识别功能暂时不可用。'),
+            const Text('本地语音识别功能暂时不可用（兼容性问题）。'),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -445,14 +337,12 @@ class SpeechService {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '可能的原因：',
+                    '原因：',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Android: 缺少 Google 服务\n'
-                    '• iOS: 系统版本过低\n'
-                    '• 网络连接问题',
+                    'speech_to_text 插件与当前 Gradle 版本不兼容，\n正在等待官方更新。',
                     style: TextStyle(fontSize: 12),
                   ),
                 ],
