@@ -1068,6 +1068,17 @@ class ShareUtils {
     return spans;
   }
 
+  // 创建普通文本 TextSpan
+  static TextSpan _createNormalTextSpan(String text) {
+    return TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: Colors.black87,
+        fontSize: 15,
+      ),
+    );
+  }
+
 
   // 保存并分享图片
   static Future<bool> _saveAndShareImage(
