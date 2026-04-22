@@ -1079,6 +1079,49 @@ class ShareUtils {
     );
   }
 
+  // 创建粗体文本 TextSpan
+  static TextSpan _createBoldTextSpan(String text) {
+    return TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: Colors.black87,
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  // 创建斜体文本 TextSpan
+  static TextSpan _createItalicTextSpan(String text) {
+    return TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: Colors.black87,
+        fontSize: 15,
+        fontStyle: FontStyle.italic,
+      ),
+    );
+  }
+
+  // 创建代码文本 TextSpan
+  static TextSpan _createCodeTextSpan(String text) {
+    return TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: Colors.blue,
+        fontSize: 14,
+        fontFamily: 'monospace',
+        backgroundColor: Colors.grey200,
+      ),
+    );
+  }
+
+  // 查找 Markdown 标记的结束位置
+  static int _findMarkdownEnd(String text, int start, String marker) {
+    final index = text.indexOf(marker, start);
+    return index >= 0 ? index : text.length;
+  }
+
 
   // 保存并分享图片
   static Future<bool> _saveAndShareImage(
