@@ -1,0 +1,2348 @@
+{
+  "@@locale": "en",
+  "appTitle": "InkRoot Notes",
+  "@appTitle": {
+    "description": "Application title"
+  },
+  
+  "preferences": "Preferences",
+  "@preferences": {
+    "description": "Preferences title"
+  },
+  
+  "appearance": "Appearance",
+  "@appearance": {
+    "description": "Appearance settings category"
+  },
+  
+  "themeSelection": "Theme",
+  "@themeSelection": {
+    "description": "Theme selection"
+  },
+  
+  "themeSystem": "System",
+  "@themeSystem": {
+    "description": "System theme"
+  },
+  
+  "themeLight": "Light",
+  "@themeLight": {
+    "description": "Light theme"
+  },
+  
+  "themeDark": "Dark",
+  "@themeDark": {
+    "description": "Dark theme"
+  },
+  
+  "themeSystemDesc": "Follow system settings",
+  "@themeSystemDesc": {
+    "description": "System theme description"
+  },
+  
+  "themeLightDesc": "Light theme",
+  "@themeLightDesc": {
+    "description": "Light theme description"
+  },
+  
+  "themeDarkDesc": "Dark theme",
+  "@themeDarkDesc": {
+    "description": "Dark theme description"
+  },
+  
+  "fontSize": "Font Size",
+  "@fontSize": {
+    "description": "Font size"
+  },
+  
+  "fontSizeMini": "Mini",
+  "@fontSizeMini": {
+    "description": "Mini font"
+  },
+  
+  "fontSizeSmall": "Small",
+  "@fontSizeSmall": {
+    "description": "Small font"
+  },
+  
+  "fontSizeNormal": "Normal",
+  "@fontSizeNormal": {
+    "description": "Normal font"
+  },
+  
+  "fontSizeLarge": "Large",
+  "@fontSizeLarge": {
+    "description": "Large font"
+  },
+  
+  "fontSizeXLarge": "Extra Large",
+  "@fontSizeXLarge": {
+    "description": "Extra large font"
+  },
+  
+  "fontSizeMiniDesc": "Minimum font size, space-saving",
+  "@fontSizeMiniDesc": {
+    "description": "Mini font description"
+  },
+  
+  "fontSizeSmallDesc": "Suitable for reading large amounts of text",
+  "@fontSizeSmallDesc": {
+    "description": "Small font description"
+  },
+  
+  "fontSizeNormalDesc": "Default font size",
+  "@fontSizeNormalDesc": {
+    "description": "Normal font description"
+  },
+  
+  "fontSizeLargeDesc": "Easier to read",
+  "@fontSizeLargeDesc": {
+    "description": "Large font description"
+  },
+  
+  "fontSizeXLargeDesc": "Maximum font size",
+  "@fontSizeXLargeDesc": {
+    "description": "Extra large font description"
+  },
+  
+  "fontFamily": "Font",
+  "@fontFamily": {
+    "description": "Font selection"
+  },
+  
+  "sync": "Sync",
+  "@sync": {
+    "description": "Sync settings category"
+  },
+  
+  "autoSync": "Auto Sync",
+  "@autoSync": {
+    "description": "Auto sync"
+  },
+  
+  "autoSyncDesc": "Automatically sync notes periodically",
+  "@autoSyncDesc": {
+    "description": "Auto sync description"
+  },
+  
+  "syncInterval": "Sync Interval",
+  "@syncInterval": {
+    "description": "Sync interval"
+  },
+  
+  "privacy": "Privacy",
+  "@privacy": {
+    "description": "Privacy settings category"
+  },
+  
+  "defaultNoteVisibility": "Default Note Visibility",
+  "@defaultNoteVisibility": {
+    "description": "Default note visibility"
+  },
+  
+  "visibilityPrivate": "Private",
+  "@visibilityPrivate": {
+    "description": "Private"
+  },
+  
+  "visibilityPublic": "Public",
+  "@visibilityPublic": {
+    "description": "Public"
+  },
+  
+  "visibilityPrivateDesc": "Only visible to you",
+  "@visibilityPrivateDesc": {
+    "description": "Private description"
+  },
+  
+  "visibilityPublicDesc": "Visible to everyone",
+  "@visibilityPublicDesc": {
+    "description": "Public description"
+  },
+  
+  "other": "Other",
+  "@other": {
+    "description": "Other settings category"
+  },
+  
+  "rememberPassword": "Remember Password",
+  "@rememberPassword": {
+    "description": "Remember password"
+  },
+  
+  "rememberPasswordDesc": "Save account and password locally",
+  "@rememberPasswordDesc": {
+    "description": "Remember password description"
+  },
+  
+  "autoLogin": "Auto Login",
+  "@autoLogin": {
+    "description": "Auto login"
+  },
+  
+  "autoLoginDesc": "Skip login page when starting the app",
+  "@autoLoginDesc": {
+    "description": "Auto login description"
+  },
+  
+  "autoShowEditor": "Auto Show Editor on Launch",
+  "@autoShowEditor": {
+    "description": "Auto show editor on launch"
+  },
+  
+  "autoShowEditorDesc": "Automatically open note editor when app starts, quickly capture inspiration",
+  "@autoShowEditorDesc": {
+    "description": "Auto show editor on launch description"
+  },
+  
+  "autoShowEditorEnabled": "Auto show editor on launch enabled",
+  "@autoShowEditorEnabled": {
+    "description": "Auto show editor enabled message"
+  },
+  
+  "autoShowEditorDisabled": "Auto show editor on launch disabled",
+  "@autoShowEditorDisabled": {
+    "description": "Auto show editor disabled message"
+  },
+  
+  "language": "Language",
+  "@language": {
+    "description": "Language selection"
+  },
+  
+  "languageChinese": "简体中文",
+  "@languageChinese": {
+    "description": "Simplified Chinese"
+  },
+  
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "English"
+  },
+  
+  "selectTheme": "Select Theme",
+  "@selectTheme": {
+    "description": "Select theme"
+  },
+  
+  "selectFontSize": "Select Font Size",
+  "@selectFontSize": {
+    "description": "Select font size"
+  },
+  
+  "selectFont": "Select Font",
+  "@selectFont": {
+    "description": "Select font"
+  },
+  
+  "selectDefaultNoteVisibility": "Select Default Note Visibility",
+  "@selectDefaultNoteVisibility": {
+    "description": "Select default note visibility"
+  },
+  
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Select language"
+  },
+  
+  "themeChanged": "Theme changed to {themeName}",
+  "@themeChanged": {
+    "description": "Theme changed success message",
+    "placeholders": {
+      "themeName": {
+        "type": "String",
+        "example": "Light"
+      }
+    }
+  },
+  
+  "fontSizeChanged": "Font size set to {sizeName}",
+  "@fontSizeChanged": {
+    "description": "Font size changed success message",
+    "placeholders": {
+      "sizeName": {
+        "type": "String",
+        "example": "Normal"
+      }
+    }
+  },
+  
+  "fontChanged": "Font changed to {fontName}",
+  "@fontChanged": {
+    "description": "Font changed success message",
+    "placeholders": {
+      "fontName": {
+        "type": "String",
+        "example": "Noto Sans"
+      }
+    }
+  },
+  
+  "defaultNoteVisibilityChanged": "Default note visibility set to {visibility}",
+  "@defaultNoteVisibilityChanged": {
+    "description": "Note visibility changed success message",
+    "placeholders": {
+      "visibility": {
+        "type": "String",
+        "example": "Private"
+      }
+    }
+  },
+  
+  "rememberPasswordEnabled": "Remember password feature enabled",
+  "@rememberPasswordEnabled": {
+    "description": "Remember password enabled message"
+  },
+  
+  "languageChanged": "Language changed to {language}",
+  "@languageChanged": {
+    "description": "Language changed success message",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "English"
+      }
+    }
+  },
+
+  "shareImageTitle": "Generate Share Image",
+  "@shareImageTitle": {
+    "description": "Share image preview screen title"
+  },
+
+  "shareImageGenerating": "Generating...",
+  "@shareImageGenerating": {
+    "description": "Generating share image message"
+  },
+
+  "shareImageGeneratingPreview": "Generating preview (loading images...)",
+  "@shareImageGeneratingPreview": {
+    "description": "Generating preview with images message"
+  },
+
+  "shareImageLoadingImages": "Loading images, please wait...",
+  "@shareImageLoadingImages": {
+    "description": "Loading images message"
+  },
+
+  "shareImageGenerationFailed": "Preview generation failed",
+  "@shareImageGenerationFailed": {
+    "description": "Preview generation failed message"
+  },
+
+  "shareImageChangeTemplate": "Change Template",
+  "@shareImageChangeTemplate": {
+    "description": "Change template button"
+  },
+
+  "shareImageSave": "Save Image",
+  "@shareImageSave": {
+    "description": "Save image button"
+  },
+
+  "shareImageShare": "Share",
+  "@shareImageShare": {
+    "description": "Share button"
+  },
+
+  "shareImageSaving": "Saving image...",
+  "@shareImageSaving": {
+    "description": "Saving image message"
+  },
+
+  "shareImageSavingToAlbum": "Saving to album, please wait",
+  "@shareImageSavingToAlbum": {
+    "description": "Saving to album message"
+  },
+
+  "shareImageSaveSuccess": "Image saved to album",
+  "@shareImageSaveSuccess": {
+    "description": "Image save success message"
+  },
+
+  "shareImageSaveFailed": "Save failed, please check album permissions",
+  "@shareImageSaveFailed": {
+    "description": "Save failed message"
+  },
+
+  "shareImageShareFailed": "Share failed",
+  "@shareImageShareFailed": {
+    "description": "Share failed message"
+  },
+
+  "shareImageWaitForPreview": "Please wait for preview to complete",
+  "@shareImageWaitForPreview": {
+    "description": "Wait for preview message"
+  },
+
+  "shareImageFontSizeTitle": "Font Size",
+  "@shareImageFontSizeTitle": {
+    "description": "Font size setting title"
+  },
+
+  "shareImageFontSizeDesc": "Drag slider for live preview",
+  "@shareImageFontSizeDesc": {
+    "description": "Font size setting description"
+  },
+
+  "shareImageFontSizeReset": "Reset (17px)",
+  "@shareImageFontSizeReset": {
+    "description": "Reset font size button"
+  },
+
+  "shareImageFontSizeDone": "Done",
+  "@shareImageFontSizeDone": {
+    "description": "Done button"
+  },
+
+  "shareTemplateSimple": "Simple",
+  "@shareTemplateSimple": {
+    "description": "Simple template"
+  },
+
+  "shareTemplateCard": "Card",
+  "@shareTemplateCard": {
+    "description": "Card template"
+  },
+
+  "shareTemplateGradient": "Gradient",
+  "@shareTemplateGradient": {
+    "description": "Gradient template"
+  },
+
+  "shareTemplateMinimal": "Minimal",
+  "@shareTemplateMinimal": {
+    "description": "Minimal template"
+  },
+
+  "shareTemplateMagazine": "Magazine",
+  "@shareTemplateMagazine": {
+    "description": "Magazine template"
+  },
+
+  "shareImageFontSettings": "Font Settings",
+  "@shareImageFontSettings": {
+    "description": "Font settings tooltip"
+  },
+
+  "aiAssistant": "AI Assistant",
+  "@aiAssistant": {
+    "description": "AI assistant title"
+  },
+
+  "aiContinueWriting": "AI Continue",
+  "@aiContinueWriting": {
+    "description": "AI continue writing feature"
+  },
+
+  "aiContinueWritingDesc": "Intelligently continue based on existing content",
+  "@aiContinueWritingDesc": {
+    "description": "AI continue writing feature description"
+  },
+
+  "aiSmartTags": "Smart Tags",
+  "@aiSmartTags": {
+    "description": "AI smart tags feature"
+  },
+
+  "aiSmartTagsDesc": "Automatically generate precise tags",
+  "@aiSmartTagsDesc": {
+    "description": "AI smart tags feature description"
+  },
+
+  "aiRelatedNotes": "Related Notes",
+  "@aiRelatedNotes": {
+    "description": "AI related notes feature"
+  },
+
+  "aiSummary": "Smart Summary",
+  "@aiSummary": {
+    "description": "AI summary feature"
+  },
+
+  "aiProcessing": "AI processing...",
+  "@aiProcessing": {
+    "description": "AI processing message"
+  },
+
+  "aiContinueWritingProcessing": "✨ AI is continuing...",
+  "@aiContinueWritingProcessing": {
+    "description": "AI continue writing processing"
+  },
+
+  "aiContinueWritingSuccess": "✅ AI continue completed!",
+  "@aiContinueWritingSuccess": {
+    "description": "AI continue writing success"
+  },
+
+  "aiTagsProcessing": "🏷️ AI is generating tags...",
+  "@aiTagsProcessing": {
+    "description": "AI tags processing"
+  },
+
+  "aiTagsSuccess": "✅ Generated {count} tags!",
+  "@aiTagsSuccess": {
+    "description": "AI tags success",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+
+  "aiSummaryProcessing": "🤖 AI is generating summary...",
+  "@aiSummaryProcessing": {
+    "description": "AI summary processing"
+  },
+
+  "aiSummarySuccess": "✅ Summary generated successfully!",
+  "@aiSummarySuccess": {
+    "description": "AI summary success"
+  },
+
+  "aiRelatedNotesProcessing": "🔍 AI is finding related notes...",
+  "@aiRelatedNotesProcessing": {
+    "description": "AI related notes processing"
+  },
+
+  "aiRelatedNotesEmpty": "No related notes found",
+  "@aiRelatedNotesEmpty": {
+    "description": "No related notes found"
+  },
+
+  "aiConfigRequired": "Please configure AI in settings first",
+  "@aiConfigRequired": {
+    "description": "AI config required"
+  },
+
+  "aiApiConfigRequired": "Please configure AI API in settings first",
+  "@aiApiConfigRequired": {
+    "description": "AI API config required"
+  },
+
+  "aiContentRequired": "Please enter some content first",
+  "@aiContentRequired": {
+    "description": "Content required"
+  },
+
+  "aiGenerateSummaryFailed": "Failed to generate summary, please try again later",
+  "@aiGenerateSummaryFailed": {
+    "description": "Generate summary failed"
+  },
+
+  "aiRelatedNotesTitle": "Related Notes",
+  "@aiRelatedNotesTitle": {
+    "description": "Related notes title"
+  },
+
+  "aiRelatedNotesFeature": "AI Related Notes",
+  "@aiRelatedNotesFeature": {
+    "description": "AI related notes feature"
+  },
+
+  "aiRelatedNotesFeatureDesc": "Intelligently recommend notes related to the current note",
+  "@aiRelatedNotesFeatureDesc": {
+    "description": "AI related notes feature description"
+  },
+
+  "aiContinueWritingFeature": "AI Continue Writing",
+  "@aiContinueWritingFeature": {
+    "description": "AI continue writing feature"
+  },
+
+  "aiContinueWritingFeatureDesc": "Intelligently continue writing based on existing content",
+  "@aiContinueWritingFeatureDesc": {
+    "description": "AI continue writing feature description"
+  },
+
+  "aiSmartTagsAndSummary": "AI Smart Tags & Summary",
+  "@aiSmartTagsAndSummary": {
+    "description": "AI smart tags and summary"
+  },
+
+  "aiSmartTagsAndSummaryDesc": "Automatically generate precise tags and smart summaries",
+  "@aiSmartTagsAndSummaryDesc": {
+    "description": "AI smart tags and summary description"
+  },
+
+  "wechatAssistant": "WeChat Assistant",
+  "@wechatAssistant": {
+    "description": "WeChat assistant"
+  },
+
+  "wechatAssistantDesc": "Quickly record notes via WeChat, supports text and images",
+  "@wechatAssistantDesc": {
+    "description": "WeChat assistant description"
+  },
+
+  "featureCompleted": "Completed",
+  "@featureCompleted": {
+    "description": "Feature completed status"
+  },
+
+  "aiRelatedNotesUsage": "Click the AI button in the bottom right corner of the note details page to view related notes",
+  "@aiRelatedNotesUsage": {
+    "description": "AI related notes usage"
+  },
+
+  "aiContinueWritingUsage": "Click the AI button in the toolbar when editing notes and select the continue writing feature",
+  "@aiContinueWritingUsage": {
+    "description": "AI continue writing usage"
+  },
+
+  "aiSmartTagsAndSummaryUsage": "Use the AI button to generate tags when editing notes, and use the smart summary feature on the details page",
+  "@aiSmartTagsAndSummaryUsage": {
+    "description": "AI smart tags and summary usage"
+  },
+
+  "understood": "Got it",
+  "@understood": {
+    "description": "Understood button"
+  },
+
+  "webdavSync": "WebDAV Sync",
+  "@webdavSync": {
+    "description": "WebDAV Sync"
+  },
+
+  "enableWebdavSync": "Enable WebDAV Sync",
+  "@enableWebdavSync": {
+    "description": "Enable WebDAV Sync"
+  },
+
+  "serverAddress": "Server Address",
+  "@serverAddress": {
+    "description": "Server Address"
+  },
+
+  "username": "Username",
+  "@username": {
+    "description": "Username"
+  },
+
+  "password": "Password",
+  "@password": {
+    "description": "Password"
+  },
+
+  "syncFolder": "Sync Folder",
+  "@syncFolder": {
+    "description": "Sync Folder"
+  },
+
+  "testNow": "Test Now",
+  "@testNow": {
+    "description": "Test Now"
+  },
+
+  "backupNow": "Backup Now",
+  "@backupNow": {
+    "description": "Backup Now"
+  },
+
+  "restoreFromWebdav": "Restore from WebDAV",
+  "@restoreFromWebdav": {
+    "description": "Restore from WebDAV"
+  },
+
+  "enableTimedBackup": "Enable Timed Backup",
+  "@enableTimedBackup": {
+    "description": "Enable Timed Backup"
+  },
+
+  "autoBackupToWebdav": "Auto backup notes to WebDAV",
+  "@autoBackupToWebdav": {
+    "description": "Auto backup notes to WebDAV"
+  },
+
+  "backupTiming": "Backup Timing",
+  "@backupTiming": {
+    "description": "Backup Timing"
+  },
+
+  "everyStartup": "Every Startup",
+  "@everyStartup": {
+    "description": "Every Startup"
+  },
+
+  "every15Minutes": "15 Minutes",
+  "@every15Minutes": {
+    "description": "15 Minutes"
+  },
+
+  "every30Minutes": "30 Minutes",
+  "@every30Minutes": {
+    "description": "30 Minutes"
+  },
+
+  "every1Hour": "1 Hour",
+  "@every1Hour": {
+    "description": "1 Hour"
+  },
+
+  "testing": "Testing...",
+  "@testing": {
+    "description": "Testing"
+  },
+
+  "backingUp": "Backing up...",
+  "@backingUp": {
+    "description": "Backing up"
+  },
+
+  "restoring": "Restoring...",
+  "@restoring": {
+    "description": "Restoring"
+  },
+
+  "pleaseEnterServerAddress": "Please enter server address",
+  "@pleaseEnterServerAddress": {
+    "description": "Please enter server address"
+  },
+
+  "addressMustStartWithHttp": "Address must start with http:// or https://",
+  "@addressMustStartWithHttp": {
+    "description": "Address must start with http or https"
+  },
+
+  "pleaseEnterUsername": "Please enter username",
+  "@pleaseEnterUsername": {
+    "description": "Please enter username"
+  },
+
+  "pleaseEnterPassword": "Please enter password",
+  "@pleaseEnterPassword": {
+    "description": "Please enter password"
+  },
+
+  "pleaseEnterSyncFolderPath": "Please enter sync folder path",
+  "@pleaseEnterSyncFolderPath": {
+    "description": "Please enter sync folder path"
+  },
+
+  "webdavConfigSaved": "WebDAV config saved",
+  "@webdavConfigSaved": {
+    "description": "WebDAV config saved"
+  },
+
+  "pleaseEnableWebdavFirst": "Please enable WebDAV sync first",
+  "@pleaseEnableWebdavFirst": {
+    "description": "Please enable WebDAV sync first"
+  },
+
+  "webdavHelpText": "• Recommend using professional WebDAV services like Nutstore\n• Nutstore requires using \"App-specific password\" instead of login password\n• Test Now: Test WebDAV server connection\n• Backup Now: One-way upload, full backup of all data to cloud\n• Restore from WebDAV: Download cloud data to local (overwrite local)\n• Timed Backup: Choose to auto backup on every startup or timed intervals",
+  "@webdavHelpText": {
+    "description": "WebDAV help text"
+  },
+
+  "webdavGuide": "WebDAV Usage Guide",
+  "@webdavGuide": {
+    "description": "WebDAV Usage Guide"
+  },
+
+  "whatIsWebdav": "🤔 What is WebDAV?",
+  "@whatIsWebdav": {
+    "description": "What is WebDAV"
+  },
+
+  "webdavDescription": "WebDAV is a network protocol that allows you to backup notes to a cloud server. This app supports using WebDAV for note backup and recovery.",
+  "@webdavDescription": {
+    "description": "WebDAV description"
+  },
+
+  "custom": "Custom",
+  "@custom": {
+    "description": "Custom"
+  },
+
+  "featureInDevelopment": "Feature in development, stay tuned!",
+  "@featureInDevelopment": {
+    "description": "Feature in development"
+  },
+
+  "editorPlaceholder": "What's on your mind...",
+  "@editorPlaceholder": {
+    "description": "Editor placeholder"
+  },
+
+  "voiceListening": "Listening...",
+  "@voiceListening": {
+    "description": "Voice listening"
+  },
+
+  "voiceRecognizing": "Processing",
+  "@voiceRecognizing": {
+    "description": "Voice recognizing"
+  },
+
+  "clickToStop": "Tap to stop",
+  "@clickToStop": {
+    "description": "Click to stop button"
+  },
+
+  "addNoteReference": "Add Reference",
+  "@addNoteReference": {
+    "description": "Add note reference title"
+  },
+
+  "selectNoteToReference": "Select a note to reference and create connections",
+  "@selectNoteToReference": {
+    "description": "Reference note description"
+  },
+
+  "searchNoteContent": "Search notes...",
+  "@searchNoteContent": {
+    "description": "Search note content hint"
+  },
+
+  "noNotesToReference": "No notes available",
+  "@noNotesToReference": {
+    "description": "No notes to reference"
+  },
+
+  "noMatchingNotes": "No matching notes",
+  "@noMatchingNotes": {
+    "description": "No matching notes"
+  },
+
+  "createNotesFirstToReference": "Create some notes first to add references",
+  "@createNotesFirstToReference": {
+    "description": "Create notes first hint"
+  },
+
+  "tryOtherKeywords": "Try other keywords",
+  "@tryOtherKeywords": {
+    "description": "Try other keywords hint"
+  },
+
+  "foundNotesCount": "Found {count} notes",
+  "@foundNotesCount": {
+    "description": "Found notes count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "microphonePermissionRequired": "Microphone permission required for voice input",
+  "@microphonePermissionRequired": {
+    "description": "Microphone permission hint"
+  },
+
+  "referenceCreated": "Reference created",
+  "@referenceCreated": {
+    "description": "Reference created success"
+  },
+
+  "referenceCreationFailed": "Failed to create reference",
+  "@referenceCreationFailed": {
+    "description": "Reference creation failed"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button"
+  },
+
+  "confirm": "OK",
+  "@confirm": {
+    "description": "Confirm button"
+  },
+
+  "close": "Close",
+  "@close": {
+    "description": "Close button"
+  },
+
+  "done": "Done",
+  "@done": {
+    "description": "Done button"
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Save button"
+  },
+
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button"
+  },
+
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button"
+  },
+
+  "back": "Back",
+  "@back": {
+    "description": "Back button"
+  },
+
+  "collapse": "Collapse",
+  "@collapse": {
+    "description": "Collapse button"
+  },
+
+  "fullText": "Full",
+  "@fullText": {
+    "description": "Show full text button"
+  },
+
+  "referencedNoteNotFound": "Referenced note not found or deleted (ID: {id})",
+  "@referencedNoteNotFound": {
+    "description": "Referenced note not found",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+
+  "imageLoadFailed": "Unable to display image",
+  "@imageLoadFailed": {
+    "description": "Image load failed"
+  },
+
+  "updateFailed": "Update failed",
+  "@updateFailed": {
+    "description": "Update failed message"
+  },
+
+  "cancelSuccess": "Cancelled",
+  "@cancelSuccess": {
+    "description": "Cancel success"
+  },
+
+  "cancelFailed": "Cancel failed",
+  "@cancelFailed": {
+    "description": "Cancel failed"
+  },
+
+  "setSuccess": "Set successfully",
+  "@setSuccess": {
+    "description": "Set success"
+  },
+
+  "setFailed": "Set failed",
+  "@setFailed": {
+    "description": "Set failed"
+  },
+
+  "unpinAction": "Unpin",
+  "@unpinAction": {
+    "description": "Unpin action"
+  },
+
+  "pinAction": "Pin",
+  "@pinAction": {
+    "description": "Pin action"
+  },
+
+  "cancelReminder": "Cancel",
+  "@cancelReminder": {
+    "description": "Cancel reminder action"
+  },
+
+  "setReminder": "Remind",
+  "@setReminder": {
+    "description": "Set reminder action"
+  },
+
+  "deleteAction": "Delete",
+  "@deleteAction": {
+    "description": "Delete action"
+  },
+
+  "viewOriginalImage": "View HD",
+  "@viewOriginalImage": {
+    "description": "View original image hint"
+  },
+
+  "saveImage": "Save",
+  "@saveImage": {
+    "description": "Save image button"
+  },
+
+  "loadingHDImage": "Loading HD image...",
+  "@loadingHDImage": {
+    "description": "Loading HD image hint"
+  },
+
+  "imageLoadError": "Failed to load",
+  "@imageLoadError": {
+    "description": "Image load error"
+  },
+
+  "networkFailedNoCache": "Network error, no cache",
+  "@networkFailedNoCache": {
+    "description": "Network failed no cache"
+  },
+
+  "authFailedNoCache": "Auth failed, no cache",
+  "@authFailedNoCache": {
+    "description": "Auth failed no cache"
+  },
+
+  "unsupportedImageFormat": "Unsupported format",
+  "@unsupportedImageFormat": {
+    "description": "Unsupported image format"
+  },
+
+  "allImagesCount": "All images ({count})",
+  "@allImagesCount": {
+    "description": "All images count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "logoutButton": "Logout",
+  "@logoutButton": {
+    "description": "Logout button"
+  },
+
+  "logoutDataPrompt": "How to handle local data when logging out?",
+  "@logoutDataPrompt": {
+    "description": "Logout data handling prompt"
+  },
+
+  "clearLocalData": "Clear data",
+  "@clearLocalData": {
+    "description": "Clear local data option"
+  },
+
+  "keepLocalData": "Keep data",
+  "@keepLocalData": {
+    "description": "Keep local data option"
+  },
+
+  "logoutConfirm": "Confirm",
+  "@logoutConfirm": {
+    "description": "Confirm logout button"
+  },
+
+  "logoutFailed": "Logout failed",
+  "@logoutFailed": {
+    "description": "Logout failed message"
+  },
+
+  "login": "Login",
+  "@login": {
+    "description": "Login button"
+  },
+
+  "online": "Online",
+  "@online": {
+    "description": "Online status"
+  },
+
+  "offline": "Offline",
+  "@offline": {
+    "description": "Offline status"
+  },
+
+  "activityLog": "Activity",
+  "@activityLog": {
+    "description": "Activity log"
+  },
+
+  "functionMenu": "Menu",
+  "@functionMenu": {
+    "description": "Function menu"
+  },
+
+  "relatedTags": "Related",
+  "@relatedTags": {
+    "description": "Related tags"
+  },
+
+  "statistics": "Stats",
+  "@statistics": {
+    "description": "Statistics chart"
+  },
+
+  "rename": "Rename",
+  "@rename": {
+    "description": "Rename"
+  },
+
+  "relatedTagsRecommendation": "Related Tags",
+  "@relatedTagsRecommendation": {
+    "description": "Related tags recommendation title"
+  },
+
+  "noRelatedTags": "No related tags",
+  "@noRelatedTags": {
+    "description": "No related tags"
+  },
+
+  "addMoreNotesForAI": "Add more notes with this tag,\nAI will recommend related tags",
+  "@addMoreNotesForAI": {
+    "description": "Add notes hint"
+  },
+
+  "tagStatistics": "Tag Stats",
+  "@tagStatistics": {
+    "description": "Tag statistics title"
+  },
+
+  "noteCount": "Notes",
+  "@noteCount": {
+    "description": "Note count"
+  },
+
+  "creationMonths": "Months",
+  "@creationMonths": {
+    "description": "Creation months"
+  },
+
+  "recentSixMonthsTrend": "Last 6 Months",
+  "@recentSixMonthsTrend": {
+    "description": "Recent six months trend"
+  },
+
+  "noStatisticsData": "No data",
+  "@noStatisticsData": {
+    "description": "No statistics data"
+  },
+
+  "renameTag": "Rename Tag",
+  "@renameTag": {
+    "description": "Rename tag title"
+  },
+
+  "enterNewTagName": "New tag name",
+  "@enterNewTagName": {
+    "description": "Enter new tag name hint"
+  },
+
+  "deleteTag": "Delete Tag",
+  "@deleteTag": {
+    "description": "Delete tag title"
+  },
+
+  "deleteTagConfirm": "Remove this tag from {count} notes?",
+  "@deleteTagConfirm": {
+    "description": "Delete tag confirmation",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "deleteTagSimpleConfirm": "Delete this tag?",
+  "@deleteTagSimpleConfirm": {
+    "description": "Delete tag simple confirmation"
+  },
+
+  "tagColorScheme": "Tag Color",
+  "@tagColorScheme": {
+    "description": "Tag color scheme title"
+  },
+
+  "previewEffect": "Preview",
+  "@previewEffect": {
+    "description": "Preview effect"
+  },
+
+  "presetColors": "Presets",
+  "@presetColors": {
+    "description": "Preset colors"
+  },
+
+  "selectPreset": "Preset",
+  "@selectPreset": {
+    "description": "Select preset button"
+  },
+
+  "customColor": "Custom",
+  "@customColor": {
+    "description": "Custom color button"
+  },
+
+  "backgroundColor": "Background",
+  "@backgroundColor": {
+    "description": "Background color label"
+  },
+
+  "textColor": "Text",
+  "@textColor": {
+    "description": "Text color label"
+  },
+
+  "reset": "Reset",
+  "@reset": {
+    "description": "Reset button"
+  },
+
+  "notificationPermissionRequired": "Notification Permission",
+  "@notificationPermissionRequired": {
+    "description": "Notification permission title"
+  },
+
+  "notificationPermissionDesc": "To receive reminders on time, please enable:",
+  "@notificationPermissionDesc": {
+    "description": "Notification permission description"
+  },
+
+  "allowNotifications": "Allow Notifications",
+  "@allowNotifications": {
+    "description": "Allow notifications step"
+  },
+
+  "allowNotificationsDesc": "Enable InkRoot in notification settings",
+  "@allowNotificationsDesc": {
+    "description": "Allow notifications desc"
+  },
+
+  "setAlarmsAndReminders": "Set Alarms",
+  "@setAlarmsAndReminders": {
+    "description": "Set alarms step"
+  },
+
+  "setAlarmsDesc": "Allow alarm permissions",
+  "@setAlarmsDesc": {
+    "description": "Set alarms description"
+  },
+
+  "batterySaver": "Battery",
+  "@batterySaver": {
+    "description": "Battery saver step"
+  },
+
+  "batterySaverDesc": "Set to \"Unrestricted\"",
+  "@batterySaverDesc": {
+    "description": "Battery saver description"
+  },
+
+  "xiaomiNotificationNote": "Xiaomi devices disable notifications by default",
+  "@xiaomiNotificationNote": {
+    "description": "Xiaomi note"
+  },
+
+  "later": "Later",
+  "@later": {
+    "description": "Later button"
+  },
+
+  "goToSettings": "Settings",
+  "@goToSettings": {
+    "description": "Go to settings button"
+  },
+
+  "userAgreementAndPrivacy": "Terms & Privacy",
+  "@userAgreementAndPrivacy": {
+    "description": "Agreement title"
+  },
+
+  "disagree": "Decline",
+  "@disagree": {
+    "description": "Disagree button"
+  },
+
+  "agree": "Agree",
+  "@agree": {
+    "description": "Agree button"
+  },
+
+  "welcomeToApp": "Welcome to InkRoot!\n\nWe value your privacy. Please read and understand our",
+  "@welcomeToApp": {
+    "description": "Welcome text"
+  },
+
+  "and": "and",
+  "@and": {
+    "description": "And conjunction"
+  },
+
+  "agreeText": ".\n\nBy tapping \"Agree\", you accept these terms.",
+  "@agreeText": {
+    "description": "Agree text"
+  },
+
+  "newVersionAvailable": "Update Available",
+  "@newVersionAvailable": {
+    "description": "New version title"
+  },
+
+  "mustUpdateMessage": "Critical update required to continue",
+  "@mustUpdateMessage": {
+    "description": "Must update message"
+  },
+
+  "downloading": "Downloading...",
+  "@downloading": {
+    "description": "Downloading"
+  },
+
+  "laterUpdate": "Later",
+  "@laterUpdate": {
+    "description": "Later update button"
+  },
+
+  "updateNow": "Update",
+  "@updateNow": {
+    "description": "Update now button"
+  },
+
+  "downloadComplete": "Download complete! Install now",
+  "@downloadComplete": {
+    "description": "Download complete hint"
+  },
+
+  "noteUpdated": "Note updated",
+  "@noteUpdated": {
+    "description": "Note update success"
+  },
+
+  "noteDeleted": "Note deleted",
+  "@noteDeleted": {
+    "description": "Note delete success"
+  },
+
+  "undo": "Undo",
+  "@undo": {
+    "description": "Undo button"
+  },
+
+  "undoDelete": "Restored",
+  "@undoDelete": {
+    "description": "Undo delete success"
+  },
+
+  "undoFailed": "Undo failed",
+  "@undoFailed": {
+    "description": "Undo failed"
+  },
+
+  "operationFailed": "Failed",
+  "@operationFailed": {
+    "description": "Operation failed"
+  },
+
+  "pinned": "Pinned",
+  "@pinned": {
+    "description": "Pin success"
+  },
+
+  "unpinned": "Unpinned",
+  "@unpinned": {
+    "description": "Unpin success"
+  },
+
+  "noteVisibility": "Visibility",
+  "@noteVisibility": {
+    "description": "Note visibility title"
+  },
+
+  "currentStatus": "Current: {status}",
+  "@currentStatus": {
+    "description": "Current status",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+
+  "private": "Private",
+  "@private": {
+    "description": "Private status"
+  },
+
+  "public": "Public",
+  "@public": {
+    "description": "Public status"
+  },
+
+  "privateDesc": "Only you",
+  "@privateDesc": {
+    "description": "Private desc"
+  },
+
+  "publicDesc": "Anyone with link",
+  "@publicDesc": {
+    "description": "Public desc"
+  },
+
+  "alreadyPrivate": "Already private",
+  "@alreadyPrivate": {
+    "description": "Already private hint"
+  },
+
+  "alreadyPublic": "Already public",
+  "@alreadyPublic": {
+    "description": "Already public hint"
+  },
+
+  "setToPrivate": "Set to private",
+  "@setToPrivate": {
+    "description": "Set private success"
+  },
+
+  "setToPublic": "Set to public",
+  "@setToPublic": {
+    "description": "Set public success"
+  },
+
+  "syncSuccess": "Synced",
+  "@syncSuccess": {
+    "description": "Sync success"
+  },
+
+  "refreshSuccess": "Refreshed",
+  "@refreshSuccess": {
+    "description": "Refresh success"
+  },
+
+  "refreshFailed": "Refresh failed",
+  "@refreshFailed": {
+    "description": "Refresh failed"
+  },
+
+  "createNoteFailed": "Create failed",
+  "@createNoteFailed": {
+    "description": "Create note failed"
+  },
+
+  "shareNote": "Share Note",
+  "@shareNote": {
+    "description": "Share note"
+  },
+
+  "linkCopied": "Link copied",
+  "@linkCopied": {
+    "description": "Link copied"
+  },
+
+  "saveFailed": "Save failed",
+  "@saveFailed": {
+    "description": "Save failed"
+  },
+
+  "loadFailed": "Load failed",
+  "@loadFailed": {
+    "description": "Load failed"
+  },
+
+  "noteNotFound": "Note not found",
+  "@noteNotFound": {
+    "description": "Note not found"
+  },
+
+  "referenceFailed": "Reference failed",
+  "@referenceFailed": {
+    "description": "Reference failed"
+  },
+
+  "sortBy": "Sort",
+  "@sortBy": {
+    "description": "Sort by"
+  },
+
+  "newestFirst": "Newest",
+  "@newestFirst": {
+    "description": "Newest first"
+  },
+
+  "oldestFirst": "Oldest",
+  "@oldestFirst": {
+    "description": "Oldest first"
+  },
+
+  "updatedTime": "Updated",
+  "@updatedTime": {
+    "description": "Updated time"
+  },
+
+  "noNotesYet": "No notes yet",
+  "@noNotesYet": {
+    "description": "No notes"
+  },
+
+  "clickToCreate": "Tap + to create your first note",
+  "@clickToCreate": {
+    "description": "Create hint"
+  },
+
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Loading"
+  },
+
+  "loadedAll": "Loaded all {count} notes",
+  "@loadedAll": {
+    "description": "Loaded all",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "searchNotes": "Search notes...",
+  "@searchNotes": {
+    "description": "Search notes hint"
+  },
+
+  "networkError": "Network error",
+  "@networkError": {
+    "description": "Network error"
+  },
+
+  "connectionFailed": "Connection failed",
+  "@connectionFailed": {
+    "description": "Connection failed"
+  },
+
+  "requestFailed": "Request failed",
+  "@requestFailed": {
+    "description": "Request failed"
+  },
+
+  "authFailed": "Auth failed",
+  "@authFailed": {
+    "description": "Auth failed"
+  },
+
+  "timeout": "Timeout",
+  "@timeout": {
+    "description": "Timeout"
+  },
+
+  "serverError": "Server error",
+  "@serverError": {
+    "description": "Server error"
+  },
+
+  "unknownError": "Unknown error",
+  "@unknownError": {
+    "description": "Unknown error"
+  },
+
+  "noConnection": "No connection",
+  "@noConnection": {
+    "description": "No connection"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button"
+  },
+
+  "copySuccess": "Copied",
+  "@copySuccess": {
+    "description": "Copy success"
+  },
+
+  "copyFailed": "Copy failed",
+  "@copyFailed": {
+    "description": "Copy failed"
+  },
+
+  "viewDetails": "Details",
+  "@viewDetails": {
+    "description": "View details"
+  },
+
+  "voiceListening": "Listening...",
+  "@voiceListening": {
+    "description": "Voice listening"
+  },
+
+  "voiceRecognizing": "Processing",
+  "@voiceRecognizing": {
+    "description": "Voice recognizing"
+  },
+
+  "clickToStop": "Tap to stop",
+  "@clickToStop": {
+    "description": "Click to stop button"
+  },
+
+  "addNoteReference": "Add Reference",
+  "@addNoteReference": {
+    "description": "Add note reference title"
+  },
+
+  "selectNoteToReference": "Select a note to reference and create connections",
+  "@selectNoteToReference": {
+    "description": "Reference note description"
+  },
+
+  "searchNoteContent": "Search notes...",
+  "@searchNoteContent": {
+    "description": "Search note content hint"
+  },
+
+  "noNotesToReference": "No notes available",
+  "@noNotesToReference": {
+    "description": "No notes to reference"
+  },
+
+  "noMatchingNotes": "No matching notes",
+  "@noMatchingNotes": {
+    "description": "No matching notes"
+  },
+
+  "createNotesFirstToReference": "Create some notes first to add references",
+  "@createNotesFirstToReference": {
+    "description": "Create notes first hint"
+  },
+
+  "tryOtherKeywords": "Try other keywords",
+  "@tryOtherKeywords": {
+    "description": "Try other keywords hint"
+  },
+
+  "foundNotesCount": "Found {count} notes",
+  "@foundNotesCount": {
+    "description": "Found notes count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "microphonePermissionRequired": "Microphone permission required for voice input",
+  "@microphonePermissionRequired": {
+    "description": "Microphone permission hint"
+  },
+
+  "referenceCreated": "Reference created",
+  "@referenceCreated": {
+    "description": "Reference created success"
+  },
+
+  "referenceCreationFailed": "Failed to create reference",
+  "@referenceCreationFailed": {
+    "description": "Reference creation failed"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button"
+  },
+
+  "confirm": "OK",
+  "@confirm": {
+    "description": "Confirm button"
+  },
+
+  "close": "Close",
+  "@close": {
+    "description": "Close button"
+  },
+
+  "done": "Done",
+  "@done": {
+    "description": "Done button"
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Save button"
+  },
+
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button"
+  },
+
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button"
+  },
+
+  "back": "Back",
+  "@back": {
+    "description": "Back button"
+  },
+
+  "collapse": "Collapse",
+  "@collapse": {
+    "description": "Collapse button"
+  },
+
+  "fullText": "Full",
+  "@fullText": {
+    "description": "Show full text button"
+  },
+
+  "referencedNoteNotFound": "Referenced note not found or deleted (ID: {id})",
+  "@referencedNoteNotFound": {
+    "description": "Referenced note not found",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+
+  "imageLoadFailed": "Unable to display image",
+  "@imageLoadFailed": {
+    "description": "Image load failed"
+  },
+
+  "updateFailed": "Update failed",
+  "@updateFailed": {
+    "description": "Update failed message"
+  },
+
+  "cancelSuccess": "Cancelled",
+  "@cancelSuccess": {
+    "description": "Cancel success"
+  },
+
+  "cancelFailed": "Cancel failed",
+  "@cancelFailed": {
+    "description": "Cancel failed"
+  },
+
+  "setSuccess": "Set successfully",
+  "@setSuccess": {
+    "description": "Set success"
+  },
+
+  "setFailed": "Set failed",
+  "@setFailed": {
+    "description": "Set failed"
+  },
+
+  "unpinAction": "Unpin",
+  "@unpinAction": {
+    "description": "Unpin action"
+  },
+
+  "pinAction": "Pin",
+  "@pinAction": {
+    "description": "Pin action"
+  },
+
+  "cancelReminder": "Cancel",
+  "@cancelReminder": {
+    "description": "Cancel reminder action"
+  },
+
+  "setReminder": "Remind",
+  "@setReminder": {
+    "description": "Set reminder action"
+  },
+
+  "deleteAction": "Delete",
+  "@deleteAction": {
+    "description": "Delete action"
+  },
+
+  "viewOriginalImage": "View HD",
+  "@viewOriginalImage": {
+    "description": "View original image hint"
+  },
+
+  "saveImage": "Save",
+  "@saveImage": {
+    "description": "Save image button"
+  },
+
+  "loadingHDImage": "Loading HD image...",
+  "@loadingHDImage": {
+    "description": "Loading HD image hint"
+  },
+
+  "imageLoadError": "Failed to load",
+  "@imageLoadError": {
+    "description": "Image load error"
+  },
+
+  "networkFailedNoCache": "Network error, no cache",
+  "@networkFailedNoCache": {
+    "description": "Network failed no cache"
+  },
+
+  "authFailedNoCache": "Auth failed, no cache",
+  "@authFailedNoCache": {
+    "description": "Auth failed no cache"
+  },
+
+  "unsupportedImageFormat": "Unsupported format",
+  "@unsupportedImageFormat": {
+    "description": "Unsupported image format"
+  },
+
+  "allImagesCount": "All images ({count})",
+  "@allImagesCount": {
+    "description": "All images count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "logoutButton": "Logout",
+  "@logoutButton": {
+    "description": "Logout button"
+  },
+
+  "logoutDataPrompt": "How to handle local data when logging out?",
+  "@logoutDataPrompt": {
+    "description": "Logout data handling prompt"
+  },
+
+  "clearLocalData": "Clear data",
+  "@clearLocalData": {
+    "description": "Clear local data option"
+  },
+
+  "keepLocalData": "Keep data",
+  "@keepLocalData": {
+    "description": "Keep local data option"
+  },
+
+  "logoutConfirm": "Confirm",
+  "@logoutConfirm": {
+    "description": "Confirm logout button"
+  },
+
+  "logoutFailed": "Logout failed",
+  "@logoutFailed": {
+    "description": "Logout failed message"
+  },
+
+  "login": "Login",
+  "@login": {
+    "description": "Login button"
+  },
+
+  "online": "Online",
+  "@online": {
+    "description": "Online status"
+  },
+
+  "offline": "Offline",
+  "@offline": {
+    "description": "Offline status"
+  },
+
+  "activityLog": "Activity",
+  "@activityLog": {
+    "description": "Activity log"
+  },
+
+  "functionMenu": "Menu",
+  "@functionMenu": {
+    "description": "Function menu"
+  },
+
+  "relatedTags": "Related",
+  "@relatedTags": {
+    "description": "Related tags"
+  },
+
+  "statistics": "Stats",
+  "@statistics": {
+    "description": "Statistics chart"
+  },
+
+  "rename": "Rename",
+  "@rename": {
+    "description": "Rename"
+  },
+
+  "relatedTagsRecommendation": "Related Tags",
+  "@relatedTagsRecommendation": {
+    "description": "Related tags recommendation title"
+  },
+
+  "noRelatedTags": "No related tags",
+  "@noRelatedTags": {
+    "description": "No related tags"
+  },
+
+  "addMoreNotesForAI": "Add more notes with this tag,\nAI will recommend related tags",
+  "@addMoreNotesForAI": {
+    "description": "Add notes hint"
+  },
+
+  "tagStatistics": "Tag Stats",
+  "@tagStatistics": {
+    "description": "Tag statistics title"
+  },
+
+  "noteCount": "Notes",
+  "@noteCount": {
+    "description": "Note count"
+  },
+
+  "creationMonths": "Months",
+  "@creationMonths": {
+    "description": "Creation months"
+  },
+
+  "recentSixMonthsTrend": "Last 6 Months",
+  "@recentSixMonthsTrend": {
+    "description": "Recent six months trend"
+  },
+
+  "noStatisticsData": "No data",
+  "@noStatisticsData": {
+    "description": "No statistics data"
+  },
+
+  "renameTag": "Rename Tag",
+  "@renameTag": {
+    "description": "Rename tag title"
+  },
+
+  "enterNewTagName": "New tag name",
+  "@enterNewTagName": {
+    "description": "Enter new tag name hint"
+  },
+
+  "deleteTag": "Delete Tag",
+  "@deleteTag": {
+    "description": "Delete tag title"
+  },
+
+  "deleteTagConfirm": "Remove this tag from {count} notes?",
+  "@deleteTagConfirm": {
+    "description": "Delete tag confirmation",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "deleteTagSimpleConfirm": "Delete this tag?",
+  "@deleteTagSimpleConfirm": {
+    "description": "Delete tag simple confirmation"
+  },
+
+  "tagColorScheme": "Tag Color",
+  "@tagColorScheme": {
+    "description": "Tag color scheme title"
+  },
+
+  "previewEffect": "Preview",
+  "@previewEffect": {
+    "description": "Preview effect"
+  },
+
+  "presetColors": "Presets",
+  "@presetColors": {
+    "description": "Preset colors"
+  },
+
+  "selectPreset": "Preset",
+  "@selectPreset": {
+    "description": "Select preset button"
+  },
+
+  "customColor": "Custom",
+  "@customColor": {
+    "description": "Custom color button"
+  },
+
+  "backgroundColor": "Background",
+  "@backgroundColor": {
+    "description": "Background color label"
+  },
+
+  "textColor": "Text",
+  "@textColor": {
+    "description": "Text color label"
+  },
+
+  "reset": "Reset",
+  "@reset": {
+    "description": "Reset button"
+  },
+
+  "notificationPermissionRequired": "Notification Permission",
+  "@notificationPermissionRequired": {
+    "description": "Notification permission title"
+  },
+
+  "notificationPermissionDesc": "To receive reminders on time, please enable:",
+  "@notificationPermissionDesc": {
+    "description": "Notification permission description"
+  },
+
+  "allowNotifications": "Allow Notifications",
+  "@allowNotifications": {
+    "description": "Allow notifications step"
+  },
+
+  "allowNotificationsDesc": "Enable InkRoot in notification settings",
+  "@allowNotificationsDesc": {
+    "description": "Allow notifications desc"
+  },
+
+  "setAlarmsAndReminders": "Set Alarms",
+  "@setAlarmsAndReminders": {
+    "description": "Set alarms step"
+  },
+
+  "setAlarmsDesc": "Allow alarm permissions",
+  "@setAlarmsDesc": {
+    "description": "Set alarms description"
+  },
+
+  "batterySaver": "Battery",
+  "@batterySaver": {
+    "description": "Battery saver step"
+  },
+
+  "batterySaverDesc": "Set to \"Unrestricted\"",
+  "@batterySaverDesc": {
+    "description": "Battery saver description"
+  },
+
+  "xiaomiNotificationNote": "Xiaomi devices disable notifications by default",
+  "@xiaomiNotificationNote": {
+    "description": "Xiaomi note"
+  },
+
+  "later": "Later",
+  "@later": {
+    "description": "Later button"
+  },
+
+  "goToSettings": "Settings",
+  "@goToSettings": {
+    "description": "Go to settings button"
+  },
+
+  "userAgreementAndPrivacy": "Terms & Privacy",
+  "@userAgreementAndPrivacy": {
+    "description": "Agreement title"
+  },
+
+  "disagree": "Decline",
+  "@disagree": {
+    "description": "Disagree button"
+  },
+
+  "agree": "Agree",
+  "@agree": {
+    "description": "Agree button"
+  },
+
+  "welcomeToApp": "Welcome to InkRoot!\n\nWe value your privacy. Please read and understand our",
+  "@welcomeToApp": {
+    "description": "Welcome text"
+  },
+
+  "and": "and",
+  "@and": {
+    "description": "And conjunction"
+  },
+
+  "agreeText": ".\n\nBy tapping \"Agree\", you accept these terms.",
+  "@agreeText": {
+    "description": "Agree text"
+  },
+
+  "newVersionAvailable": "Update Available",
+  "@newVersionAvailable": {
+    "description": "New version title"
+  },
+
+  "mustUpdateMessage": "Critical update required to continue",
+  "@mustUpdateMessage": {
+    "description": "Must update message"
+  },
+
+  "downloading": "Downloading...",
+  "@downloading": {
+    "description": "Downloading"
+  },
+
+  "laterUpdate": "Later",
+  "@laterUpdate": {
+    "description": "Later update button"
+  },
+
+  "updateNow": "Update",
+  "@updateNow": {
+    "description": "Update now button"
+  },
+
+  "downloadComplete": "Download complete! Install now",
+  "@downloadComplete": {
+    "description": "Download complete hint"
+  },
+
+  "noteUpdated": "Note updated",
+  "@noteUpdated": {
+    "description": "Note update success"
+  },
+
+  "noteDeleted": "Note deleted",
+  "@noteDeleted": {
+    "description": "Note delete success"
+  },
+
+  "undo": "Undo",
+  "@undo": {
+    "description": "Undo button"
+  },
+
+  "undoDelete": "Restored",
+  "@undoDelete": {
+    "description": "Undo delete success"
+  },
+
+  "undoFailed": "Undo failed",
+  "@undoFailed": {
+    "description": "Undo failed"
+  },
+
+  "operationFailed": "Failed",
+  "@operationFailed": {
+    "description": "Operation failed"
+  },
+
+  "pinned": "Pinned",
+  "@pinned": {
+    "description": "Pin success"
+  },
+
+  "unpinned": "Unpinned",
+  "@unpinned": {
+    "description": "Unpin success"
+  },
+
+  "noteVisibility": "Visibility",
+  "@noteVisibility": {
+    "description": "Note visibility title"
+  },
+
+  "currentStatus": "Current: {status}",
+  "@currentStatus": {
+    "description": "Current status",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+
+  "private": "Private",
+  "@private": {
+    "description": "Private status"
+  },
+
+  "public": "Public",
+  "@public": {
+    "description": "Public status"
+  },
+
+  "privateDesc": "Only you",
+  "@privateDesc": {
+    "description": "Private desc"
+  },
+
+  "publicDesc": "Anyone with link",
+  "@publicDesc": {
+    "description": "Public desc"
+  },
+
+  "alreadyPrivate": "Already private",
+  "@alreadyPrivate": {
+    "description": "Already private hint"
+  },
+
+  "alreadyPublic": "Already public",
+  "@alreadyPublic": {
+    "description": "Already public hint"
+  },
+
+  "setToPrivate": "Set to private",
+  "@setToPrivate": {
+    "description": "Set private success"
+  },
+
+  "setToPublic": "Set to public",
+  "@setToPublic": {
+    "description": "Set public success"
+  },
+
+  "syncSuccess": "Synced",
+  "@syncSuccess": {
+    "description": "Sync success"
+  },
+
+  "refreshSuccess": "Refreshed",
+  "@refreshSuccess": {
+    "description": "Refresh success"
+  },
+
+  "refreshFailed": "Refresh failed",
+  "@refreshFailed": {
+    "description": "Refresh failed"
+  },
+
+  "createNoteFailed": "Create failed",
+  "@createNoteFailed": {
+    "description": "Create note failed"
+  },
+
+  "shareNote": "Share Note",
+  "@shareNote": {
+    "description": "Share note"
+  },
+
+  "linkCopied": "Link copied",
+  "@linkCopied": {
+    "description": "Link copied"
+  },
+
+  "saveFailed": "Save failed",
+  "@saveFailed": {
+    "description": "Save failed"
+  },
+
+  "loadFailed": "Load failed",
+  "@loadFailed": {
+    "description": "Load failed"
+  },
+
+  "noteNotFound": "Note not found",
+  "@noteNotFound": {
+    "description": "Note not found"
+  },
+
+  "referenceFailed": "Reference failed",
+  "@referenceFailed": {
+    "description": "Reference failed"
+  },
+
+  "sortBy": "Sort",
+  "@sortBy": {
+    "description": "Sort by"
+  },
+
+  "newestFirst": "Newest",
+  "@newestFirst": {
+    "description": "Newest first"
+  },
+
+  "oldestFirst": "Oldest",
+  "@oldestFirst": {
+    "description": "Oldest first"
+  },
+
+  "updatedTime": "Updated",
+  "@updatedTime": {
+    "description": "Updated time"
+  },
+
+  "noNotesYet": "No notes yet",
+  "@noNotesYet": {
+    "description": "No notes"
+  },
+
+  "clickToCreate": "Tap + to create your first note",
+  "@clickToCreate": {
+    "description": "Create hint"
+  },
+
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Loading"
+  },
+
+  "loadedAll": "Loaded all {count} notes",
+  "@loadedAll": {
+    "description": "Loaded all",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "searchNotes": "Search notes...",
+  "@searchNotes": {
+    "description": "Search notes hint"
+  },
+
+  "networkError": "Network error",
+  "@networkError": {
+    "description": "Network error"
+  },
+
+  "connectionFailed": "Connection failed",
+  "@connectionFailed": {
+    "description": "Connection failed"
+  },
+
+  "requestFailed": "Request failed",
+  "@requestFailed": {
+    "description": "Request failed"
+  },
+
+  "authFailed": "Auth failed",
+  "@authFailed": {
+    "description": "Auth failed"
+  },
+
+  "timeout": "Timeout",
+  "@timeout": {
+    "description": "Timeout"
+  },
+
+  "serverError": "Server error",
+  "@serverError": {
+    "description": "Server error"
+  },
+
+  "unknownError": "Unknown error",
+  "@unknownError": {
+    "description": "Unknown error"
+  },
+
+  "noConnection": "No connection",
+  "@noConnection": {
+    "description": "No connection"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button"
+  },
+
+  "copySuccess": "Copied",
+  "@copySuccess": {
+    "description": "Copy success"
+  },
+
+  "copyFailed": "Copy failed",
+  "@copyFailed": {
+    "description": "Copy failed"
+  },
+
+  "viewDetails": "Details",
+  "@viewDetails": {
+    "description": "View details"
+  }
+}

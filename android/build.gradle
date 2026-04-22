@@ -1,0 +1,31 @@
+// 定义全局 Android 配置
+ext {
+    compileSdkVersion = 34
+    targetSdkVersion = 34
+    minSdkVersion = 21
+}
+
+allprojects {
+    repositories {
+        // 官方源优先（确保所有包都能找到）
+        google()
+        mavenCentral()
+        
+        // 阿里云镜像源作为备用（加速常用包下载）
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+} 

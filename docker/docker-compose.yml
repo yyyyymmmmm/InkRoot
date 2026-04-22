@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # Memos v0.21.0（基线版本）
+  memos-v021:
+    image: neosmemo/memos:0.21.0
+    container_name: memos-v021
+    ports:
+      - "5230:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v021-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Memos v0.22.5（API v1 不兼容更新后的稳定版）
+  memos-v022:
+    image: neosmemo/memos:0.22.5
+    container_name: memos-v022
+    ports:
+      - "5231:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v022-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Memos v0.23.1（标签重构版本）
+  memos-v023:
+    image: neosmemo/memos:0.23.1
+    container_name: memos-v023
+    ports:
+      - "5232:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v023-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Memos v0.24.4（数据库&API变更后的稳定版）
+  memos-v024:
+    image: neosmemo/memos:0.24.4
+    container_name: memos-v024
+    ports:
+      - "5233:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v024-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Memos v0.25.3（数据库&API变更后的稳定版）
+  memos-v025:
+    image: neosmemo/memos:0.25.3
+    container_name: memos-v025
+    ports:
+      - "5234:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v025-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Memos v0.26.2（Token刷新机制）
+  memos-v026:
+    image: neosmemo/memos:0.26.2
+    container_name: memos-v026
+    ports:
+      - "5235:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v026-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Memos v0.27.1（Username路径 + 最新特性）
+  memos-v027:
+    image: neosmemo/memos:0.27.1
+    container_name: memos-v027
+    ports:
+      - "5236:5230"
+    environment:
+      - MEMOS_MODE=prod
+      - MEMOS_PORT=5230
+    volumes:
+      - memos-v027-data:/var/opt/memos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5230/api/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  memos-v021-data:
+  memos-v022-data:
+  memos-v023-data:
+  memos-v024-data:
+  memos-v025-data:
+  memos-v026-data:
+  memos-v027-data:
+
+networks:
+  default:
+    name: memos-test-network

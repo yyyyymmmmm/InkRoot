@@ -1,0 +1,48 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 敏感配置文件（绝不提交）
+.env
+.env.local
+.env.*.local
+*.env
+
+# 测试产物
+test/*.json
+test/*.log
+test/test_results/
+coverage/
+
+# Docker volumes 数据
+docker/data/
+docker/*.log
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 构建产物
+*.so
+*.dylib
+*.dll
+*.o
+*.pyc
+*.class
+*.jar
+*.war

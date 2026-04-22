@@ -1,0 +1,39 @@
+# Flutter Native Splash 配置
+# 🎨 使用自定义设计的全屏启动页（1242x2688）
+# ✅ 大厂最佳实践：使用 background_image 而不是 color+image，避免两层叠加
+
+flutter_native_splash:
+  # 🚀 使用 background_image（全屏背景图，包含所有设计元素）
+  # 优势：只生成一张图片，无需叠加，性能更好
+  background_image: assets/images/splash_logo.png
+  background_image_dark: assets/images/splash_logo_dark.png
+  
+  # 图片填充模式（等比例填充，保持宽高比）
+  android_gravity: fill_horizontal|fill_vertical|clip_vertical
+  ios_content_mode: scaleAspectFill
+  
+  # 🔥 关键：不使用 image 和 color（避免多层叠加导致出现2个启动页）
+  # 设置为 false 防止插件生成 LaunchImage 层
+  image: false
+  color: false
+  
+  # Android 12+ 配置（禁用特殊启动页，使用统一的全屏背景图）
+  # 大厂做法：所有 Android 版本使用相同的全屏启动图，不用居中图标
+  # android_12:
+  #   image: assets/images/splash_logo.png
+  #   image_dark: assets/images/splash_logo_dark.png
+  #   color: "#F5F4F7"
+  #   color_dark: "#000000"
+  
+  # iOS配置
+  ios: true
+  
+  # Android配置
+  android: true
+  
+  # Web配置（可选）
+  web: false
+  
+  # 全屏启动页
+  fullscreen: true
+

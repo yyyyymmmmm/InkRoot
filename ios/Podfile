@@ -1,0 +1,82 @@
+# 🇨🇳 使用国内镜像源加速下载
+source 'https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git'
+# 备用源
+# source 'https://mirrors.aliyun.com/CocoaPods/Specs.git'
+# source 'https://cdn.cocoapods.org/'
+
+# Uncomment this line to define a global platform for your project
+platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
+  # ⚠️ iOS版本不使用友盟统计SDK（符合App Store审核要求）
+  # Android版本保留友盟统计功能
+  # 如需使用统计功能，建议使用Apple自带的App Analytics
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    
+    # 🔥 关键：配置 permission_handler 插件所需的权限
+    # 如果不配置，iOS将无法请求这些权限！
+    target.build_configurations.each do |config|
+      # 🚀 修复iOS部署目标版本问题
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      
+      # 🔧 修复模拟器架构问题：排除 arm64 架构（解决友盟SDK等第三方库不支持模拟器的问题）
+      # ⚠️ 注释掉：已移除友盟SDK，不再需要排除arm64架构
+      # config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        
+        ## dart: PermissionGroup.microphone
+        'PERMISSION_MICROPHONE=1',
+        
+        ## dart: PermissionGroup.speech
+        'PERMISSION_SPEECH_RECOGNIZER=1',
+        
+        ## dart: PermissionGroup.notification
+        'PERMISSION_NOTIFICATIONS=1',
+        
+        ## dart: PermissionGroup.camera
+        'PERMISSION_CAMERA=1',
+        
+      ## dart: PermissionGroup.photos
+      'PERMISSION_PHOTOS=1',
+      
+      ]
+    end
+  end
+end
