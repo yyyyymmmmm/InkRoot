@@ -108,8 +108,8 @@ dependencies:
   # 错误监控
   sentry_flutter: ^7.18.0
 
-  # 录音 - 临时禁用以兼容 Gradle 8.9
-  # record: ^6.2.0
+  # 录音 - 使用精确版本以兼容 Gradle 8.9
+  record: 6.2.0
 
   # WebDAV客户端
   webdav_client: ^1.2.2
