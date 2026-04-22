@@ -94,7 +94,7 @@ dependencies:
   timezone: ^0.9.4
   
   # 语音识别
-  speech_to_text: ^7.0.0
+  # speech_to_text: ^7.0.0  # 临时禁用（兼容 Gradle 8.9）
   
   # UUID生成器
   uuid: ^4.5.1
