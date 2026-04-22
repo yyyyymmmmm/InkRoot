@@ -108,8 +108,9 @@ dependencies:
   # 错误监控
   sentry_flutter: ^7.18.0
 
-  # 录音 - 使用精确版本以兼容 Gradle 8.9
-  record: 6.2.0
+  # 录音 - 临时禁用以兼容 Gradle 8.9（record_android 1.5.1 不兼容新 Gradle Plugin）
+  # TODO: 等待 record_android 发布兼容版本后重新启用
+  # record: 6.2.0
 
   # WebDAV客户端
   webdav_client: ^1.2.2
@@ -118,10 +119,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-
-# 强制覆盖依赖版本以兼容 Gradle 8.9
-dependency_overrides:
-  record_android: 3.1.3  # 1.5.1 不兼容新 Flutter Gradle Plugin
 
 flutter:
   uses-material-design: true
