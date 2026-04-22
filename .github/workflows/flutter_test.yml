@@ -84,6 +84,9 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: 清除 Flutter 缓存
+        run: flutter pub cache clean --force
+
       - name: 获取依赖
         run: flutter pub get
 

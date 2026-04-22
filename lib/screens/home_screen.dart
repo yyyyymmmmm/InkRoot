@@ -708,7 +708,7 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-
+  Widget _buildUnreadNotificationBanner(BuildContext context, AppProvider appProvider, bool isDarkMode) {
     // 设置颜色 - 使用卡片背景色和蓝色主题
     final backgroundColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
     final textColor = Colors.blue.shade600;

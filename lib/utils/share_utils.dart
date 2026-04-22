@@ -1068,21 +1068,6 @@ class ShareUtils {
     return spans;
   }
 
-  // 查找Markdown标记的结束位置
-
-  // 创建不同样式的TextSpan
-      TextSpan(
-        text: text,
-        style: const TextStyle(
-          color: Color(0xFF007AFF),
-          fontSize: 17,
-          height: 1.5,
-          fontWeight: FontWeight.w600,
-        ),
-      );
-
-
-  // 创建标题样式的span，但保留原有的粗体、斜体等样式
 
   // 保存并分享图片
   static Future<bool> _saveAndShareImage(
