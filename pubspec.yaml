@@ -1,0 +1,176 @@
+name: inkroot
+description: 墨迹·墨笔记·墨计划
+
+publish_to: 'none'
+
+version: 1.0.9+10009
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # UI组件
+  cupertino_icons: ^1.0.6
+  
+  # 状态管理
+  provider: ^6.1.2
+  
+  # 数据库
+  sqflite: ^2.3.3+1
+  path_provider: ^2.1.3
+  path: ^1.9.0
+  
+  # 图片相关
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.3.0
+  
+  # 国际化 (intl 由 flutter_localizations 自动管理，不需要显式依赖)
+  
+  # HTTP请求
+  http: ^1.2.2
+  
+  # WebDAV 同步
+  webdav_client: ^1.2.2
+  xml: ^6.5.0
+  
+  # 设备信息
+  device_info_plus: ^10.1.2
+  
+  # 共享偏好
+  shared_preferences: ^2.2.3
+  
+  # URL启动器
+  url_launcher: ^6.3.0
+  
+  # 权限
+  permission_handler: ^11.3.1
+  
+  # 图片缓存
+  cached_network_image: ^3.3.1
+  
+  # 路由
+  go_router: ^10.2.0
+  
+  # Markdown
+  flutter_markdown: ^0.6.23
+  
+  # 分享
+  share_plus: ^7.2.2
+  
+  # 包信息
+  package_info_plus: ^8.0.2
+  
+  # 安全存储
+  flutter_secure_storage: ^8.1.0
+  
+  # 保存图片到相册
+  image_gallery_saver_plus: ^4.0.1
+  
+  # 时间格式化
+  timeago: ^3.7.0
+  
+  # SVG
+  flutter_svg: ^2.0.10
+  
+  # 启动屏
+  flutter_native_splash: ^2.4.1
+  
+  # 滑动操作
+  flutter_slidable: ^3.1.1
+  
+  # 高亮代码
+  flutter_highlight: ^0.7.0
+  
+  # ⚠️ 移除WebView依赖（项目中未使用）
+  # webview_flutter: ^4.10.0
+  
+  # 文件选择器
+  file_picker: ^8.1.2
+  
+  # 通知 - 使用官方推荐版本
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  
+  # 语音识别
+  speech_to_text: ^7.0.0
+  
+  # 录音（用于百度实时语音识别）
+  record: ^6.1.2
+  
+  # UUID生成器
+  uuid: ^4.5.1
+  
+  # 图形可视化 - 知识图谱
+  graphview: ^1.5.0
+  
+  # Google Fonts - 免费商用字体
+  google_fonts: ^6.2.1
+  
+  # 错误追踪和监控
+  sentry_flutter: ^8.9.0
+  
+  # 环境变量管理
+  flutter_dotenv: ^5.1.0
+  
+  # ⚠️ 移除Firebase依赖（iOS不使用，Android也未真正使用）
+  # firebase_performance: ^0.10.0+7
+  # firebase_core: ^3.6.0
+
+  # 加密库
+  crypto: ^3.0.3
+  
+  # HTTP 解析
+  http_parser: ^4.0.2
+  
+  # 压缩/解压
+  archive: ^3.6.1
+  
+  # 缓存管理
+  flutter_cache_manager: ^3.4.1
+  
+  # Markdown 解析（flutter_markdown 的依赖）
+  markdown: ^7.2.2
+  
+  # HTML 解析（用于导入第三方数据）
+  html: ^0.15.4
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  
+  # 测试相关依赖
+  integration_test:
+    sdk: flutter
+  mockito: ^5.4.4
+  build_runner: ^2.4.7
+  sqflite_common_ffi: ^2.3.0  # 用于桌面测试 SQLite
+  
+  # 🚀 大厂标准：代码质量工具
+  # very_good_analysis: ^10.0.0  # 需要 Dart SDK >=3.4.0，暂时注释
+  # custom_lint: ^0.8.1
+  # 使用内置的 flutter analyze
+  
+  # 代码生成（如果需要）
+  # freezed: ^2.4.6
+  # json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true
+  
+  # 启用国际化代码生成
+  generate: true
+
+  assets:
+    - assets/images/
+    # .env files are in .gitignore and managed locally
+    # Use .env.example as template
+
+  # ⚠️ 移除SF Pro Display字体（Apple版权字体）
+  # iOS: 使用系统默认字体（San Francisco）
+  # Android: 使用系统默认字体（Roboto）
+  # 用户可通过Google Fonts选择其他开源字体

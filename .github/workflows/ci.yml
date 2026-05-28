@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-test:
+    name: Analyze + Test + Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test --coverage
+      - name: Upload coverage (lcov.info)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+
+  android-debug-apk:
+    name: Android debug APK (unsigned)
+    runs-on: ubuntu-latest
+    needs: flutter-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --debug
+
+  ios-sim:
+    name: iOS simulator build (no signing)
+    runs-on: macos-latest
+    needs: flutter-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: cd ios && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install
+      - run: flutter build ios --simulator
+
+  macos-debug:
+    name: macOS debug build (no signing)
+    runs-on: macos-latest
+    needs: flutter-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build macos --debug
+
+  windows-debug:
+    name: Windows debug build
+    runs-on: windows-latest
+    needs: flutter-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --debug
+

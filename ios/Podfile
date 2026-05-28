@@ -1,0 +1,113 @@
+# 🇨🇳 CocoaPods 国内镜像（Specs 索引）
+source 'https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git'
+# 备用：阿里云
+# source 'https://mirrors.aliyun.com/CocoaPods/Specs.git'
+
+# GitHub 仓库国内镜像（speech_to_text → CwlCatchException）
+# kkgithub / gitee 等，避免直连 github.com
+
+# Uncomment this line to define a global platform for your project
+platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+require 'fileutils'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks! :linkage => :static
+
+  # 避免 pod install 时 git clone GitHub：走 Gitee 镜像
+  pod 'SDWebImage', :git => 'https://gitee.com/mirrors/SDWebImage.git', :tag => '5.21.7'
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # 本地 Pod，避免从 GitHub 下载
+  pod 'SDWebImageWebPCoder', :path => 'local_pods/SDWebImageWebPCoder-0.15.0'
+
+  # speech_to_text 依赖，默认源为 GitHub
+  pod 'CwlCatchException',
+      :git => 'https://kkgithub.com/mattgallagher/CwlCatchException.git',
+      :tag => '2.2.1'
+
+  # ⚠️ iOS版本不使用友盟统计SDK（符合App Store审核要求）
+end
+
+post_install do |installer|
+  # SDWebImage：部分 Core 源码用引号 import Private 头文件（例如 SDInternalMacros.h）。
+  # 某些安装方式下 header search path 不稳定，会导致编译报错。
+  # 这里直接改为相对路径引用，避免依赖 Xcode 的 Header Search Paths。
+  sd_root = File.join(installer.sandbox.root, 'SDWebImage/SDWebImage')
+  if File.directory?(sd_root)
+    Dir.glob(File.join(sd_root, 'Core/**/*.{h,m,mm}')).each do |path|
+      content = File.read(path)
+      next unless content.include?('#import "SDInternalMacros.h"')
+      begin
+        FileUtils.chmod('u+w', path)
+      rescue StandardError
+        # best effort
+      end
+      File.write(path, content.gsub('#import "SDInternalMacros.h"', '#import "../Private/SDInternalMacros.h"'))
+    end
+  end
+
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+
+      # 模拟器本地测试：不需要开发者证书
+      config.build_settings['CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]'] = 'NO'
+      config.build_settings['CODE_SIGN_IDENTITY[sdk=iphonesimulator*]'] = ''
+
+      if target.name == 'SDWebImage'
+        private_headers = '$(PODS_TARGET_SRCROOT)/SDWebImage/Private'
+        header_paths = (config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)']).dup
+        header_paths << private_headers
+        header_paths << '$(PODS_TARGET_SRCROOT)/SDWebImage/Core'
+        config.build_settings['HEADER_SEARCH_PATHS'] = header_paths.uniq
+
+        user_header_paths = (config.build_settings['USER_HEADER_SEARCH_PATHS'] || ['$(inherited)']).dup
+        user_header_paths << private_headers
+        config.build_settings['USER_HEADER_SEARCH_PATHS'] = user_header_paths.uniq
+
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        flags = config.build_settings['OTHER_CFLAGS'] || '$(inherited)'
+        config.build_settings['OTHER_CFLAGS'] = "#{flags} -I\"#{private_headers}\""
+      end
+
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_MICROPHONE=1',
+        'PERMISSION_SPEECH_RECOGNIZER=1',
+        'PERMISSION_NOTIFICATIONS=1',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+      ]
+    end
+  end
+end

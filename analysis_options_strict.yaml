@@ -1,0 +1,62 @@
+
+# 🚀 大厂标准：严格代码质量配置
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/generated/**"
+    - build/**
+    - lib/generated/**
+    - test/**
+
+  strong-mode:
+    implicit-casts: false
+    implicit-dynamic: false
+
+  errors:
+    invalid_annotation_target: ignore
+    todo: warning  # TODO标记为警告
+    deprecated_member_use: warning
+    deprecated_member_use_from_same_package: warning
+    missing_required_param: error
+    missing_return: error
+
+linter:
+  rules:
+    # very_good_analysis已包含的规则，这里是额外的严格规则
+    
+    # 性能相关
+    avoid_slow_async_io: true
+    avoid_print: true  # 禁止使用print
+    
+    # 代码质量
+    avoid_catches_without_on_clauses: false
+    avoid_catching_errors: true
+    avoid_returning_null_for_void: true
+    avoid_type_to_string: true
+    
+    # 文档
+    public_member_api_docs: false
+    
+    # 设计
+    one_member_abstracts: false
+    avoid_classes_with_only_static_members: false
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_fields: true
+    prefer_final_locals: true
+    
+    # 测试
+    test_types_in_equals: true
+    
+    # 安全性
+    secure_pubspec_urls: true
+    
+    # Flutter特定
+    use_key_in_widget_constructors: true
+    sized_box_for_whitespace: true
+    avoid_unnecessary_containers: true
+    prefer_const_literals_to_create_immutables: true
+

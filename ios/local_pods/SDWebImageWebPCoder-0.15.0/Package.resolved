@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "libwebp",
+        "repositoryURL": "https://github.com/SDWebImage/libwebp-Xcode.git",
+        "state": {
+          "branch": null,
+          "revision": "86c1b5d567ed548da861486b54e1f8f068a3cef7",
+          "version": "1.1.0"
+        }
+      },
+      {
+        "package": "SDWebImage",
+        "repositoryURL": "https://github.com/SDWebImage/SDWebImage.git",
+        "state": {
+          "branch": null,
+          "revision": "59730af512c06fb569c119d737df4c1c499e001d",
+          "version": "5.18.10"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

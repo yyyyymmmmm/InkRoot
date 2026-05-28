@@ -1,0 +1,764 @@
+{
+  "@@locale": "zh",
+  "appTitle": "墨鸣笔记",
+  "@appTitle": {
+    "description": "应用标题"
+  },
+  
+  "preferences": "偏好设置",
+  "@preferences": {
+    "description": "偏好设置标题"
+  },
+  
+  "appearance": "外观",
+  "@appearance": {
+    "description": "外观设置分类"
+  },
+  
+  "themeSelection": "主题选择",
+  "@themeSelection": {
+    "description": "主题选择"
+  },
+  
+  "themeSystem": "跟随系统",
+  "@themeSystem": {
+    "description": "跟随系统主题"
+  },
+  
+  "themeLight": "纸白",
+  "@themeLight": {
+    "description": "浅色主题"
+  },
+  
+  "themeDark": "幽谷",
+  "@themeDark": {
+    "description": "深色主题"
+  },
+  
+  "themeSystemDesc": "跟随系统设置",
+  "@themeSystemDesc": {
+    "description": "跟随系统描述"
+  },
+  
+  "themeLightDesc": "浅色主题",
+  "@themeLightDesc": {
+    "description": "浅色主题描述"
+  },
+  
+  "themeDarkDesc": "深色主题",
+  "@themeDarkDesc": {
+    "description": "深色主题描述"
+  },
+  
+  "fontSize": "字体大小",
+  "@fontSize": {
+    "description": "字体大小"
+  },
+  
+  "fontSizeMini": "极小",
+  "@fontSizeMini": {
+    "description": "极小字体"
+  },
+  
+  "fontSizeSmall": "小",
+  "@fontSizeSmall": {
+    "description": "小字体"
+  },
+  
+  "fontSizeNormal": "标准",
+  "@fontSizeNormal": {
+    "description": "标准字体"
+  },
+  
+  "fontSizeLarge": "大",
+  "@fontSizeLarge": {
+    "description": "大字体"
+  },
+  
+  "fontSizeXLarge": "特大",
+  "@fontSizeXLarge": {
+    "description": "特大字体"
+  },
+  
+  "fontSizeMiniDesc": "最小字体，节省空间",
+  "@fontSizeMiniDesc": {
+    "description": "极小字体描述"
+  },
+  
+  "fontSizeSmallDesc": "适合阅读大量文字",
+  "@fontSizeSmallDesc": {
+    "description": "小字体描述"
+  },
+  
+  "fontSizeNormalDesc": "默认字体大小",
+  "@fontSizeNormalDesc": {
+    "description": "标准字体描述"
+  },
+  
+  "fontSizeLargeDesc": "更易于阅读",
+  "@fontSizeLargeDesc": {
+    "description": "大字体描述"
+  },
+  
+  "fontSizeXLargeDesc": "最大字体",
+  "@fontSizeXLargeDesc": {
+    "description": "特大字体描述"
+  },
+  
+  "fontFamily": "字体选择",
+  "@fontFamily": {
+    "description": "字体选择"
+  },
+  
+  "sync": "同步",
+  "@sync": {
+    "description": "同步设置分类"
+  },
+  
+  "autoSync": "自动同步",
+  "@autoSync": {
+    "description": "自动同步"
+  },
+  
+  "autoSyncDesc": "定期自动同步笔记",
+  "@autoSyncDesc": {
+    "description": "自动同步描述"
+  },
+  
+  "syncInterval": "同步间隔",
+  "@syncInterval": {
+    "description": "同步间隔"
+  },
+  
+  "privacy": "隐私",
+  "@privacy": {
+    "description": "隐私设置分类"
+  },
+  
+  "defaultNoteVisibility": "默认笔记状态",
+  "@defaultNoteVisibility": {
+    "description": "默认笔记状态"
+  },
+  
+  "visibilityPrivate": "私有",
+  "@visibilityPrivate": {
+    "description": "私有"
+  },
+  
+  "visibilityPublic": "公开",
+  "@visibilityPublic": {
+    "description": "公开"
+  },
+  
+  "visibilityPrivateDesc": "仅自己可见",
+  "@visibilityPrivateDesc": {
+    "description": "私有描述"
+  },
+  
+  "visibilityPublicDesc": "所有人可见",
+  "@visibilityPublicDesc": {
+    "description": "公开描述"
+  },
+  
+  "other": "其他",
+  "@other": {
+    "description": "其他设置分类"
+  },
+  
+  "rememberPassword": "记住密码",
+  "@rememberPassword": {
+    "description": "记住密码"
+  },
+  
+  "rememberPasswordDesc": "保存账号和密码到本地",
+  "@rememberPasswordDesc": {
+    "description": "记住密码描述"
+  },
+  
+  "autoLogin": "自动登录",
+  "@autoLogin": {
+    "description": "自动登录"
+  },
+  
+  "autoLoginDesc": "启动应用时跳过登录页面直接进入",
+  "@autoLoginDesc": {
+    "description": "自动登录描述"
+  },
+  
+  "autoShowEditor": "启动自动弹出编辑框",
+  "@autoShowEditor": {
+    "description": "启动自动弹出编辑框"
+  },
+  
+  "autoShowEditorDesc": "打开应用时自动弹出笔记编辑框，快速记录灵感",
+  "@autoShowEditorDesc": {
+    "description": "启动自动弹出编辑框描述"
+  },
+  
+  "autoShowEditorEnabled": "已开启启动自动弹出编辑框",
+  "@autoShowEditorEnabled": {
+    "description": "启动自动弹出编辑框已启用消息"
+  },
+  
+  "autoShowEditorDisabled": "已关闭启动自动弹出编辑框",
+  "@autoShowEditorDisabled": {
+    "description": "启动自动弹出编辑框已禁用消息"
+  },
+  
+  "language": "语言选择",
+  "@language": {
+    "description": "语言选择"
+  },
+  
+  "languageChinese": "简体中文",
+  "@languageChinese": {
+    "description": "简体中文"
+  },
+  
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "英文"
+  },
+  
+  "selectTheme": "选择主题",
+  "@selectTheme": {
+    "description": "选择主题"
+  },
+  
+  "selectFontSize": "选择字体大小",
+  "@selectFontSize": {
+    "description": "选择字体大小"
+  },
+  
+  "selectFont": "选择字体",
+  "@selectFont": {
+    "description": "选择字体"
+  },
+  
+  "selectDefaultNoteVisibility": "选择默认笔记状态",
+  "@selectDefaultNoteVisibility": {
+    "description": "选择默认笔记状态"
+  },
+  
+  "selectLanguage": "选择语言",
+  "@selectLanguage": {
+    "description": "选择语言"
+  },
+  
+  "themeChanged": "主题已切换为{themeName}",
+  "@themeChanged": {
+    "description": "主题切换成功消息",
+    "placeholders": {
+      "themeName": {
+        "type": "String",
+        "example": "纸白"
+      }
+    }
+  },
+  
+  "fontSizeChanged": "字体大小已设置为{sizeName}",
+  "@fontSizeChanged": {
+    "description": "字体大小切换成功消息",
+    "placeholders": {
+      "sizeName": {
+        "type": "String",
+        "example": "标准"
+      }
+    }
+  },
+  
+  "fontChanged": "字体已切换为{fontName}",
+  "@fontChanged": {
+    "description": "字体切换成功消息",
+    "placeholders": {
+      "fontName": {
+        "type": "String",
+        "example": "思源黑体"
+      }
+    }
+  },
+  
+  "defaultNoteVisibilityChanged": "默认笔记状态已设置为{visibility}",
+  "@defaultNoteVisibilityChanged": {
+    "description": "笔记可见性切换成功消息",
+    "placeholders": {
+      "visibility": {
+        "type": "String",
+        "example": "私有"
+      }
+    }
+  },
+  
+  "rememberPasswordEnabled": "已同时开启记住密码功能",
+  "@rememberPasswordEnabled": {
+    "description": "记住密码已启用消息"
+  },
+  
+  "languageChanged": "语言已切换为{language}",
+  "@languageChanged": {
+    "description": "语言切换成功消息",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "简体中文"
+      }
+    }
+  },
+
+  "shareImageTitle": "生成分享图",
+  "@shareImageTitle": {
+    "description": "分享图预览页面标题"
+  },
+
+  "shareImageGenerating": "生成中...",
+  "@shareImageGenerating": {
+    "description": "生成分享图消息"
+  },
+
+  "shareImageGeneratingPreview": "正在生成预览（加载图片中...）",
+  "@shareImageGeneratingPreview": {
+    "description": "生成预览和图片消息"
+  },
+
+  "shareImageLoadingImages": "图片加载中，请稍候...",
+  "@shareImageLoadingImages": {
+    "description": "加载图片消息"
+  },
+
+  "shareImageGenerationFailed": "预览生成失败",
+  "@shareImageGenerationFailed": {
+    "description": "预览生成失败消息"
+  },
+
+  "shareImageChangeTemplate": "更换模板",
+  "@shareImageChangeTemplate": {
+    "description": "更换模板按钮"
+  },
+
+  "shareImageSave": "保存图片",
+  "@shareImageSave": {
+    "description": "保存图片按钮"
+  },
+
+  "shareImageShare": "分享",
+  "@shareImageShare": {
+    "description": "分享按钮"
+  },
+
+  "shareImageSaving": "正在保存图片...",
+  "@shareImageSaving": {
+    "description": "保存图片消息"
+  },
+
+  "shareImageSavingToAlbum": "正在保存到相册，请稍候",
+  "@shareImageSavingToAlbum": {
+    "description": "保存到相册消息"
+  },
+
+  "shareImageSaveSuccess": "图片已保存到相册",
+  "@shareImageSaveSuccess": {
+    "description": "图片保存成功消息"
+  },
+
+  "shareImageSaveFailed": "保存失败，请检查相册权限",
+  "@shareImageSaveFailed": {
+    "description": "保存失败消息"
+  },
+
+  "shareImageShareFailed": "分享失败",
+  "@shareImageShareFailed": {
+    "description": "分享失败消息"
+  },
+
+  "shareImageWaitForPreview": "请等待预览生成完成",
+  "@shareImageWaitForPreview": {
+    "description": "等待预览消息"
+  },
+
+  "shareImageFontSizeTitle": "字体大小",
+  "@shareImageFontSizeTitle": {
+    "description": "字体大小设置标题"
+  },
+
+  "shareImageFontSizeDesc": "拖动滑块实时预览效果",
+  "@shareImageFontSizeDesc": {
+    "description": "字体大小设置描述"
+  },
+
+  "shareImageFontSizeReset": "重置 (17px)",
+  "@shareImageFontSizeReset": {
+    "description": "重置字体大小按钮"
+  },
+
+  "shareImageFontSizeDone": "完成",
+  "@shareImageFontSizeDone": {
+    "description": "完成按钮"
+  },
+
+  "shareTemplateSimple": "简约风格",
+  "@shareTemplateSimple": {
+    "description": "简约模板"
+  },
+
+  "shareTemplateCard": "卡片风格",
+  "@shareTemplateCard": {
+    "description": "卡片模板"
+  },
+
+  "shareTemplateGradient": "渐变风格",
+  "@shareTemplateGradient": {
+    "description": "渐变模板"
+  },
+
+  "shareTemplateMinimal": "极简风格",
+  "@shareTemplateMinimal": {
+    "description": "极简模板"
+  },
+
+  "shareTemplateMagazine": "杂志风格",
+  "@shareTemplateMagazine": {
+    "description": "杂志模板"
+  },
+
+  "shareImageFontSettings": "字体设置",
+  "@shareImageFontSettings": {
+    "description": "字体设置工具提示"
+  },
+
+  "aiAssistant": "AI 智能助手",
+  "@aiAssistant": {
+    "description": "AI 助手标题"
+  },
+
+  "aiContinueWriting": "AI 续写",
+  "@aiContinueWriting": {
+    "description": "AI 续写功能"
+  },
+
+  "aiContinueWritingDesc": "基于已有内容智能续写",
+  "@aiContinueWritingDesc": {
+    "description": "AI 续写功能描述"
+  },
+
+  "aiSmartTags": "智能标签",
+  "@aiSmartTags": {
+    "description": "AI 智能标签功能"
+  },
+
+  "aiSmartTagsDesc": "自动生成精准标签",
+  "@aiSmartTagsDesc": {
+    "description": "AI 智能标签功能描述"
+  },
+
+  "aiRelatedNotes": "相关笔记",
+  "@aiRelatedNotes": {
+    "description": "AI 相关笔记功能"
+  },
+
+  "aiSummary": "智能摘要",
+  "@aiSummary": {
+    "description": "AI 摘要功能"
+  },
+
+  "aiProcessing": "AI 处理中...",
+  "@aiProcessing": {
+    "description": "AI 处理中提示"
+  },
+
+  "aiContinueWritingProcessing": "✨ AI 正在续写中...",
+  "@aiContinueWritingProcessing": {
+    "description": "AI 续写处理中"
+  },
+
+  "aiContinueWritingSuccess": "✅ AI 续写完成！",
+  "@aiContinueWritingSuccess": {
+    "description": "AI 续写成功"
+  },
+
+  "aiTagsProcessing": "🏷️ AI 正在生成标签...",
+  "@aiTagsProcessing": {
+    "description": "AI 标签生成中"
+  },
+
+  "aiTagsSuccess": "✅ 生成了 {count} 个标签！",
+  "@aiTagsSuccess": {
+    "description": "AI 标签生成成功",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+
+  "aiSummaryProcessing": "🤖 AI 正在生成摘要...",
+  "@aiSummaryProcessing": {
+    "description": "AI 摘要生成中"
+  },
+
+  "aiSummarySuccess": "✅ 摘要生成成功！",
+  "@aiSummarySuccess": {
+    "description": "AI 摘要生成成功"
+  },
+
+  "aiRelatedNotesProcessing": "🔍 AI 正在查找相关笔记...",
+  "@aiRelatedNotesProcessing": {
+    "description": "AI 查找相关笔记中"
+  },
+
+  "aiRelatedNotesEmpty": "暂无相关笔记",
+  "@aiRelatedNotesEmpty": {
+    "description": "没有找到相关笔记"
+  },
+
+  "aiConfigRequired": "请先在设置中配置 AI",
+  "@aiConfigRequired": {
+    "description": "需要配置 AI"
+  },
+
+  "aiApiConfigRequired": "请先在 AI 设置中配置 API",
+  "@aiApiConfigRequired": {
+    "description": "需要配置 AI API"
+  },
+
+  "aiContentRequired": "请先输入一些内容",
+  "@aiContentRequired": {
+    "description": "需要输入内容"
+  },
+
+  "aiGenerateSummaryFailed": "生成摘要失败，请稍后重试",
+  "@aiGenerateSummaryFailed": {
+    "description": "生成摘要失败"
+  },
+
+  "aiRelatedNotesTitle": "相关笔记",
+  "@aiRelatedNotesTitle": {
+    "description": "相关笔记标题"
+  },
+
+  "aiRelatedNotesFeature": "AI 相关笔记",
+  "@aiRelatedNotesFeature": {
+    "description": "AI 相关笔记功能"
+  },
+
+  "aiRelatedNotesFeatureDesc": "智能推荐与当前笔记相关的其他笔记",
+  "@aiRelatedNotesFeatureDesc": {
+    "description": "AI 相关笔记功能描述"
+  },
+
+  "aiContinueWritingFeature": "AI 续写",
+  "@aiContinueWritingFeature": {
+    "description": "AI 续写功能"
+  },
+
+  "aiContinueWritingFeatureDesc": "基于已有内容智能续写笔记",
+  "@aiContinueWritingFeatureDesc": {
+    "description": "AI 续写功能描述"
+  },
+
+  "aiSmartTagsAndSummary": "AI 智能标签 & 摘要",
+  "@aiSmartTagsAndSummary": {
+    "description": "AI 智能标签和摘要"
+  },
+
+  "aiSmartTagsAndSummaryDesc": "自动生成精准标签和智能摘要",
+  "@aiSmartTagsAndSummaryDesc": {
+    "description": "AI 智能标签和摘要描述"
+  },
+
+  "wechatAssistant": "微信小助手",
+  "@wechatAssistant": {
+    "description": "微信小助手"
+  },
+
+  "wechatAssistantDesc": "通过微信直接输入快速记录笔记，支持文字、图片",
+  "@wechatAssistantDesc": {
+    "description": "微信小助手描述"
+  },
+
+  "featureCompleted": "已完成",
+  "@featureCompleted": {
+    "description": "功能已完成状态"
+  },
+
+  "aiRelatedNotesUsage": "在笔记详情页点击右下角的 AI 按钮即可查看相关笔记",
+  "@aiRelatedNotesUsage": {
+    "description": "AI 相关笔记使用说明"
+  },
+
+  "aiContinueWritingUsage": "在编辑笔记时点击工具栏的 AI 按钮，选择续写功能",
+  "@aiContinueWritingUsage": {
+    "description": "AI 续写使用说明"
+  },
+
+  "aiSmartTagsAndSummaryUsage": "编辑笔记时使用 AI 按钮生成标签，详情页使用智能摘要功能",
+  "@aiSmartTagsAndSummaryUsage": {
+    "description": "AI 智能标签和摘要使用说明"
+  },
+
+  "understood": "知道了",
+  "@understood": {
+    "description": "知道了按钮"
+  },
+
+  "webdavSync": "WebDAV 同步",
+  "@webdavSync": {
+    "description": "WebDAV 同步"
+  },
+
+  "enableWebdavSync": "启用 WebDAV 同步",
+  "@enableWebdavSync": {
+    "description": "启用 WebDAV 同步"
+  },
+
+  "serverAddress": "服务器地址",
+  "@serverAddress": {
+    "description": "服务器地址"
+  },
+
+  "username": "用户名",
+  "@username": {
+    "description": "用户名"
+  },
+
+  "password": "密码",
+  "@password": {
+    "description": "密码"
+  },
+
+  "syncFolder": "同步文件夹",
+  "@syncFolder": {
+    "description": "同步文件夹"
+  },
+
+  "testNow": "立即测试",
+  "@testNow": {
+    "description": "立即测试"
+  },
+
+  "backupNow": "立即备份",
+  "@backupNow": {
+    "description": "立即备份"
+  },
+
+  "restoreFromWebdav": "从 WebDAV 恢复",
+  "@restoreFromWebdav": {
+    "description": "从 WebDAV 恢复"
+  },
+
+  "enableTimedBackup": "启用定时备份",
+  "@enableTimedBackup": {
+    "description": "启用定时备份"
+  },
+
+  "autoBackupToWebdav": "自动备份笔记到 WebDAV",
+  "@autoBackupToWebdav": {
+    "description": "自动备份笔记到 WebDAV"
+  },
+
+  "backupTiming": "备份时机",
+  "@backupTiming": {
+    "description": "备份时机"
+  },
+
+  "everyStartup": "每次启动",
+  "@everyStartup": {
+    "description": "每次启动"
+  },
+
+  "every15Minutes": "15分钟",
+  "@every15Minutes": {
+    "description": "15分钟"
+  },
+
+  "every30Minutes": "30分钟",
+  "@every30Minutes": {
+    "description": "30分钟"
+  },
+
+  "every1Hour": "1小时",
+  "@every1Hour": {
+    "description": "1小时"
+  },
+
+  "testing": "测试中...",
+  "@testing": {
+    "description": "测试中"
+  },
+
+  "backingUp": "备份中...",
+  "@backingUp": {
+    "description": "备份中"
+  },
+
+  "restoring": "恢复中...",
+  "@restoring": {
+    "description": "恢复中"
+  },
+
+  "pleaseEnterServerAddress": "请输入服务器地址",
+  "@pleaseEnterServerAddress": {
+    "description": "请输入服务器地址"
+  },
+
+  "addressMustStartWithHttp": "地址必须以 http:// 或 https:// 开头",
+  "@addressMustStartWithHttp": {
+    "description": "地址必须以http或https开头"
+  },
+
+  "pleaseEnterUsername": "请输入用户名",
+  "@pleaseEnterUsername": {
+    "description": "请输入用户名"
+  },
+
+  "pleaseEnterPassword": "请输入密码",
+  "@pleaseEnterPassword": {
+    "description": "请输入密码"
+  },
+
+  "pleaseEnterSyncFolderPath": "请输入同步文件夹路径",
+  "@pleaseEnterSyncFolderPath": {
+    "description": "请输入同步文件夹路径"
+  },
+
+  "webdavConfigSaved": "WebDAV 配置已保存",
+  "@webdavConfigSaved": {
+    "description": "WebDAV 配置已保存"
+  },
+
+  "pleaseEnableWebdavFirst": "请先启用 WebDAV 同步",
+  "@pleaseEnableWebdavFirst": {
+    "description": "请先启用 WebDAV 同步"
+  },
+
+  "webdavHelpText": "• 推荐使用坚果云等专业 WebDAV 服务\n• 坚果云需要使用\"应用专用密码\"而不是登录密码\n• 立即测试：测试 WebDAV 服务器连接\n• 立即备份：单向上传，完整备份所有数据到云端\n• 从 WebDAV 恢复：下载云端数据到本地（覆盖本地）\n• 定时备份：可选择每次启动或定时自动备份",
+  "@webdavHelpText": {
+    "description": "WebDAV 帮助文本"
+  },
+
+  "webdavGuide": "WebDAV 使用指南",
+  "@webdavGuide": {
+    "description": "WebDAV 使用指南"
+  },
+
+  "whatIsWebdav": "🤔 什么是 WebDAV？",
+  "@whatIsWebdav": {
+    "description": "什么是 WebDAV"
+  },
+
+  "webdavDescription": "WebDAV 是一种网络协议，可以让你将笔记备份到云端服务器。本应用支持使用 WebDAV 进行笔记备份和恢复。",
+  "@webdavDescription": {
+    "description": "WebDAV 描述"
+  },
+
+  "custom": "自定义",
+  "@custom": {
+    "description": "自定义"
+  },
+
+  "featureInDevelopment": "功能正在开发中，敬请期待！",
+  "@featureInDevelopment": {
+    "description": "功能开发中"
+  }
+}
+

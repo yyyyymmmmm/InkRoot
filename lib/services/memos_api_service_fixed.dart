@@ -1,0 +1,589 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:inkroot/models/note_model.dart';
+import 'package:inkroot/models/user_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Token过期异常类
+class TokenExpiredException implements Exception {
+  TokenExpiredException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'TokenExpiredException: $message';
+}
+
+/// Memos API service – fully compatible with v0.21.0 → v0.27.x+
+///
+/// Auth & endpoint behaviour differs significantly across versions:
+///
+/// | Version       | Login request body              | Token location        | Memo path         |
+/// |---------------|---------------------------------|-----------------------|-------------------|
+/// | v0.21.0       | {username, password}            | Body: `token`         | /api/v1/memo      |
+/// | v0.22–v0.25   | {username, password, neverExpire}| Set-Cookie header    | /api/v1/memos     |
+/// | v0.26+        | {passwordCredentials:{…}}       | Body: `accessToken`   | /api/v1/memos     |
+class MemosApiServiceFixed {
+  MemosApiServiceFixed({required this.baseUrl, this.token});
+
+  final String baseUrl;
+  final String? token;
+
+  // In-process cache: baseUrl → minor version integer (21, 22, 25, 26, 27, …)
+  // Seeded from SharedPreferences on first access so cold-starts are instant.
+  static final Map<String, int> _versionCache = {};
+  static const String _prefKeyPrefix = 'memos_server_version_';
+
+  // ── Headers ───────────────────────────────────────────────────────────────
+
+  Map<String, String> _getHeaders() {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (token != null) headers['Authorization'] = 'Bearer $token';
+    return headers;
+  }
+
+  // ── Version detection ──────────────────────────────────────────────────────
+
+  /// Returns the Memos minor version (e.g. 21 for v0.21.x, 26 for v0.26.x).
+  ///
+  /// Lookup order (fastest → slowest):
+  ///   1. In-process static Map  – instant, survives hot reload
+  ///   2. SharedPreferences      – instant after cold start, no network call
+  ///   3. HTTP /workspace/profile – one lightweight call, result persisted
+  static Future<int> getServerVersion(String baseUrl) async {
+    // 1. In-process cache
+    if (_versionCache.containsKey(baseUrl)) return _versionCache[baseUrl]!;
+
+    // 2. SharedPreferences (persisted across cold starts)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getInt('$_prefKeyPrefix${baseUrl.hashCode}');
+      if (stored != null) {
+        _versionCache[baseUrl] = stored;
+        debugPrint('Memos version (cached): 0.$stored.x');
+        // Refresh in background so we pick up server upgrades eventually
+        _refreshVersionInBackground(baseUrl);
+        return stored;
+      }
+    } catch (_) {}
+
+    // 3. Network detection
+    return _fetchAndCacheVersion(baseUrl);
+  }
+
+  static Future<int> _fetchAndCacheVersion(String baseUrl) async {
+    int minor = 21; // default: old REST API
+    try {
+      final resp = await http
+          .get(
+            Uri.parse('$baseUrl/api/v1/workspace/profile'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        final v = (data['version'] as String? ?? '').replaceFirst('v', '');
+        final parts = v.split('.');
+        minor = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+        debugPrint('Memos server version detected: 0.$minor.x');
+      } else {
+        debugPrint('Memos version: old REST API (workspace/profile → ${resp.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('Memos version detection error: $e – assuming 0.21.x');
+    }
+    _versionCache[baseUrl] = minor;
+    // Persist so the next cold start skips the network call
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('$_prefKeyPrefix${baseUrl.hashCode}', minor);
+    } catch (_) {}
+    return minor;
+  }
+
+  /// Background refresh: silently re-detects version and updates both caches.
+  /// Called after a hit on the SharedPreferences cache so we catch server upgrades.
+  static void _refreshVersionInBackground(String baseUrl) {
+    Future.microtask(() async {
+      try {
+        final resp = await http
+            .get(
+              Uri.parse('$baseUrl/api/v1/workspace/profile'),
+              headers: {'Accept': 'application/json'},
+            )
+            .timeout(const Duration(seconds: 10));
+        if (resp.statusCode == 200) {
+          final data = json.decode(resp.body) as Map<String, dynamic>;
+          final v = (data['version'] as String? ?? '').replaceFirst('v', '');
+          final parts = v.split('.');
+          final minor = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+          if (_versionCache[baseUrl] != minor) {
+            debugPrint('Memos version updated: 0.$minor.x (was ${_versionCache[baseUrl]})');
+            _versionCache[baseUrl] = minor;
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setInt('$_prefKeyPrefix${baseUrl.hashCode}', minor);
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  /// Clears both in-process and persisted version for this server.
+  /// Call this if the user manually changes the server URL.
+  static Future<void> invalidateVersionCache(String baseUrl) async {
+    _versionCache.remove(baseUrl);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('$_prefKeyPrefix${baseUrl.hashCode}');
+    } catch (_) {}
+  }
+
+  Future<int> get _version => getServerVersion(baseUrl);
+
+  /// Base URL for memo endpoints.
+  /// v0.21.0: /api/v1/memo (singular)
+  /// v0.22.0+: /api/v1/memos (plural)
+  Future<String> _memoBase() async {
+    final v = await _version;
+    return v >= 22 ? '$baseUrl/api/v1/memos' : '$baseUrl/api/v1/memo';
+  }
+
+  // ── Authentication ────────────────────────────────────────────────────────
+
+  /// Returns the access token string.
+  /// Handles all three auth flows depending on server version.
+  Future<String> createAccessToken(String username, String password) async {
+    final v = await _version;
+    if (v >= 26) return _signInV26(username, password);
+    if (v >= 22) return _signInV22(username, password);
+    return _signInV21(username, password);
+  }
+
+  /// v0.26.0+: credentials wrapped in `passwordCredentials`, token in body.
+  Future<String> _signInV26(String username, String password) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/signin'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'passwordCredentials': {'username': username, 'password': password},
+      }),
+    );
+    if (resp.statusCode == 200) {
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final tok = data['accessToken'] as String?;
+      if (tok != null && tok.isNotEmpty) return tok;
+    }
+    throw Exception('登录失败 (v0.26+): ${resp.statusCode} – ${_parseError(resp.body)}');
+  }
+
+  /// v0.22.0–v0.25.x: flat body, token is returned in `Set-Cookie` header.
+  Future<String> _signInV22(String username, String password) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/signin'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'username': username, 'password': password, 'neverExpire': false}),
+    );
+
+    if (resp.statusCode != 200) {
+      throw Exception('登录失败 (v0.22–0.25): ${resp.statusCode} – ${_parseError(resp.body)}');
+    }
+
+    // Token lives in Set-Cookie: memos.access-token=eyJ…; Path=/; HttpOnly
+    // Some reverse proxies join multiple Set-Cookie headers with ", " so we
+    // try splitting on "," first to isolate individual cookie entries.
+    final rawCookie = resp.headers['set-cookie'] ?? '';
+    final tok = _extractCookieToken(rawCookie);
+    if (tok != null && tok.isNotEmpty) return tok;
+
+    // Fallback: body might carry the token if a proxy or future patch returns it
+    try {
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final bodyTok = data['accessToken'] as String? ?? data['token'] as String?;
+      if (bodyTok != null && bodyTok.isNotEmpty) return bodyTok;
+    } catch (_) {}
+
+    // Cookie was stripped – almost certainly a reverse-proxy stripping Set-Cookie
+    throw Exception(
+      '登录成功但无法获取 Token。\n\n'
+      '您的 Memos 服务器版本（v0.22–v0.25）通过 Set-Cookie 返回 Token，'
+      '但当前反向代理（Nginx/Caddy 等）似乎屏蔽了该响应头。\n\n'
+      '推荐解决方法：\n'
+      '① 将 Memos 升级到 v0.26.0 或更高版本（Token 改为在响应体返回，不依赖 Cookie）\n'
+      '② 或检查并修正反向代理配置，确保 Set-Cookie 响应头透传给客户端',
+    );
+  }
+
+  /// v0.21.0: flat body, token returned as `token` in response body.
+  Future<String> _signInV21(String username, String password) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/v1/auth/signin'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'username': username, 'password': password}),
+    );
+    if (resp.statusCode == 200) {
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final tok = data['token'] as String?;
+      if (tok != null && tok.isNotEmpty) return tok;
+    }
+    throw Exception('登录失败 (v0.21): ${resp.statusCode} – ${_parseError(resp.body)}');
+  }
+
+  /// Extracts the Memos access token value from a `Set-Cookie` header string.
+  ///
+  /// Handles two common formats:
+  ///   • Single cookie:   "memos.access-token=eyJ…; Path=/; HttpOnly"
+  ///   • Proxy-joined:    "memos.access-token=eyJ…; Path=/, other=val; Path=/"
+  String? _extractCookieToken(String cookieHeader) {
+    if (cookieHeader.isEmpty) return null;
+    const cookieName = 'memos.access-token=';
+
+    // Split on ", " first (proxy may join multiple Set-Cookie lines with comma)
+    // then on ";" to separate cookie attributes within each entry.
+    for (final entry in cookieHeader.split(RegExp(r',\s*(?=[^;]+='))) {
+      for (final segment in entry.split(';')) {
+        final kv = segment.trim();
+        if (kv.startsWith(cookieName)) {
+          final value = kv.substring(cookieName.length).trim();
+          if (value.isNotEmpty) return value;
+        }
+      }
+    }
+    return null;
+  }
+
+  // ── User info ──────────────────────────────────────────────────────────────
+
+  /// Fetches the current authenticated user.
+  /// Endpoint varies by version:
+  ///   v0.21.0: GET /api/v1/user/me
+  ///   v0.22–v0.25: POST /api/v1/auth/status
+  ///   v0.26+: GET /api/v1/auth/me → {user: {...}}
+  Future<User> getUserInfo() async {
+    final v = await _version;
+    if (v >= 26) return _getUserV26();
+    if (v >= 22) return _getUserV22();
+    return _getUserV21();
+  }
+
+  Future<User> _getUserV26() async {
+    final resp = await http.get(Uri.parse('$baseUrl/api/v1/auth/me'), headers: _getHeaders());
+    if (resp.statusCode == 200) {
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      // GetCurrentUserResponse wraps the User in a 'user' field
+      final userMap = data['user'] as Map<String, dynamic>? ?? data;
+      return _convertApiUserToUser(userMap);
+    }
+    if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+    throw Exception('获取用户信息失败: ${resp.statusCode}');
+  }
+
+  Future<User> _getUserV22() async {
+    final resp = await http.post(Uri.parse('$baseUrl/api/v1/auth/status'), headers: _getHeaders());
+    if (resp.statusCode == 200) {
+      return _convertApiUserToUser(json.decode(resp.body) as Map<String, dynamic>);
+    }
+    if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+    throw Exception('获取用户信息失败: ${resp.statusCode}');
+  }
+
+  Future<User> _getUserV21() async {
+    final resp = await http.get(Uri.parse('$baseUrl/api/v1/user/me'), headers: _getHeaders());
+    if (resp.statusCode == 200) {
+      return _convertApiUserToUser(json.decode(resp.body) as Map<String, dynamic>);
+    }
+    if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+    throw Exception('获取用户信息失败: ${resp.statusCode}');
+  }
+
+  // ── Memo list ──────────────────────────────────────────────────────────────
+
+  /// Returns `{'memos': List<dynamic>}` regardless of server version.
+  /// Fetches up to [pageSize] memos (defaults to 1000 to approximate "all").
+  Future<Map<String, dynamic>> getMemos({int pageSize = 1000}) async {
+    final v = await _version;
+    final base = await _memoBase();
+
+    if (v >= 22) {
+      // gRPC-Gateway: GET /api/v1/memos?pageSize=…
+      final uri = Uri.parse(base).replace(
+        queryParameters: {'pageSize': pageSize.toString()},
+      );
+      final resp = await http.get(uri, headers: _getHeaders());
+      if (resp.statusCode == 200) {
+        return json.decode(resp.body) as Map<String, dynamic>;
+      }
+      if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+      throw Exception('获取备忘录列表失败: ${resp.statusCode}');
+    } else {
+      // Old REST API returns a bare JSON array
+      final resp = await http.get(Uri.parse(base), headers: _getHeaders());
+      if (resp.statusCode == 200) {
+        final list = json.decode(resp.body) as List<dynamic>;
+        return {'memos': list};
+      }
+      if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+      throw Exception('获取备忘录列表失败: ${resp.statusCode}');
+    }
+  }
+
+  // ── Create memo ────────────────────────────────────────────────────────────
+
+  Future<Note> createMemo({
+    required String content,
+    String visibility = 'PRIVATE',
+  }) async {
+    final base = await _memoBase();
+    final resp = await http.post(
+      Uri.parse(base),
+      headers: _getHeaders(),
+      body: json.encode({'content': content, 'visibility': visibility}),
+    );
+    if (resp.statusCode == 200) {
+      return Note.fromJson(json.decode(resp.body) as Map<String, dynamic>);
+    }
+    if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+    throw Exception('创建备忘录失败: ${resp.statusCode}');
+  }
+
+  // ── Get single memo ────────────────────────────────────────────────────────
+
+  Future<Note> getMemo(String id) async {
+    final base = await _memoBase();
+    final resp = await http.get(Uri.parse('$base/$id'), headers: _getHeaders());
+    if (resp.statusCode == 200) {
+      return Note.fromJson(json.decode(resp.body) as Map<String, dynamic>);
+    }
+    throw Exception('获取备忘录失败: ${resp.statusCode}');
+  }
+
+  // ── Update memo ────────────────────────────────────────────────────────────
+
+  Future<Note> updateMemo(
+    String id, {
+    required String content,
+    String? visibility,
+  }) async {
+    if (id.startsWith('local_') || id.contains('-')) {
+      return createMemo(content: content, visibility: visibility ?? 'PRIVATE');
+    }
+
+    final v = await _version;
+    final base = await _memoBase();
+
+    if (v >= 22) {
+      // gRPC-Gateway: PATCH /api/v1/memos/{id}?updateMask=content[,visibility]
+      // Body maps to the Memo message (body: "memo" in proto HTTP binding)
+      final fields = ['content'];
+      final memoBody = <String, dynamic>{'name': 'memos/$id', 'content': content};
+      if (visibility != null) {
+        memoBody['visibility'] = visibility;
+        fields.add('visibility');
+      }
+      final uri = Uri.parse('$base/$id').replace(
+        queryParameters: {'updateMask': fields.join(',')},
+      );
+      final resp = await http.patch(uri, headers: _getHeaders(), body: json.encode(memoBody));
+      if (resp.statusCode == 200) {
+        return Note.fromJson(json.decode(resp.body) as Map<String, dynamic>);
+      }
+      throw Exception('更新备忘录失败: ${resp.statusCode} – ${_parseError(resp.body)}');
+    } else {
+      final body = <String, dynamic>{'content': content};
+      if (visibility != null) body['visibility'] = visibility;
+      final resp = await http.patch(
+        Uri.parse('$base/$id'),
+        headers: _getHeaders(),
+        body: json.encode(body),
+      );
+      if (resp.statusCode == 200) {
+        return Note.fromJson(json.decode(resp.body) as Map<String, dynamic>);
+      }
+      throw Exception('更新备忘录失败: ${resp.statusCode}');
+    }
+  }
+
+  // ── Delete memo ────────────────────────────────────────────────────────────
+
+  Future<void> deleteMemo(String id) async {
+    if (id.startsWith('local_') || id.contains('-')) return;
+    final base = await _memoBase();
+    final resp = await http.delete(Uri.parse('$base/$id'), headers: _getHeaders());
+    if (resp.statusCode != 200) {
+      throw Exception('删除备忘录失败: ${resp.statusCode}');
+    }
+  }
+
+  // ── Update memo organizer (pin/unpin) ──────────────────────────────────────
+
+  Future<Note> updateMemoOrganizer(String id, {required bool pinned}) async {
+    if (id.startsWith('local_') || id.contains('-')) {
+      throw Exception('本地笔记无需同步');
+    }
+
+    final v = await _version;
+    final base = await _memoBase();
+
+    if (v >= 22) {
+      // v0.22.0+: use UpdateMemo with pinned in the update mask
+      final uri = Uri.parse('$base/$id').replace(
+        queryParameters: {'updateMask': 'pinned'},
+      );
+      final resp = await http.patch(
+        uri,
+        headers: _getHeaders(),
+        body: json.encode({'name': 'memos/$id', 'pinned': pinned}),
+      );
+      if (resp.statusCode == 200) {
+        return Note.fromJson(json.decode(resp.body) as Map<String, dynamic>);
+      }
+      throw Exception('更新备忘录置顶状态失败: ${resp.statusCode}');
+    } else {
+      // v0.21.0: POST /api/v1/memo/{id}/organizer
+      final resp = await http.post(
+        Uri.parse('$base/$id/organizer'),
+        headers: _getHeaders(),
+        body: json.encode({'pinned': pinned}),
+      );
+      if (resp.statusCode == 200) {
+        return Note.fromJson(json.decode(resp.body) as Map<String, dynamic>);
+      }
+      throw Exception('更新备忘录置顶状态失败: ${resp.statusCode}');
+    }
+  }
+
+  // ── Update user info ───────────────────────────────────────────────────────
+
+  Future<User> updateUserInfo({
+    String? nickname,
+    String? email,
+    String? avatarUrl,
+    String? description,
+  }) async {
+    if (token == null || token!.isEmpty) throw Exception('未登录，无法更新用户信息');
+
+    final currentUser = await getUserInfo();
+    final v = await _version;
+
+    final body = <String, dynamic>{};
+    final fields = <String>[];
+    if (nickname != null)    { body['nickname']    = nickname;    fields.add('nickname'); }
+    if (email != null)       { body['email']       = email;       fields.add('email'); }
+    if (avatarUrl != null)   { body['avatarUrl']   = avatarUrl;   fields.add('avatar_url'); }
+    if (description != null) { body['description'] = description; fields.add('description'); }
+
+    if (v >= 22) {
+      // gRPC-Gateway: PATCH /api/v1/users/{name}?updateMask=…
+      // v0.22–v0.26: name is numeric ID → users/{id}
+      // v0.27+: name is username → users/{username}
+      final resourceSegment = v >= 27 ? currentUser.username : currentUser.id;
+      final apiUrl = '$baseUrl/api/v1/users/$resourceSegment';
+      body['name'] = 'users/$resourceSegment';
+
+      final uri = Uri.parse(apiUrl).replace(
+        queryParameters: fields.isNotEmpty ? {'updateMask': fields.join(',')} : null,
+      );
+      debugPrint('更新用户信息: $uri');
+      final resp = await http.patch(uri, headers: _getHeaders(), body: json.encode(body));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        return _convertApiUserToUser({...data, 'token': token});
+      }
+      if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+      throw Exception('更新用户信息失败: ${resp.statusCode} – ${_parseError(resp.body)}');
+    } else {
+      final apiUrl = '$baseUrl/api/v1/user/${currentUser.id}';
+      final resp = await http.patch(
+        Uri.parse(apiUrl), headers: _getHeaders(), body: json.encode(body),
+      );
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        return _convertApiUserToUser({...data, 'token': token});
+      }
+      if (resp.statusCode == 401) throw TokenExpiredException('Token无效或已过期，请重新登录');
+      throw Exception('更新用户信息失败: ${resp.statusCode}');
+    }
+  }
+
+  // ── Logout ─────────────────────────────────────────────────────────────────
+
+  Future<bool> logout() async {
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/api/v1/auth/signout'),
+        headers: _getHeaders(),
+      );
+    } catch (e) {
+      debugPrint('登出API失败 (忽略): $e');
+    }
+    return true;
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /// Extracts a human-readable error message from a JSON error body.
+  /// Supports old `{"error":"…"}` and new gRPC `{"code":…,"message":"…"}` formats.
+  String _extractErrorMessage(Map<String, dynamic> errorData) =>
+      (errorData['message'] ?? errorData['error'] ?? 'Unknown error').toString();
+
+  String _parseError(String body) {
+    try {
+      final data = json.decode(body) as Map<String, dynamic>;
+      return _extractErrorMessage(data);
+    } catch (_) {
+      return body.length > 200 ? body.substring(0, 200) : body;
+    }
+  }
+
+  /// Converts a raw API user map to our [User] model.
+  /// Handles both v0.21.0 (numeric id) and v0.22.0+ (resource-name 'name') formats.
+  User _convertApiUserToUser(Map<String, dynamic> apiUser) {
+    // ID: v0.21.0 has int `id`; v0.22.0+ has `id` (int32) AND `name` = "users/{id}"
+    final rawId = apiUser['id'];
+    String id;
+    if (rawId is int) {
+      id = rawId.toString();
+    } else {
+      final idStr = rawId?.toString() ?? '';
+      id = idStr.contains('/') ? idStr.split('/').last : idStr;
+    }
+
+    // Username: prefer explicit field, fall back to parsing `name`
+    String username = apiUser['username'] as String? ?? '';
+    if (username.isEmpty) {
+      final name = apiUser['name'] as String? ?? '';
+      if (name.contains('/')) username = name.split('/').last;
+    }
+
+    // avatarUrl: v0.22.0+ uses camelCase 'avatarUrl'
+    final avatarUrl = apiUser['avatarUrl'] as String?
+        ?? apiUser['avatar_url'] as String?;
+
+    return User(
+      id: id,
+      username: username,
+      email: apiUser['email'] as String?,
+      nickname: apiUser['nickname'] as String? ?? username,
+      avatarUrl: avatarUrl,
+      token: apiUser['token'] as String? ?? token,
+      role: _normalizeRole(apiUser['role'] as String?),
+    );
+  }
+
+  /// Maps proto enum role names to our internal strings.
+  /// v0.26.0+: HOST role was renamed to ADMIN.
+  String _normalizeRole(String? role) {
+    switch (role) {
+      case 'HOST':
+      case 'ROLE_HOST':
+      case 'ADMIN':
+      case 'ROLE_ADMIN':
+        return 'ADMIN';
+      default:
+        return 'USER';
+    }
+  }
+}
