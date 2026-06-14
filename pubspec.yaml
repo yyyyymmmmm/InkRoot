@@ -83,7 +83,7 @@ dependencies:
   flutter_native_splash: ^2.4.1
   
   # 滑动操作
-  flutter_slidable: ^3.1.1
+  flutter_slidable: ^4.0.3
   
   # 高亮代码
   flutter_highlight: ^0.7.0
