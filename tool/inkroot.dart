@@ -130,17 +130,13 @@ class InkRootCli {
         await _run(['flutter', 'config', '--enable-linux-desktop']);
         await _run(['flutter', 'build', 'linux', '--release']);
         return;
-      case 'web':
-      case 'web-release':
-        await _run(['flutter', 'build', 'web', '--release']);
-        return;
       default:
         throw ToolExit(2, 'Unknown build target: $target');
     }
   }
 
   List<String> _hostBuildTargets() {
-    final targets = <String>['android-debug', 'web-release'];
+    final targets = <String>['android-debug'];
     if (Platform.isMacOS) {
       targets.addAll(['ios-sim', 'macos-debug']);
     } else if (Platform.isWindows) {
@@ -235,13 +231,12 @@ Commands:
   version                        Print pubspec version
 
 Build targets:
-  all                            Android + Web + host-specific desktop/mobile
+  all                            Android + host-specific desktop/mobile
   android-debug | android-release
   ios-sim | ios-unsigned-ipa     macOS only
   macos-debug | macos-release    macOS only
   windows-debug | windows-release Windows only
   linux-debug | linux-release    Linux only
-  web-release
 ''');
   }
 }

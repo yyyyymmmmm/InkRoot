@@ -13,7 +13,7 @@ Current version:
 version: 1.1.0+10100
 ```
 
-Flutter injects this value into Android, iOS, macOS, Windows, Linux, and Web
+Flutter injects this value into Android, iOS, macOS, Windows, and Linux
 build metadata. Do not hardcode app versions in platform files or Dart code.
 
 ## Local CLI
@@ -29,7 +29,6 @@ dart tool/inkroot.dart build ios-sim
 dart tool/inkroot.dart build macos-debug
 dart tool/inkroot.dart build windows-debug
 dart tool/inkroot.dart build linux-debug
-dart tool/inkroot.dart build web-release
 dart tool/inkroot.dart ci all
 ```
 
@@ -42,7 +41,6 @@ Host-specific builds still require the matching host OS:
 | Windows | Windows + Visual Studio C++ desktop workload |
 | Linux | Linux + GTK/CMake/Ninja dependencies + system SQLite |
 | Android | Any host with Android SDK |
-| Web | Any host |
 
 The project configures `package:sqlite3` to use the system SQLite library in
 `pubspec.yaml` hooks. This avoids downloading prebuilt SQLite binaries during
@@ -69,7 +67,6 @@ It delegates to `dart tool/inkroot.dart`.
 - macOS debug build
 - Windows debug build
 - Linux debug build
-- Web release build
 
 Artifacts are uploaded from each platform job.
 

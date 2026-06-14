@@ -737,11 +737,10 @@ scripts\windows\build_windows.bat
 
 **详细说明**：参考 [Windows 构建指南](scripts/windows/README.md)
 
-#### 构建 Linux / Web
+#### 构建 Linux
 
 ```bash
 dart tool/inkroot.dart build linux-debug
-dart tool/inkroot.dart build web-release
 ```
 
 完整维护和 CI 说明见 [维护指南](docs/MAINTENANCE.md)。
@@ -1023,7 +1022,7 @@ InkRoot/
 
 - 版本单一真源：`pubspec.yaml`
 - 本地维护入口：`dart tool/inkroot.dart`
-- CI 覆盖：Analyze、Test、Secret Scan、Android、iOS 模拟器、macOS、Windows、Linux、Web
+- CI 覆盖：Analyze、Test、Secret Scan、Android、iOS 模拟器、macOS、Windows、Linux
 - 发版说明：见 [维护指南](docs/MAINTENANCE.md)
 - Android 签名：见 [Android 签名说明](scripts/ANDROID_SIGNING.md)
 
@@ -1753,7 +1752,6 @@ test('should parse markdown todo items', () {
 - 📱 **Widget 小部件** - iOS 和 Android 桌面小部件
 - ⌚ **Apple Watch** - 快速记录和查看笔记
 - 🖥️ **桌面版** - macOS 和 Windows 客户端
-- 🌐 **Web 版本** - 浏览器访问和编辑
 - 🔗 **浏览器扩展** - Chrome/Safari/Firefox 快速剪藏
 
 ---

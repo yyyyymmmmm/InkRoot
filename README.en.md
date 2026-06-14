@@ -607,7 +607,7 @@ InkRoot/
 
 - Single version source: `pubspec.yaml`
 - Local maintenance entrypoint: `dart tool/inkroot.dart`
-- CI coverage: Analyze, Test, Secret Scan, Android, iOS simulator, macOS, Windows, Linux, Web
+- CI coverage: Analyze, Test, Secret Scan, Android, iOS simulator, macOS, Windows, Linux
 - Release workflow: see [Maintenance Guide](docs/MAINTENANCE.md)
 - Android signing: see [Android Signing](scripts/ANDROID_SIGNING.md)
 
@@ -822,7 +822,6 @@ For more API details, refer to [Memos API Documentation](https://github.com/usem
 - 📱 Widget support
 - ⌚ Apple Watch app
 - 🖥️ Desktop apps
-- 🌐 Web version
 
 ### 🌟 Long-term (v2.0+)
 
