@@ -1,0 +1,239 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_CHANNEL: stable
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)"
+          tag="${GITHUB_REF_NAME}"
+          if [ "$tag" != "v$version" ]; then
+            echo "Tag $tag does not match pubspec version $version." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/release_notes.py CHANGELOG.md "${GITHUB_REF_NAME#v}" > release_notes.md
+          {
+            echo 'notes<<EOF'
+            cat release_notes.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md
+
+  quality:
+    name: Analyze + Test
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart verify --coverage
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+      - run: gitleaks detect --no-git --redact -v --exit-code=2
+
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - name: Restore Android release credentials
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_STORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/inkroot-new-release.keystore
+          {
+            echo "storeFile=../inkroot-new-release.keystore"
+            echo "storePassword=$ANDROID_STORE_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+          } > android/key.properties
+          chmod 600 android/inkroot-new-release.keystore android/key.properties
+      - run: dart tool/inkroot.dart build android-release
+      - name: Rename Android package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/InkRoot-${GITHUB_REF_NAME}-android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: dist/*.apk
+
+  ios:
+    name: iOS
+    runs-on: macos-latest
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build ios-unsigned-ipa
+      - name: Collect iOS package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp build/ios/unsigned/*.ipa dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned
+          path: dist/*.ipa
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build macos-debug
+      - name: Package macOS app
+        shell: bash
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Debug/inkroot.app "dist/InkRoot-${GITHUB_REF_NAME}-macos.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: dist/*.zip
+
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build windows-release
+      - name: Package Windows app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "dist/InkRoot-$env:GITHUB_REF_NAME-windows.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: dist/*.zip
+
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libcurl4-openssl-dev libc-ares-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build linux-release
+      - name: Package Linux app
+        shell: bash
+        run: |
+          mkdir -p dist
+          tar -C build/linux/x64/release/bundle -czf "dist/InkRoot-${GITHUB_REF_NAME}-linux.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-app
+          path: dist/*.tar.gz
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: [prepare, android, ios, macos, windows, linux]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find artifacts -type f \
+            \( -name '*.apk' -o -name '*.ipa' -o -name '*.zip' -o -name '*.tar.gz' -o -name 'release_notes.md' \) \
+            -exec cp {} dist/ \;
+          find dist -maxdepth 1 -type f -print | sort
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: InkRoot ${{ needs.prepare.outputs.tag }}
+          body_path: dist/release_notes.md
+          files: |
+            dist/*.apk
+            dist/*.ipa
+            dist/*.zip
+            dist/*.tar.gz
+          draft: false
+          prerelease: false

@@ -9,23 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2026-06-14
 
-### ✨ Maintenance and Release Workflow
+### Maintenance and Release Workflow
 - Added the unified maintenance CLI: `dart tool/inkroot.dart`
-- Upgraded GitHub Actions to validate and build Android, iOS simulator, macOS, Windows, Linux, and Web
+- Upgraded GitHub Actions to validate and build Android, iOS simulator, macOS, Windows, and Linux
 - Added PR template, issue templates, Dependabot configuration, and Gitleaks secret scanning
-- Added `docs/MAINTENANCE.md` for versioning, CI, signing, release, and security workflow
+- Added `docs/MAINTENANCE.md` for versioning, CI, release, and security workflow
+- Added tag-driven release publishing through GitHub Actions
 
-### 🔐 Android Signing
-- Android release signing now supports local `android/key.properties`
-- Signing files stay out of Git; CI release builds use GitHub Secrets
-- Missing signing config does not block debug or normal verification builds
-
-### 🧪 Quality
+### Quality
 - `flutter analyze` currently reports 0 issues
 - `flutter test` currently passes 300 tests
 - iOS simulator launch was verified
 
-### 🐛 Fixed
+### Fixed
 - Cloud configuration failure responses with string `msg` no longer trigger Dart type errors
 - Added model tests for successful and failed cloud verification responses
 

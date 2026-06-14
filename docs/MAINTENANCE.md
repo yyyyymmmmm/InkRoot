@@ -1,24 +1,20 @@
-# InkRoot Maintenance Guide
+# Maintenance
 
-This document describes the project maintenance workflow used for local builds,
-CI, release checks, and Android signing.
+This document describes the project workflow for versioning, checks, builds, and releases.
 
-## Version Source
+## Version
 
-`pubspec.yaml` is the single source of truth for the app version.
-
-Current version:
+`pubspec.yaml` is the source of truth for the application version.
 
 ```yaml
 version: 1.1.0+10100
 ```
 
-Flutter injects this value into Android, iOS, macOS, Windows, and Linux
-build metadata. Do not hardcode app versions in platform files or Dart code.
+Do not duplicate the app version in platform files or Dart code. Flutter passes the version into Android, iOS, macOS, Windows, and Linux build metadata.
 
-## Local CLI
+## CLI
 
-Use the project CLI for repeatable local checks:
+Use the project CLI for repeatable local work:
 
 ```bash
 dart tool/inkroot.dart doctor
@@ -29,112 +25,54 @@ dart tool/inkroot.dart build ios-sim
 dart tool/inkroot.dart build macos-debug
 dart tool/inkroot.dart build windows-debug
 dart tool/inkroot.dart build linux-debug
-dart tool/inkroot.dart ci all
+dart tool/inkroot.dart release v1.1.0
 ```
 
-Host-specific builds still require the matching host OS:
+Host-specific builds require matching local tools:
 
-| Target | Host requirement |
-| --- | --- |
-| iOS simulator | macOS + Xcode + CocoaPods |
-| macOS | macOS |
-| Windows | Windows + Visual Studio C++ desktop workload |
-| Linux | Linux + GTK/CMake/Ninja dependencies + system SQLite |
-| Android | Any host with Android SDK |
+- Android requires an Android SDK.
+- iOS simulator requires macOS, Xcode, and CocoaPods.
+- macOS requires macOS and Xcode.
+- Windows requires Windows and Visual Studio C++ desktop components.
+- Linux requires GTK, CMake, Ninja, and system libraries used by the desktop plugins.
 
-The project configures `package:sqlite3` to use the system SQLite library in
-`pubspec.yaml` hooks. This avoids downloading prebuilt SQLite binaries during
-desktop builds. macOS normally provides SQLite; Linux CI installs the required
-system packages before building.
-
-The legacy shell entrypoint is still available:
+The shell entrypoint remains available for compatibility:
 
 ```bash
 scripts/ci.sh all
 ```
 
-It delegates to `dart tool/inkroot.dart`.
+## Continuous Integration
 
-## GitHub Actions
+Pull requests and pushes run:
 
-`.github/workflows/ci.yml` runs:
+- Flutter dependency resolution.
+- Static analysis.
+- Automated tests.
+- Secret scanning.
+- Android APK build.
+- iOS simulator build.
+- macOS build.
+- Windows build.
+- Linux build.
 
-- `flutter analyze`
-- `flutter test --coverage`
-- secret scanning with Gitleaks
-- Android APK build
-- iOS simulator build
-- macOS debug build
-- Windows debug build
-- Linux debug build
+The current CI and release workflows intentionally skip the Web platform.
 
-Artifacts are uploaded from each platform job.
+## Release
 
-Manual release builds can be started from GitHub Actions with
-`workflow_dispatch` and `release_build=true`.
+Release flow:
 
-## Android Release Signing
-
-Android release signing is intentionally kept out of Git.
-
-Local files:
-
-```text
-android/key.properties
-android/inkroot-new-release.keystore
-```
-
-Both files are ignored by Git. `android/app/build.gradle` signs release builds
-only when all signing fields are present.
-
-Expected `android/key.properties` shape:
-
-```properties
-storeFile=../inkroot-new-release.keystore
-storePassword=...
-keyAlias=...
-keyPassword=...
-```
-
-For GitHub Actions release builds, configure these repository secrets:
-
-| Secret | Value |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | Base64 encoded keystore file |
-| `ANDROID_STORE_PASSWORD` | Keystore password |
-| `ANDROID_KEY_ALIAS` | Key alias |
-| `ANDROID_KEY_PASSWORD` | Key password |
-
-Generate the base64 value locally:
-
-```bash
-base64 -i android/inkroot-new-release.keystore | pbcopy
-```
-
-On Linux:
-
-```bash
-base64 -w 0 android/inkroot-new-release.keystore
-```
-
-## Release Checklist
-
-1. Update `pubspec.yaml` version.
+1. Update `pubspec.yaml`.
 2. Update `CHANGELOG.md` and `CHANGELOG.en.md`.
 3. Run `dart tool/inkroot.dart verify`.
-4. Build the required targets using `dart tool/inkroot.dart build <target>`.
-5. Run the app on at least one real device or simulator for each changed platform.
-6. Create a GitHub Release and upload build artifacts.
-7. Confirm no signing keys, tokens, or local config files are included in Git.
+4. Commit and push the changes.
+5. Run `dart tool/inkroot.dart release vX.Y.Z`.
+6. Wait for the GitHub Actions Release workflow to finish.
 
-## Security Baseline
+The tag must match the version in `pubspec.yaml`. For `version: 1.1.0+10100`, the release tag is `v1.1.0`.
 
-Never commit:
+GitHub Actions publishes the release assets after all release jobs pass.
 
-- Personal access tokens
-- `android/key.properties`
-- Keystores, certificates, provisioning profiles
-- API keys or service account files
-- User data exports or backups
+## Security
 
-If a token or key is exposed, revoke it immediately and rotate the credential.
+Do not commit credentials, local configuration, private keys, certificates, user exports, or backup files. If a secret is exposed, revoke it and rotate the credential.

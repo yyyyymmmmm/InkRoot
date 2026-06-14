@@ -78,12 +78,12 @@ jobs:
           fi
           mkdir -p android
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/inkroot-new-release.keystore
-          cat > android/key.properties <<EOF
-          storeFile=../inkroot-new-release.keystore
-          storePassword=$ANDROID_STORE_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          keyPassword=$ANDROID_KEY_PASSWORD
-          EOF
+          {
+            echo "storeFile=../inkroot-new-release.keystore"
+            echo "storePassword=$ANDROID_STORE_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+          } > android/key.properties
           chmod 600 android/inkroot-new-release.keystore android/key.properties
       - name: Build debug APK
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.release_build }}

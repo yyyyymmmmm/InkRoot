@@ -107,8 +107,9 @@ if [ -f "$IPA_PATH" ]; then
     echo -e "  - 安装后可能需要在设置中信任开发者证书"
     echo ""
     
-    # 在 Finder 中显示文件
-    open "$OUTPUT_DIR"
+    if command -v open >/dev/null 2>&1 && [ -z "${CI:-}" ]; then
+        open "$OUTPUT_DIR"
+    fi
 else
     echo -e "${RED}错误: IPA 文件创建失败${NC}"
     exit 1

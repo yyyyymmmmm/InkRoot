@@ -40,6 +40,9 @@ class InkRootCli {
         case 'build':
           await _build(args.length > 1 ? args[1] : 'all');
           return 0;
+        case 'release':
+          await _release(args);
+          return 0;
         case 'clean':
           await _run(['flutter', 'clean']);
           return 0;
@@ -72,6 +75,41 @@ class InkRootCli {
     return _run(args);
   }
 
+  Future<void> _release(List<String> args) async {
+    if (args.length < 2) {
+      throw ToolExit(2, 'Usage: dart tool/inkroot.dart release v1.1.0');
+    }
+
+    final tag = args[1];
+    if (!RegExp(r'^v\d+\.\d+\.\d+([+-][0-9A-Za-z.-]+)?$').hasMatch(tag)) {
+      throw ToolExit(2, 'Release tag must look like v1.1.0.');
+    }
+
+    final currentVersion = _readVersion().split('+').first;
+    final expectedTag = 'v$currentVersion';
+    if (tag != expectedTag) {
+      throw ToolExit(
+        2,
+        'Tag $tag does not match pubspec version $currentVersion.',
+      );
+    }
+
+    await _run(['git', 'diff', '--quiet']);
+    await _run(['git', 'diff', '--cached', '--quiet']);
+
+    if (await _gitTagExists(tag)) {
+      throw ToolExit(2, 'Tag already exists locally: $tag');
+    }
+    if (await _remoteTagExists(tag)) {
+      throw ToolExit(2, 'Tag already exists on origin: $tag');
+    }
+
+    await _run(['git', 'tag', '-a', tag, '-m', 'InkRoot $tag']);
+    await _run(['git', 'push', 'origin', tag]);
+    stdout.writeln('Release tag pushed: $tag');
+    stdout.writeln('GitHub Actions will build and publish the release.');
+  }
+
   Future<void> _build(String target) async {
     switch (target) {
       case 'all':
@@ -96,6 +134,7 @@ class InkRootCli {
         return;
       case 'ios-unsigned-ipa':
         _requireHost(target, Platform.isMacOS, 'macOS with Xcode');
+        await _disableSwiftPackageManager();
         await _run(['bash', 'scripts/build_unsigned_ipa.sh']);
         return;
       case 'macos':
@@ -212,11 +251,39 @@ class InkRootCli {
   }
 
   void _printVersion() {
+    stdout.writeln('version: ${_readVersion()}');
+  }
+
+  String _readVersion() {
     final pubspec = File('pubspec.yaml');
     final versionLine = pubspec
         .readAsLinesSync()
         .firstWhere((line) => line.trimLeft().startsWith('version:'));
-    stdout.writeln(versionLine.trim());
+    return versionLine.split(':').sublist(1).join(':').trim();
+  }
+
+  Future<bool> _gitTagExists(String tag) async {
+    return _runForStatus(
+      ['git', 'rev-parse', '-q', '--verify', 'refs/tags/$tag'],
+    );
+  }
+
+  Future<bool> _remoteTagExists(String tag) async {
+    return _runForStatus(
+      ['git', 'ls-remote', '--exit-code', '--tags', 'origin', tag],
+    );
+  }
+
+  Future<bool> _runForStatus(List<String> command) async {
+    final process = await Process.start(
+      command.first,
+      command.sublist(1),
+      runInShell: Platform.isWindows,
+    );
+    await stdout.addStream(process.stdout);
+    await stderr.addStream(process.stderr);
+    final code = await process.exitCode;
+    return code == 0;
   }
 
   void _printHelp() {
@@ -236,6 +303,7 @@ Commands:
   build [target]                 Build one target or all host-supported targets
   clean                          Run flutter clean
   version                        Print pubspec version
+  release vX.Y.Z                 Push a release tag for GitHub Actions
 
 Build targets:
   all                            Android + host-specific desktop/mobile

@@ -9,23 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2026-06-14
 
-### ✨ 维护与发布体系
+### 维护与发布体系
 - 新增统一维护 CLI：`dart tool/inkroot.dart`
-- GitHub Actions 升级为多平台验证与构建：Android、iOS 模拟器、macOS、Windows、Linux、Web
+- GitHub Actions 升级为多平台验证与构建：Android、iOS 模拟器、macOS、Windows、Linux
 - 新增 PR 模板、Issue 模板、Dependabot 配置和 Gitleaks secret 扫描
-- 新增 `docs/MAINTENANCE.md`，统一说明版本、CI、签名、发版和安全基线
+- 新增 `docs/MAINTENANCE.md`，统一说明版本、CI、发版和安全基线
+- 新增 tag 驱动的 Release workflow，通过 CLI 推送版本 tag 后自动发布
 
-### 🔐 Android 签名
-- Android release 签名支持本地 `android/key.properties`
-- release 签名文件保持在 Git 外，CI 通过 GitHub Secrets 注入
-- 缺少签名配置时不影响 debug/普通验证构建
-
-### 🧪 质量验证
+### 质量验证
 - `flutter analyze` 当前为 0 issues
 - `flutter test` 当前为 300 tests passed
 - iOS 模拟器启动验证通过
 
-### 🐛 修复
+### 修复
 - 云配置接口失败态返回字符串时不再触发 Dart 类型异常
 - 新增云验证响应模型单元测试，覆盖成功态和失败态
 
@@ -370,7 +366,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🎨 Improved
 - 所有UI文本支持英文显示，更适合国际用户
 - 图片加载错误提示更友好
-- 代码注释优化，添加大厂标准说明
+- 代码注释优化，补充交互说明
 - 标签管理界面更直观
 - 导入流程更清晰
 
@@ -502,7 +498,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 提升稳定性
 
 ### 🎨 UI/UX
-- **隐私政策弹窗** - 简洁优雅的大厂风格设计
+- **隐私政策弹窗** - 简洁的隐私确认体验
 - **相关笔记底部表单** - 优化笔记关联查看体验
 - **简化备忘录内容展示** - 提升阅读体验
 
