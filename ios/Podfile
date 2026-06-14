@@ -1,10 +1,4 @@
-# 🇨🇳 CocoaPods 国内镜像（Specs 索引）
-source 'https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git'
-# 备用：阿里云
-# source 'https://mirrors.aliyun.com/CocoaPods/Specs.git'
-
-# GitHub 仓库国内镜像（speech_to_text → CwlCatchException）
-# kkgithub / gitee 等，避免直连 github.com
+source 'https://cdn.cocoapods.org/'
 
 # Uncomment this line to define a global platform for your project
 platform :ios, '13.0'
@@ -48,9 +42,8 @@ target 'Runner' do
   # 本地 Pod，避免从 GitHub 下载
   pod 'SDWebImageWebPCoder', :path => 'local_pods/SDWebImageWebPCoder-0.15.0'
 
-  # speech_to_text 依赖，默认源为 GitHub
   pod 'CwlCatchException',
-      :git => 'https://kkgithub.com/mattgallagher/CwlCatchException.git',
+      :git => 'https://github.com/mattgallagher/CwlCatchException.git',
       :tag => '2.2.1'
 
   # ⚠️ iOS版本不使用友盟统计SDK（符合App Store审核要求）

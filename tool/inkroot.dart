@@ -90,6 +90,7 @@ class InkRootCli {
       case 'ios':
       case 'ios-sim':
         _requireHost(target, Platform.isMacOS, 'macOS with Xcode');
+        await _disableSwiftPackageManager();
         await _podInstall('ios');
         await _run(['flutter', 'build', 'ios', '--simulator', '--debug']);
         return;
@@ -101,11 +102,13 @@ class InkRootCli {
       case 'macos-debug':
         _requireHost(target, Platform.isMacOS, 'macOS');
         await _run(['flutter', 'config', '--enable-macos-desktop']);
+        await _disableSwiftPackageManager();
         await _run(['flutter', 'build', 'macos', '--debug']);
         return;
       case 'macos-release':
         _requireHost(target, Platform.isMacOS, 'macOS');
         await _run(['flutter', 'config', '--enable-macos-desktop']);
+        await _disableSwiftPackageManager();
         await _run(['flutter', 'build', 'macos', '--release']);
         return;
       case 'windows':
@@ -172,6 +175,10 @@ class InkRootCli {
         'LC_ALL': 'en_US.UTF-8',
       },
     );
+  }
+
+  Future<void> _disableSwiftPackageManager() {
+    return _run(['flutter', 'config', '--no-enable-swift-package-manager']);
   }
 
   void _requireHost(String target, bool condition, String requirement) {

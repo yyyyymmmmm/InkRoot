@@ -105,7 +105,7 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
-  - CwlCatchException (from `https://kkgithub.com/mattgallagher/CwlCatchException.git`, tag `2.2.1`)
+  - CwlCatchException (from `https://github.com/mattgallagher/CwlCatchException.git`, tag `2.2.1`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
@@ -129,7 +129,7 @@ DEPENDENCIES:
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
 
 SPEC REPOS:
-  https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git:
+  trunk:
     - CwlCatchExceptionSupport
     - DKImagePickerController
     - DKPhotoGallery
@@ -140,7 +140,7 @@ SPEC REPOS:
 
 EXTERNAL SOURCES:
   CwlCatchException:
-    :git: https://kkgithub.com/mattgallagher/CwlCatchException.git
+    :git: https://github.com/mattgallagher/CwlCatchException.git
     :tag: 2.2.1
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
@@ -188,7 +188,7 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   CwlCatchException:
-    :git: https://kkgithub.com/mattgallagher/CwlCatchException.git
+    :git: https://github.com/mattgallagher/CwlCatchException.git
     :tag: 2.2.1
   SDWebImage:
     :git: https://gitee.com/mirrors/SDWebImage.git
@@ -225,6 +225,6 @@ SPEC CHECKSUMS:
   SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: 17b20f6347438c6c879ce6e26893d9bd61717504
+PODFILE CHECKSUM: 624e2f47c0fda5f1767418ac5fa928ab6ba1923c
 
 COCOAPODS: 1.16.2
