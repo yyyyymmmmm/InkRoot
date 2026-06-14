@@ -76,7 +76,7 @@ dependencies {
     
     // 友盟统计（更新到最新稳定版本）
     implementation 'com.umeng.umsdk:common:9.6.8'       // 友盟基础组件
-    implementation 'com.umeng.umsdk:asms:1.8.3'         // 友盟统计SDK
+    implementation 'com.umeng.umsdk:asms:1.8.7.2'         // 友盟统计SDK
     
     // 🔥 友盟依赖的必需库（避免初始化失败）
     implementation 'com.google.code.gson:gson:2.10.1'   // JSON解析
