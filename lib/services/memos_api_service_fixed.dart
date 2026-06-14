@@ -15,6 +15,11 @@ class TokenExpiredException implements Exception {
   String toString() => 'TokenExpiredException: $message';
 }
 
+typedef _AuthAttempt = ({
+  int version,
+  Future<String> Function(String username, String password) signIn,
+});
+
 /// Memos API service – fully compatible with v0.21.0 → v0.27.x+
 ///
 /// Auth & endpoint behaviour differs significantly across versions:
@@ -34,6 +39,14 @@ class MemosApiServiceFixed {
   // Seeded from SharedPreferences on first access so cold-starts are instant.
   static final Map<String, int> _versionCache = {};
   static const String _prefKeyPrefix = 'memos_server_version_';
+
+  static Future<void> _cacheServerVersion(String baseUrl, int minor) async {
+    _versionCache[baseUrl] = minor;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('$_prefKeyPrefix${baseUrl.hashCode}', minor);
+    } on Object catch (_) {}
+  }
 
   // ── Headers ───────────────────────────────────────────────────────────────
 
@@ -102,12 +115,7 @@ class MemosApiServiceFixed {
     }
 
     minor ??= await _probeVersionByEndpoint(baseUrl);
-    _versionCache[baseUrl] = minor;
-    // Persist so the next cold start skips the network call
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('$_prefKeyPrefix${baseUrl.hashCode}', minor);
-    } on Object catch (_) {}
+    await _cacheServerVersion(baseUrl, minor);
     return minor;
   }
 
@@ -190,16 +198,62 @@ class MemosApiServiceFixed {
   // ── Authentication ────────────────────────────────────────────────────────
 
   /// Returns the access token string.
-  /// Handles all three auth flows depending on server version.
+  /// Handles all supported auth flows. Some servers hide their version before
+  /// login, so this method treats the detected version as a hint and falls
+  /// back through the other known protocols before failing.
   Future<String> createAccessToken(String username, String password) async {
     final v = await _version;
-    if (v >= 26) {
-      return _signInV26(username, password);
+    final attempts = v >= 26
+        ? <_AuthAttempt>[
+            (version: 26, signIn: _signInV26),
+            (version: 22, signIn: _signInV22),
+            (version: 21, signIn: _signInV21),
+          ]
+        : v >= 22
+            ? <_AuthAttempt>[
+                (version: 22, signIn: _signInV22),
+                (version: 26, signIn: _signInV26),
+                (version: 21, signIn: _signInV21),
+              ]
+            : <_AuthAttempt>[
+                (version: 21, signIn: _signInV21),
+                (version: 26, signIn: _signInV26),
+                (version: 22, signIn: _signInV22),
+              ];
+
+    final errors = <String>[];
+    for (final attempt in attempts) {
+      try {
+        final accessToken = await attempt.signIn(username, password);
+        await _cacheServerVersion(baseUrl, attempt.version);
+        return accessToken;
+      } on Object catch (e) {
+        errors.add(e.toString());
+      }
     }
-    if (v >= 22) {
-      return _signInV22(username, password);
+
+    final cookieError =
+        errors.where((error) => error.contains('登录成功但无法获取 Token')).firstOrNull;
+    if (cookieError != null) {
+      throw Exception(cookieError);
     }
-    return _signInV21(username, password);
+
+    if (errors.any(_isCredentialFailure)) {
+      throw Exception('账号或密码错误，请检查后重试');
+    }
+
+    throw Exception(errors.isEmpty ? '登录失败' : errors.last);
+  }
+
+  bool _isCredentialFailure(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('incorrect login credentials') ||
+        normalized.contains('invalid username or password') ||
+        normalized.contains('invalid credentials') ||
+        normalized.contains('wrong password') ||
+        normalized.contains('用户不存在') ||
+        normalized.contains('密码错误') ||
+        normalized.contains('账号或密码');
   }
 
   /// v0.26.0+: credentials wrapped in `passwordCredentials`, token in body.
