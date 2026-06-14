@@ -7,7 +7,7 @@ This document describes the project workflow for versioning, checks, builds, and
 `pubspec.yaml` is the source of truth for the application version.
 
 ```yaml
-version: 1.1.0+10100
+version: 1.1.1+10101
 ```
 
 Do not duplicate the app version in platform files or Dart code. Flutter passes the version into Android, iOS, macOS, Windows, and Linux build metadata.
@@ -25,7 +25,7 @@ dart tool/inkroot.dart build ios-sim
 dart tool/inkroot.dart build macos-debug
 dart tool/inkroot.dart build windows-debug
 dart tool/inkroot.dart build linux-debug
-dart tool/inkroot.dart release v1.1.0
+dart tool/inkroot.dart release v1.1.1
 ```
 
 Host-specific builds require matching local tools:
@@ -69,7 +69,7 @@ Release flow:
 5. Run `dart tool/inkroot.dart release vX.Y.Z`.
 6. Wait for the GitHub Actions Release workflow to finish.
 
-The tag must match the version in `pubspec.yaml`. For `version: 1.1.0+10100`, the release tag is `v1.1.0`.
+The tag must match the version in `pubspec.yaml`. For `version: 1.1.1+10101`, the release tag is `v1.1.1`.
 
 GitHub Actions publishes the release assets after all release jobs pass.
 

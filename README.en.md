@@ -6,7 +6,7 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.0`
+`1.1.1`
 
 This release improves editing, home feed rendering, image preview, WebDAV backup, Memos compatibility, timeline merging, localization, and the release workflow.
 
@@ -71,13 +71,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.0+10100
+version: 1.1.1+10101
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.0
+dart tool/inkroot.dart release v1.1.1
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android, iOS, macOS, Windows, and Linux assets.

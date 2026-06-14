@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2026-06-15
+
+### 修复
+- 提升 Memos 登录兼容性：服务器登录前隐藏版本信息时，自动回退尝试不同 Memos 认证协议
+- 修复 Windows 桌面端仍显示 Flutter 默认图标的问题
+- 统一 macOS 与 Windows 桌面端应用图标生成流程
+
+### 维护
+- 新增 `scripts/generate_desktop_icons.py`，统一生成桌面端图标资源
+
+---
+
 ## [1.1.0] - 2026-06-14
 
 ### 维护与发布体系
