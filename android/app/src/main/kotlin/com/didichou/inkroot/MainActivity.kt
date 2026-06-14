@@ -39,7 +39,6 @@ class MainActivity: FlutterActivity() {
                             MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.AUTO)
                             isUmengInitialized = true
                             android.util.Log.d("UmengAnalytics", "友盟统计初始化成功")
-                            android.util.Log.d("UmengAnalytics", "AppKey: 68f40dfe644c9e2c20597ea5")
                             android.util.Log.d("UmengAnalytics", "Channel: default")
                             result.success(true)
                         } catch (e: Exception) {

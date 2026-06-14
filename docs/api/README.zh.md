@@ -65,7 +65,7 @@ InkRoot 使用 JWT (JSON Web Token) 认证。
     "createdTs": 1640995200,
     "updatedTs": 1640995200
   },
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "accessToken": "<access_token>"
 }
 ```
 
@@ -93,7 +93,7 @@ InkRoot 使用 JWT (JSON Web Token) 认证。
     "createdTs": 1640995200,
     "updatedTs": 1640995200
   },
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "accessToken": "<access_token>"
 }
 ```
 
@@ -102,7 +102,7 @@ InkRoot 使用 JWT (JSON Web Token) 认证。
 在 `Authorization` 请求头中包含访问令牌：
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer <access_token>
 ```
 
 ---

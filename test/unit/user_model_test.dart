@@ -56,9 +56,9 @@ void main() {
       final user = User.fromJson({
         'id': '1',
         'username': 'user',
-        'token': 'eyJ0eXAiOiJKV1Q',
+        'token': 'sample-token',
       });
-      expect(user.token, 'eyJ0eXAiOiJKV1Q');
+      expect(user.token, 'sample-token');
       expect(user.isLoggedIn, isTrue);
     });
 
