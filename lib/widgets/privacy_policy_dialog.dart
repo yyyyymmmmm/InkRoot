@@ -1,6 +1,6 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -40,12 +40,12 @@ class PrivacyPolicyDialog extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // 协议内容
                 _buildContent(context),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // 按钮
                 Row(
@@ -68,7 +68,7 @@ class PrivacyPolicyDialog extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          '不同意',
+                          '不同意并退出',
                           style: TextStyle(
                             fontSize: 15,
                             color: Color(0xFF666666),
@@ -94,7 +94,7 @@ class PrivacyPolicyDialog extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          '同意',
+                          '同意并继续',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -110,46 +110,65 @@ class PrivacyPolicyDialog extends StatelessWidget {
         ),
       );
 
-  Widget _buildContent(BuildContext context) => RichText(
-        textAlign: TextAlign.left,
-        text: TextSpan(
-          style: const TextStyle(
-            fontSize: 14,
-            height: 1.6,
-            color: Color(0xFF666666),
+  Widget _buildContent(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '我们会以本地优先方式保存笔记。只有你主动配置同步、登录服务器或使用保存图片、通知等功能时，才会使用必要权限和账号信息。',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.6,
+              color: Color(0xFF666666),
+            ),
           ),
-          children: [
-            const TextSpan(
-              text: '欢迎使用InkRoot！\n\n我们非常重视您的隐私保护和个人信息安全。在使用我们的服务前，请您仔细阅读并充分理解',
-            ),
-            TextSpan(
-              text: '《用户协议》',
-              style: const TextStyle(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w500,
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text(
+                '继续使用前，请阅读并同意',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Color(0xFF666666),
+                ),
               ),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () => _openUrl('https://inkroot.cn/agreement.html'),
-            ),
-            const TextSpan(text: '和'),
-            TextSpan(
-              text: '《隐私政策》',
-              style: const TextStyle(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w500,
+              _buildProtocolLink('《用户协议》', AppConfig.userAgreementUri),
+              const Text(
+                '和',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Color(0xFF666666),
+                ),
               ),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () => _openUrl('https://inkroot.cn/privacy.html'),
-            ),
-            const TextSpan(
-              text: '。\n\n点击"同意"即表示您已阅读并同意上述协议的全部内容。',
-            ),
-          ],
+              _buildProtocolLink('《隐私政策》', AppConfig.privacyPolicyUri),
+            ],
+          ),
+        ],
+      );
+
+  Widget _buildProtocolLink(String label, Uri uri) => TextButton(
+        onPressed: () => _openUrl(uri),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.primaryColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       );
 
-  Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
+  Future<void> _openUrl(Uri uri) async {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }

@@ -5,10 +5,10 @@ import 'package:flutter/foundation.dart';
 /// 🚀 轻量级性能追踪工具类（无Firebase依赖）
 /// 用于监控关键操作的性能指标（仅本地日志，不上报）
 class PerformanceTracker {
-  // 单例模式
-  static final PerformanceTracker _instance = PerformanceTracker._internal();
   factory PerformanceTracker() => _instance;
   PerformanceTracker._internal();
+  // 单例模式
+  static final PerformanceTracker _instance = PerformanceTracker._internal();
 
   // 存储活跃的追踪
   final Map<String, _TraceData> _activeTraces = {};
@@ -24,13 +24,13 @@ class PerformanceTracker {
         attributes: attributes ?? {},
         stopwatch: Stopwatch()..start(),
       );
-      
+
       _activeTraces[name] = trace;
-      
+
       if (kDebugMode) {
         print('📊 [Performance] Started tracking: $name');
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) {
         print('⚠️ [Performance] Failed to start trace $name: $e');
       }
@@ -45,30 +45,30 @@ class PerformanceTracker {
   }) async {
     try {
       final trace = _activeTraces[name];
-      
+
       if (trace == null) {
         if (kDebugMode) {
           print('⚠️ [Performance] Trace not found: $name');
         }
         return;
       }
-      
+
       trace.stopwatch.stop();
-      
+
       if (kDebugMode) {
         print(
           '📊 [Performance] Stopped tracking: $name '
           '(${trace.stopwatch.elapsedMilliseconds}ms, '
           'status: ${success ? 'success' : 'failure'})',
         );
-        
+
         if (metrics != null) {
           print('   Metrics: $metrics');
         }
       }
-      
+
       _activeTraces.remove(name);
-    } catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) {
         print('⚠️ [Performance] Failed to stop trace $name: $e');
       }
@@ -82,12 +82,12 @@ class PerformanceTracker {
     Map<String, String>? attributes,
   }) async {
     await startTrace(name, attributes: attributes);
-    
+
     try {
       final result = await operation();
-      await stopTrace(name, success: true);
+      await stopTrace(name);
       return result;
-    } catch (e) {
+    } on Object {
       await stopTrace(name, success: false);
       rethrow;
     }
@@ -100,27 +100,27 @@ class PerformanceTracker {
     Map<String, String>? attributes,
   }) {
     final stopwatch = Stopwatch()..start();
-    
+
     try {
       final result = operation();
       stopwatch.stop();
-      
+
       if (kDebugMode) {
         print(
           '📊 [Performance] $name completed in ${stopwatch.elapsedMilliseconds}ms',
         );
       }
-      
+
       return result;
-    } catch (e) {
+    } on Object {
       stopwatch.stop();
-      
+
       if (kDebugMode) {
         print(
           '📊 [Performance] $name failed after ${stopwatch.elapsedMilliseconds}ms',
         );
       }
-      
+
       rethrow;
     }
   }
@@ -128,33 +128,31 @@ class PerformanceTracker {
 
 /// 内部追踪数据类
 class _TraceData {
-  final String name;
-  final Map<String, String> attributes;
-  final Stopwatch stopwatch;
-
   _TraceData({
     required this.name,
     required this.attributes,
     required this.stopwatch,
   });
+  final String name;
+  final Map<String, String> attributes;
+  final Stopwatch stopwatch;
 }
 
 /// 🚀 轻量级页面性能追踪
 class ScreenPerformanceTracker {
+  ScreenPerformanceTracker._(this.screenName);
   final String screenName;
   final Stopwatch _stopwatch = Stopwatch();
-
-  ScreenPerformanceTracker._(this.screenName);
 
   /// 创建并开始追踪
   static Future<ScreenPerformanceTracker> start(String screenName) async {
     final tracker = ScreenPerformanceTracker._(screenName);
     tracker._stopwatch.start();
-    
+
     if (kDebugMode) {
       print('📊 [Screen] Started tracking: $screenName');
     }
-    
+
     return tracker;
   }
 
@@ -180,7 +178,7 @@ class ScreenPerformanceTracker {
   /// 停止追踪
   Future<void> stop() async {
     _stopwatch.stop();
-    
+
     if (kDebugMode) {
       print(
         '📊 [Screen] Stopped tracking: $screenName '

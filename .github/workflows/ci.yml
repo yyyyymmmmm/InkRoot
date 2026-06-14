@@ -3,80 +3,189 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
+  workflow_dispatch:
+    inputs:
+      release_build:
+        description: "Build release artifacts"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_CHANNEL: stable
+
 jobs:
-  flutter-test:
-    name: Analyze + Test + Coverage
+  quality:
+    name: Analyze + Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test --coverage
-      - name: Upload coverage (lcov.info)
+      - run: dart tool/inkroot.dart verify --coverage
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-lcov
           path: coverage/lcov.info
 
-  android-debug-apk:
-    name: Android debug APK (unsigned)
+  secret-scan:
+    name: Secret scan
     runs-on: ubuntu-latest
-    needs: flutter-test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    needs: [quality, secret-scan]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
-      - run: flutter pub get
-      - run: flutter build apk --debug
+      - run: dart tool/inkroot.dart deps
+      - name: Restore Android signing files
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_build }}
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_STORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "Android release signing secrets are incomplete." >&2
+            exit 1
+          fi
+          mkdir -p android
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/inkroot-new-release.keystore
+          cat > android/key.properties <<EOF
+          storeFile=../inkroot-new-release.keystore
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          chmod 600 android/inkroot-new-release.keystore android/key.properties
+      - name: Build debug APK
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.release_build }}
+        run: dart tool/inkroot.dart build android-debug
+      - name: Build release APK
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_build }}
+        run: dart tool/inkroot.dart build android-release
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: |
+            build/app/outputs/flutter-apk/*.apk
 
-  ios-sim:
-    name: iOS simulator build (no signing)
+  ios:
+    name: iOS simulator
     runs-on: macos-latest
-    needs: flutter-test
+    needs: [quality, secret-scan]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
-      - run: flutter pub get
-      - run: cd ios && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install
-      - run: flutter build ios --simulator
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build ios-sim
+      - name: Upload iOS simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: build/ios/iphonesimulator/Runner.app
 
-  macos-debug:
-    name: macOS debug build (no signing)
+  macos:
+    name: macOS app
     runs-on: macos-latest
-    needs: flutter-test
+    needs: [quality, secret-scan]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
-      - run: flutter pub get
-      - run: flutter build macos --debug
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build macos-debug
+      - name: Upload macOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug-app
+          path: build/macos/Build/Products/Debug/*.app
 
-  windows-debug:
-    name: Windows debug build
+  windows:
+    name: Windows app
     runs-on: windows-latest
-    needs: flutter-test
+    needs: [quality, secret-scan]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
-      - run: flutter pub get
-      - run: flutter build windows --debug
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build windows-debug
+      - name: Upload Windows app
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-debug-app
+          path: build/windows/x64/runner/Debug/**
 
+  linux:
+    name: Linux app
+    runs-on: ubuntu-latest
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build linux-debug
+      - name: Upload Linux app
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-debug-app
+          path: build/linux/x64/debug/bundle/**
+
+  web:
+    name: Web build
+    runs-on: ubuntu-latest
+    needs: [quality, secret-scan]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - run: dart tool/inkroot.dart deps
+      - run: dart tool/inkroot.dart build web-release
+      - name: Upload Web app
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: build/web/**

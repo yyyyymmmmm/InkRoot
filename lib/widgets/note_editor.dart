@@ -1,20 +1,21 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/services/ai_enhanced_service.dart';
 import 'package:inkroot/services/local_reference_service.dart';
+import 'package:inkroot/services/memos_resource_service.dart';
 import 'package:inkroot/services/speech_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/widgets/memo_editing_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -40,10 +41,10 @@ class NoteEditor extends StatefulWidget {
 
 class _NoteEditorState extends State<NoteEditor>
     with SingleTickerProviderStateMixin {
-  late TextEditingController _textController;
-  bool _canSave = false;
+  late MemoEditingController _textController;
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
+  final FocusNode _textFocusNode = FocusNode();
 
   // 语音识别动画控制器
   late AnimationController _speechAnimationController;
@@ -56,19 +57,6 @@ class _NoteEditorState extends State<NoteEditor>
 
   // 文本内容行数
   int _lineCount = 0;
-
-  // 文本样式
-  static const TextStyle _textStyle = TextStyle(
-    fontSize: 16,
-    height: 1.375, // 行高是字体大小的1.375倍
-    letterSpacing: 0.1,
-    color: Color(0xFF333333),
-  );
-
-  // 提示文本样式
-  late final TextStyle _hintStyle = _textStyle.copyWith(
-    color: Colors.grey.shade400,
-  );
 
   // 添加一个标志来防止多次保存
   bool _isSaving = false;
@@ -86,62 +74,65 @@ class _NoteEditorState extends State<NoteEditor>
 
   // 🚀 标志：是否是新建笔记（用于判断是否需要保存/加载草稿）
   late bool _isNewNote;
+  String _initialSavedContent = '';
 
   // 添加图片列表和Markdown代码
   List<_ImageItem> _imageList = [];
   List<String> _mdCodes = [];
+  List<int?> _imageAnchors = [];
   final ScrollController _imageScrollController = ScrollController();
+  String _lastTextForImageAnchors = '';
+  bool _suppressImageAnchorSync = false;
 
   // 语音识别相关
   final SpeechService _speechService = SpeechService();
   bool _isSpeechListening = false;
   String _partialSpeechText = '';
-  double _soundLevel = 0.0; // 声音级别，用于音波动画（动态更新）
-  final bool _continuousMode = true; // 连续识别模式
-
   // 🚀 标签自动补全相关
   OverlayEntry? _tagSuggestionOverlay;
-  List<String> _tagSuggestions = [];
-  String _currentTagPrefix = '';
   int _tagStartPosition = 0;
   final LayerLink _textFieldLayerLink = LayerLink(); // 用于跟踪光标位置
 
-  // 从Markdown中提取图片路径
-  void _extractImagesFromMarkdown() {
+  String _loadVisualContent(String markdown) {
     final imageRegex = RegExp(r'!\[(.*?)\]\((.*?)\)');
-    final matches = imageRegex.allMatches(_textController.text);
-
-    // 提取所有图片链接和描述
-    final newImageList = <_ImageItem>[];
+    final imageItems = <_ImageItem>[];
     final markdownCodes = <String>[];
+    final markdownAnchors = <int>[];
+    final imageAnchors = <int?>[];
+    final body = StringBuffer();
+    var cursor = 0;
 
-    for (final match in matches) {
+    for (final match in imageRegex.allMatches(markdown)) {
       final alt =
           match.group(1) ?? (AppLocalizationsSimple.of(context)?.image ?? '图片');
-      final path = match.group(2) ?? '';
+      final imagePath = match.group(2) ?? '';
       final fullMatch = match.group(0) ?? '';
 
-      if (path.isNotEmpty) {
-        newImageList.add(_ImageItem(path: path, alt: alt));
-        markdownCodes.add(fullMatch);
+      if (imagePath.isEmpty || fullMatch.isEmpty) {
+        continue;
       }
+
+      body.write(markdown.substring(cursor, match.start));
+      imageItems.add(_ImageItem(path: imagePath, alt: alt));
+      markdownCodes.add(fullMatch);
+      markdownAnchors.add(body.length);
+      cursor = match.end;
+    }
+    body.write(markdown.substring(cursor));
+    final bodyText = body.toString();
+
+    for (final anchor in markdownAnchors) {
+      imageAnchors.add(
+        MemoMarkdownEditingCodec.decode(bodyText.substring(0, anchor))
+            .text
+            .length,
+      );
     }
 
-    setState(() {
-      _imageList = newImageList;
-      _mdCodes = markdownCodes;
-
-      // 从文本中移除所有图片Markdown代码
-      var newText = _textController.text;
-      for (final code in markdownCodes) {
-        newText = newText.replaceAll(code, '');
-      }
-
-      // 更新文本，但不触发监听器
-      _textController.removeListener(_updateLineCount);
-      _textController.text = newText;
-      _textController.addListener(_updateLineCount);
-    });
+    _imageList = imageItems;
+    _mdCodes = markdownCodes;
+    _imageAnchors = imageAnchors;
+    return bodyText;
   }
 
   // 更新内容行数
@@ -151,9 +142,26 @@ class _NoteEditorState extends State<NoteEditor>
     });
   }
 
-  // 检查是否可以保存
-  bool _checkCanSave() =>
-      _textController.text.trim().isNotEmpty || _imageList.isNotEmpty;
+  void _syncImageAnchorsForTextChange() {
+    if (_suppressImageAnchorSync) {
+      return;
+    }
+
+    final nextText = _textController.text;
+    if (nextText == _lastTextForImageAnchors) {
+      return;
+    }
+
+    final diff = _TextDiff.from(_lastTextForImageAnchors, nextText);
+    for (var i = 0; i < _imageAnchors.length; i++) {
+      final anchor = _imageAnchors[i];
+      if (anchor == null) {
+        continue;
+      }
+      _imageAnchors[i] = diff.transformOffset(anchor);
+    }
+    _lastTextForImageAnchors = nextText;
+  }
 
   // 🚀 检测标签输入
   void _detectTagInput() {
@@ -231,7 +239,6 @@ class _NoteEditorState extends State<NoteEditor>
     }
 
     if (suggestions.isNotEmpty) {
-      _currentTagPrefix = tagPrefix;
       _tagStartPosition = hashIndex;
       _showTagSuggestions(suggestions);
     } else {
@@ -246,8 +253,6 @@ class _NoteEditorState extends State<NoteEditor>
       _hideTagSuggestions();
       return;
     }
-
-    _tagSuggestions = suggestions;
 
     // 移除旧的overlay
     _tagSuggestionOverlay?.remove();
@@ -270,12 +275,13 @@ class _NoteEditorState extends State<NoteEditor>
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? const Color(0xFF2C2C2E).withOpacity(0.95)
-                  : Colors.white.withOpacity(0.95),
+                  ? const Color(0xFF2C2C2E).withValues(alpha: 0.95)
+                  : Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.06),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.06),
                   blurRadius: 8,
                   offset: const Offset(0, -1),
                 ),
@@ -295,10 +301,10 @@ class _NoteEditorState extends State<NoteEditor>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
                         width: 0.5,
                       ),
                     ),
@@ -321,7 +327,7 @@ class _NoteEditorState extends State<NoteEditor>
                           style: TextStyle(
                             fontSize: 13,
                             color: isDarkMode
-                                ? Colors.white.withOpacity(0.9)
+                                ? Colors.white.withValues(alpha: 0.9)
                                 : Colors.black87,
                             fontWeight: FontWeight.w400,
                           ),
@@ -344,7 +350,6 @@ class _NoteEditorState extends State<NoteEditor>
   void _hideTagSuggestions() {
     _tagSuggestionOverlay?.remove();
     _tagSuggestionOverlay = null;
-    _tagSuggestions = [];
   }
 
   // 🚀 插入选中的标签
@@ -382,7 +387,7 @@ class _NoteEditorState extends State<NoteEditor>
   // 🚀 保存草稿到本地
   Future<void> _saveDraft() async {
     try {
-      final content = _textController.text.trim();
+      final content = _prepareFinalContent();
       // 只有在有内容时才保存草稿
       if (content.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
@@ -393,8 +398,10 @@ class _NoteEditorState extends State<NoteEditor>
           );
         }
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('保存草稿失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('保存草稿失败: $e');
+      }
     }
   }
 
@@ -411,8 +418,10 @@ class _NoteEditorState extends State<NoteEditor>
         }
       }
       return draft;
-    } catch (e) {
-      if (kDebugMode) debugPrint('加载草稿失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('加载草稿失败: $e');
+      }
       return null;
     }
   }
@@ -422,17 +431,24 @@ class _NoteEditorState extends State<NoteEditor>
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('note_editor_draft');
-      if (kDebugMode) debugPrint('🗑️ 草稿已清除');
-    } catch (e) {
-      if (kDebugMode) debugPrint('清除草稿失败: $e');
+      if (kDebugMode) {
+        debugPrint('🗑️ 草稿已清除');
+      }
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('清除草稿失败: $e');
+      }
     }
   }
 
   @override
   void initState() {
     super.initState();
-    // 先创建controller，使用initialContent作为默认值
-    _textController = TextEditingController(text: widget.initialContent);
+    final initialMarkdown = widget.initialContent ?? '';
+    final initialBody = _loadVisualContent(initialMarkdown);
+    _textController = MemoEditingController(markdown: initialBody);
+    _lastTextForImageAnchors = _textController.text;
+    _initialSavedContent = _prepareFinalContent();
 
     // 🚀 判断是否是新建笔记（initialContent为空）
     _isNewNote =
@@ -444,16 +460,21 @@ class _NoteEditorState extends State<NoteEditor>
       _loadDraft().then((draft) {
         if (draft != null && draft.isNotEmpty) {
           setState(() {
-            _textController.text = draft;
-            _canSave = _checkCanSave();
+            final draftBody = _loadVisualContent(draft);
+            _suppressImageAnchorSync = true;
+            try {
+              _textController.setMarkdown(draftBody);
+            } finally {
+              _suppressImageAnchorSync = false;
+            }
+            _lastTextForImageAnchors = _textController.text;
+            _initialSavedContent = '';
             _updateLineCount();
-            _extractImagesFromMarkdown();
           });
+          _focusEditorAfterOpen();
         }
       });
     }
-
-    _canSave = _checkCanSave();
 
     // 初始化语音识别动画控制器
     _speechAnimationController = AnimationController(
@@ -464,17 +485,11 @@ class _NoteEditorState extends State<NoteEditor>
     // 初始化内容行数
     _updateLineCount();
 
-    // 解析现有内容中的图片
-    _extractImagesFromMarkdown();
+    _focusEditorAfterOpen();
 
     // 监听输入变化，更新保存按钮状态和行数
     _textController.addListener(() {
-      final canSave = _checkCanSave();
-      if (canSave != _canSave) {
-        setState(() {
-          _canSave = canSave;
-        });
-      }
+      _syncImageAnchorsForTextChange();
       _updateLineCount();
 
       // 🚀 检测标签输入并显示建议
@@ -502,6 +517,7 @@ class _NoteEditorState extends State<NoteEditor>
     }
 
     _textController.dispose();
+    _textFocusNode.dispose();
     _scrollController.dispose();
     _imageScrollController.dispose();
     _speechAnimationController.dispose();
@@ -511,11 +527,10 @@ class _NoteEditorState extends State<NoteEditor>
   // 从设备选择图片并插入（支持多选）
   Future<void> _pickImage() async {
     try {
-      final pickedFiles = await _imagePicker.pickMultiImage(
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-      );
+      final pickedFiles = await _imagePicker.pickMultiImage();
+      if (!mounted) {
+        return;
+      }
 
       if (pickedFiles.isNotEmpty) {
         final appProvider = Provider.of<AppProvider>(context, listen: false);
@@ -525,13 +540,16 @@ class _NoteEditorState extends State<NoteEditor>
         // 1. 立即保存到本地并显示，提供即时响应
         for (final pickedFile in pickedFiles) {
           await _saveImageLocally(pickedFile, newImages, newMdCodes);
+          if (!mounted) {
+            return;
+          }
         }
 
         // 2. 立即更新UI，让用户看到图片
         setState(() {
           _imageList.addAll(newImages);
           _mdCodes.addAll(newMdCodes);
-          _canSave = true;
+          _imageAnchors.addAll(List<int?>.filled(newImages.length, null));
         });
 
         // 移除成功通知，减少干扰用户体验
@@ -540,11 +558,13 @@ class _NoteEditorState extends State<NoteEditor>
         if (appProvider.isLoggedIn &&
             !appProvider.isLocalMode &&
             appProvider.resourceService != null) {
-          _uploadImagesInBackground(pickedFiles, newImages);
+          unawaited(_uploadImagesInBackground(pickedFiles, newImages));
         }
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('选择图片失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('选择图片失败: $e');
+      }
       SnackBarUtils.showError(
         context,
         AppLocalizationsSimple.of(context)?.selectImageFailed ?? '选择图片失败',
@@ -563,6 +583,9 @@ class _NoteEditorState extends State<NoteEditor>
       // if (kDebugMode) debugPrint('NoteEditor: 开始后台上传 ${pickedFiles.length} 张图片');
 
       // 标记图片为上传中状态
+      if (!mounted) {
+        return;
+      }
       setState(() {
         for (var i = 0; i < localImages.length; i++) {
           final index = _imageList.indexOf(localImages[i]);
@@ -580,6 +603,9 @@ class _NoteEditorState extends State<NoteEditor>
 
       final uploadResults =
           await appProvider.resourceService!.uploadImages(imageFiles);
+      if (!mounted) {
+        return;
+      }
       debugPrint('NoteEditor: 获得上传结果，共 ${uploadResults.length} 个结果');
       var successCount = 0;
 
@@ -621,13 +647,19 @@ class _NoteEditorState extends State<NoteEditor>
         }
 
         if (result['success'] == true) {
-          final resourceUid = result['resourceUid'];
-          final serverPath = '/o/r/$resourceUid';
+          final serverPath = result['serverPath']?.toString();
+          if (serverPath == null || serverPath.isEmpty) {
+            debugPrint('NoteEditor: 上传成功但缺少服务器路径，跳过');
+            continue;
+          }
           final localPath = localImage.path;
 
           debugPrint('NoteEditor: 准备更新图片路径: $localPath -> $serverPath');
 
           // 更新图片项为服务器路径
+          if (!mounted) {
+            return;
+          }
           setState(() {
             _imageList[localImageIndex] = localImage.copyWith(
               path: serverPath,
@@ -643,6 +675,9 @@ class _NoteEditorState extends State<NoteEditor>
             'NoteEditor: Markdown替换: $localMdPattern -> $serverMdPattern, 索引: $mdIndex',
           );
           if (mdIndex != -1) {
+            if (!mounted) {
+              return;
+            }
             setState(() {
               _mdCodes[mdIndex] = serverMdPattern;
             });
@@ -657,6 +692,9 @@ class _NoteEditorState extends State<NoteEditor>
           debugPrint('NoteEditor: 图片 $i 上传成功，路径: $serverPath');
         } else {
           // 上传失败，保持本地路径，标记失败状态
+          if (!mounted) {
+            return;
+          }
           setState(() {
             _imageList[localImageIndex] =
                 localImage.copyWith(uploadStatus: UploadStatus.failed);
@@ -671,15 +709,21 @@ class _NoteEditorState extends State<NoteEditor>
       // }
 
       if (successCount < pickedFiles.length) {
+        if (!mounted) {
+          return;
+        }
         SnackBarUtils.showError(
           context,
           '${pickedFiles.length - successCount} 张图片上传失败',
         );
       }
-    } catch (e, stackTrace) {
+    } on Object catch (e, stackTrace) {
       debugPrint('NoteEditor: 后台上传异常: $e');
       debugPrint('NoteEditor: 异常堆栈: $stackTrace');
       // 标记所有图片为上传失败
+      if (!mounted) {
+        return;
+      }
       setState(() {
         for (var i = 0; i < localImages.length; i++) {
           final index = _imageList.indexOf(localImages[i]);
@@ -692,24 +736,18 @@ class _NoteEditorState extends State<NoteEditor>
     }
   }
 
-  // 同步更新文本编辑器内容（已禁用，保持图片Markdown隐藏）
-  void _updateTextContent() {
-    // 不再更新文本编辑器内容，避免图片Markdown显示在编辑框中
-    // 图片Markdown只在保存时通过 _prepareFinalContent() 添加
-  }
-
   // 清除图片缓存
   void _clearImageCache(String imagePath) {
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       if (appProvider.resourceService != null &&
-          imagePath.startsWith('/o/r/')) {
+          MemosResourceService.isServerResourcePath(imagePath)) {
         final fullUrl = appProvider.resourceService!.buildImageUrl(imagePath);
         // 清除CachedNetworkImage的缓存
         CachedNetworkImage.evictFromCache(fullUrl);
         debugPrint('NoteEditor: 已清除图片缓存 - $fullUrl');
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('NoteEditor: 清除缓存失败: $e');
     }
   }
@@ -722,7 +760,7 @@ class _NoteEditorState extends State<NoteEditor>
           width: 20,
           height: 20,
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.8),
+            color: Colors.blue.withValues(alpha: 0.8),
             shape: BoxShape.circle,
           ),
           child: const SizedBox(
@@ -739,7 +777,7 @@ class _NoteEditorState extends State<NoteEditor>
           width: 20,
           height: 20,
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.8),
+            color: Colors.green.withValues(alpha: 0.8),
             shape: BoxShape.circle,
           ),
           child: const Icon(
@@ -753,7 +791,7 @@ class _NoteEditorState extends State<NoteEditor>
           width: 20,
           height: 20,
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.8),
+            color: Colors.red.withValues(alpha: 0.8),
             shape: BoxShape.circle,
           ),
           child: const Icon(
@@ -763,7 +801,6 @@ class _NoteEditorState extends State<NoteEditor>
           ),
         );
       case UploadStatus.none:
-      default:
         return const SizedBox.shrink(); // 不显示任何图标
     }
   }
@@ -784,13 +821,18 @@ class _NoteEditorState extends State<NoteEditor>
     }
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final ext = path.extension(pickedFile.path).isNotEmpty ? path.extension(pickedFile.path) : '.jpg';
-    final fileName = 'image_${timestamp}$ext';
+    final ext = path.extension(pickedFile.path).isNotEmpty
+        ? path.extension(pickedFile.path)
+        : '.jpg';
+    final fileName = 'image_$timestamp$ext';
     final localImagePath = '${imagesDir.path}/$fileName';
 
     // 用 readAsBytes() 兼容 Android content URI（部分 OEM 如 vivo/iQOO 返回的不是文件路径）
     final bytes = await pickedFile.readAsBytes();
     await File(localImagePath).writeAsBytes(bytes);
+    if (!mounted) {
+      return;
+    }
 
     // 添加到列表
     final mdCode = '![图片](file://$localImagePath)';
@@ -803,173 +845,241 @@ class _NoteEditorState extends State<NoteEditor>
     newMdCodes.add(mdCode);
   }
 
-  // 🎯 智能提取引用标识符（大厂级体验）
-  String _extractReferenceIdentifier(String content) {
-    if (content.isEmpty) return content;
-
-    final lines = content.split('\n');
-
-    // 1. 优先使用标题（# 开头）
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('#')) {
-        // 移除 # 符号和空格
-        var title = trimmed.replaceAll(RegExp(r'^#+\s*'), '');
-        // 移除其他Markdown格式
-        title = title.replaceAll(RegExp(r'[*_`\[\]\(\)]'), '').trim();
-        if (title.isNotEmpty) {
-          return title.length > 30 ? title.substring(0, 30) : title;
-        }
-      }
-    }
-
-    // 2. 使用第一行（如果不太长）
-    final firstLine = lines[0].trim();
-    if (firstLine.isNotEmpty) {
-      // 移除Markdown格式
-      var cleaned = firstLine.replaceAll(RegExp(r'[*_`\[\]\(\)]'), '').trim();
-      // 移除URL
-      cleaned = cleaned.replaceAll(RegExp(r'https?://[^\s]+'), '').trim();
-
-      if (cleaned.isNotEmpty) {
-        // 限制长度在30字符以内
-        return cleaned.length > 30 ? cleaned.substring(0, 30) : cleaned;
-      }
-    }
-
-    // 3. 兜底：使用前30个字符
-    final plainText =
-        content.replaceAll(RegExp(r'[*_`#\[\]\(\)\n]'), ' ').trim();
-    return plainText.length > 30 ? plainText.substring(0, 30) : plainText;
-  }
-
-  // 解析文本中的引用内容，获取被引用的笔记ID列表
-  List<String> _parseReferencesFromText(String content) {
-    final referencedIds = <String>[];
-    final appProvider = Provider.of<AppProvider>(context, listen: false);
-
-    // 匹配 [[引用内容]] 格式
-    final referenceRegex = RegExp(r'\[\[([^\]]+)\]\]');
-    final matches = referenceRegex.allMatches(content);
-
-    for (final match in matches) {
-      final referenceContent = match.group(1);
-      if (referenceContent != null && referenceContent.isNotEmpty) {
-        // 🎯 解析引用格式（支持多种格式）
-        var cleanRef = referenceContent.trim();
-
-        // 移除 memos/ 前缀（如果有）
-        if (cleanRef.startsWith('memos/')) {
-          cleanRef = cleanRef.substring(6);
-        }
-
-        // 移除 ?text= 参数（如果有）
-        if (cleanRef.contains('?text=')) {
-          cleanRef = cleanRef.split('?text=')[0];
-        }
-
-        // cleanRef 现在是纯 ID（数字或字符串）
-        // 查找匹配这个 ID 的笔记
-        final matchingNote = appProvider.notes.firstWhere(
-          (note) => note.id == cleanRef,
-          orElse: () => Note(
-            id: '',
-            content: '',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        );
-
-        if (matchingNote.id.isNotEmpty &&
-            !referencedIds.contains(matchingNote.id)) {
-          referencedIds.add(matchingNote.id);
-        } else {}
-      }
-    }
-
-    return referencedIds;
-  }
-
-  // 保存后处理引用关系（支持离线）
-  Future<void> _syncReferencesAfterSave(String content) async {
-    if (widget.currentNoteId == null) return;
-
-    try {
-      final localRefService = LocalReferenceService.instance;
-
-      // 解析文本中的引用并创建本地关系
-      final createdCount = await localRefService.parseAndCreateReferences(
-        widget.currentNoteId!,
-        content,
-      );
-
-      if (kDebugMode && createdCount > 0) {
-        debugPrint('NoteEditor: 创建了 $createdCount 个本地引用关系');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('NoteEditor: 处理引用关系失败: $e');
-    }
-  }
-
-  // 创建单个引用关系
-  Future<void> _createReferenceRelation(
-    String currentNoteId,
-    String relatedMemoId,
-    String baseUrl,
-    String token,
-  ) async {
-    try {
-      final url = '$baseUrl/api/v1/memo/$currentNoteId/relation';
-      final headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-
-      final body = {
-        'relatedMemoId': int.parse(relatedMemoId),
-        'type': 'REFERENCE',
-      };
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: jsonEncode(body),
-      );
-    } catch (e) {
-      if (kDebugMode) debugPrint('NoteEditor: 创建引用关系失败: $e');
-    }
-  }
-
   // 用于保存笔记前的最终内容准备
   String _prepareFinalContent() {
-    // 保存前将隐藏的图片Markdown添加回文本
-    var finalContent = _textController.text.trim();
+    final bodyText = _textController.text;
+    if (_imageList.isEmpty) {
+      final bodyMarkdown = _textController.toMarkdown();
+      return bodyMarkdown.trim().isEmpty ? '' : bodyMarkdown;
+    }
 
-    // 如果有图片，添加到内容末尾
-    if (_imageList.isNotEmpty) {
-      // 如果文本非空且没有以换行符结尾，添加换行符
-      if (finalContent.isNotEmpty && !finalContent.endsWith('\n')) {
-        finalContent += '\n';
-      }
-
-      // 添加所有图片的Markdown代码
-      for (var i = 0; i < _imageList.length; i++) {
-        final img = _imageList[i];
-        final mdCode =
-            i < _mdCodes.length ? _mdCodes[i] : '![${img.alt}](${img.path})';
-        finalContent += '$mdCode\n';
+    final anchoredImages = <_AnchoredImage>[];
+    final trailingImages = <String>[];
+    for (var i = 0; i < _imageList.length; i++) {
+      final img = _imageList[i];
+      final mdCode =
+          i < _mdCodes.length ? _mdCodes[i] : '![${img.alt}](${img.path})';
+      final anchor = i < _imageAnchors.length ? _imageAnchors[i] : null;
+      if (anchor == null) {
+        trailingImages.add(mdCode);
+      } else {
+        anchoredImages.add(
+          _AnchoredImage(
+            offset: anchor.clamp(0, bodyText.length),
+            markdown: mdCode,
+            order: i,
+          ),
+        );
       }
     }
 
-    return finalContent.trim();
+    anchoredImages.sort((a, b) {
+      final offsetCompare = a.offset.compareTo(b.offset);
+      return offsetCompare != 0 ? offsetCompare : a.order.compareTo(b.order);
+    });
+
+    final buffer = StringBuffer();
+    var cursor = 0;
+    for (final image in anchoredImages) {
+      buffer
+        ..write(bodyText.substring(cursor, image.offset))
+        ..write(image.markdown);
+      cursor = image.offset;
+    }
+    buffer.write(bodyText.substring(cursor));
+
+    if (trailingImages.isNotEmpty) {
+      if (buffer.isNotEmpty &&
+          buffer.toString().trim().isNotEmpty &&
+          !buffer.toString().endsWith('\n')) {
+        buffer.write('\n');
+      }
+      for (final imageMarkdown in trailingImages) {
+        buffer.writeln(imageMarkdown);
+      }
+    }
+
+    final finalContent = MemoMarkdownEditingCodec.encode(
+      buffer.toString(),
+      _rangesWithImages(
+        images: anchoredImages,
+        trailingImageMarkdown: trailingImages,
+      ),
+    );
+    return finalContent.trim().isEmpty ? '' : finalContent;
+  }
+
+  Future<void> _saveNote() async {
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      debugPrint('NoteEditor: 开始保存笔记...');
+
+      final finalContent = _prepareFinalContent();
+
+      if (finalContent.isEmpty && _imageList.isEmpty) {
+        return;
+      }
+
+      await widget.onSave(finalContent);
+      await _clearDraft();
+      _hasSuccessfullySaved = true;
+
+      if (!mounted) {
+        return;
+      }
+      try {
+        Navigator.pop(context);
+        debugPrint('NoteEditor: 编辑器已关闭');
+      } on Object catch (e) {
+        debugPrint('NoteEditor: 关闭编辑器失败: $e');
+      }
+    } on Object catch (e) {
+      debugPrint('NoteEditor: 保存笔记时出错: $e');
+      if (mounted) {
+        SnackBarUtils.showError(
+          context,
+          '${AppLocalizationsSimple.of(context)?.saveFailed ?? '保存失败'}: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  List<MemoStyleRange> _rangesWithImages({
+    required List<_AnchoredImage> images,
+    required List<String> trailingImageMarkdown,
+  }) {
+    final sourceRanges = _textController.ranges;
+    if (sourceRanges.isEmpty || images.isEmpty) {
+      return sourceRanges;
+    }
+
+    final ranges = <MemoStyleRange>[];
+    for (final range in sourceRanges) {
+      var segmentStart = range.start;
+      final innerImages = images
+          .where(
+            (image) => image.offset > range.start && image.offset < range.end,
+          )
+          .toList()
+        ..sort((a, b) => a.offset.compareTo(b.offset));
+
+      for (final image in innerImages) {
+        if (segmentStart < image.offset) {
+          ranges.add(
+            _shiftRangeSegment(
+              range,
+              start: segmentStart,
+              end: image.offset,
+              images: images,
+            ),
+          );
+        }
+        segmentStart = image.offset;
+      }
+
+      if (segmentStart < range.end) {
+        ranges.add(
+          _shiftRangeSegment(
+            range,
+            start: segmentStart,
+            end: range.end,
+            images: images,
+          ),
+        );
+      }
+    }
+    return ranges;
+  }
+
+  MemoStyleRange _shiftRangeSegment(
+    MemoStyleRange range, {
+    required int start,
+    required int end,
+    required List<_AnchoredImage> images,
+  }) =>
+      range.copyWith(
+        start: start + _insertedLengthBefore(start, images),
+        end: end + _insertedLengthBefore(end, images),
+      );
+
+  int _insertedLengthBefore(int offset, List<_AnchoredImage> images) {
+    var inserted = 0;
+    for (final image in images) {
+      if (image.offset < offset) {
+        inserted += image.markdown.length;
+      }
+    }
+    return inserted;
+  }
+
+  bool get _hasUnsavedChanges {
+    final current = _prepareFinalContent();
+    if (current.isEmpty && _initialSavedContent.isEmpty) {
+      return false;
+    }
+    return current != _initialSavedContent;
+  }
+
+  Future<void> _requestCloseEditor() async {
+    if (!_hasUnsavedChanges) {
+      Navigator.pop(context);
+      return;
+    }
+
+    if (_isNewNote) {
+      await _saveDraft();
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          AppLocalizationsSimple.of(context)?.discardEditTitle ?? '放弃本次编辑？',
+        ),
+        content: Text(
+          AppLocalizationsSimple.of(context)?.unsavedChangesMessage ??
+              '当前修改尚未保存。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(AppLocalizationsSimple.of(context)?.discard ?? '放弃'),
+          ),
+        ],
+      ),
+    );
+
+    if ((shouldDiscard ?? false) && mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 获取屏幕尺寸和键盘高度
+    // 获取屏幕尺寸
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
-    final keyboardHeight = mediaQuery.viewInsets.bottom;
 
     // 基础编辑框高度 - 屏幕高度的35%或300像素，取较大值
     final baseEditorHeight = math.max(screenSize.height * 0.35, 300);
@@ -982,6 +1092,7 @@ class _NoteEditorState extends State<NoteEditor>
 
     // 底部工具栏高度
     const toolbarHeight = 50.0;
+    final keyboardInset = mediaQuery.viewInsets.bottom;
 
     // 顶部指示器和内边距高度
     const topElementsHeight = 20.0;
@@ -990,14 +1101,16 @@ class _NoteEditorState extends State<NoteEditor>
     final imagePreviewHeight = _imageList.isEmpty ? 0.0 : 120.0;
 
     // 编辑器总高度 = 内容高度 + 工具栏高度 + 顶部元素高度 + 图片预览高度
-    final editorHeight = math.max(
-      contentHeight +
-          toolbarHeight +
-          topElementsHeight +
-          imagePreviewHeight +
-          32, // 添加额外padding空间
-      baseEditorHeight,
-    ).toDouble();
+    final editorHeight = math
+        .max(
+          contentHeight +
+              toolbarHeight +
+              topElementsHeight +
+              imagePreviewHeight +
+              32, // 添加额外padding空间
+          baseEditorHeight,
+        )
+        .toDouble();
 
     // 获取当前主题模式
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -1020,9 +1133,10 @@ class _NoteEditorState extends State<NoteEditor>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      // 点击空白区域关闭编辑框
+      resizeToAvoidBottomInset: false,
+      // 点击空白区域关闭编辑框；有内容时先保护草稿/确认。
       body: GestureDetector(
-        onTap: () => Navigator.pop(context),
+        onTap: _requestCloseEditor,
         behavior: HitTestBehavior.opaque,
         child: Container(
           width: double.infinity,
@@ -1034,348 +1148,430 @@ class _NoteEditorState extends State<NoteEditor>
               // 编辑器主体 - 使用GestureDetector拦截点击事件
               GestureDetector(
                 onTap: () {}, // 空的onTap阻止点击事件冒泡
-                child: Container(
-                  height: editorHeight,
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        spreadRadius: 2,
+                child: AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  padding: EdgeInsets.only(bottom: keyboardInset),
+                  child: Container(
+                    height: editorHeight,
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // 顶部灰条 - 类似于iOS的拖动指示器
-                      Container(
-                        margin: const EdgeInsets.only(top: 8, bottom: 8),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color:
-                              isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          spreadRadius: 2,
                         ),
-                      ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // 顶部灰条 - 类似于iOS的拖动指示器
+                        Container(
+                          margin: const EdgeInsets.only(top: 8, bottom: 8),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? Colors.grey[700]
+                                : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
 
-                      // 编辑区域 - 高度自适应，支持滚动
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.only(
-                                left: 16,
-                                right: 56,
-                                top: 8,
-                                bottom: 8,
-                              ),
-                              child: CompositedTransformTarget(
-                                link: _textFieldLayerLink, // 🎯 用于跟踪光标位置
-                                child: TextField(
-                                  controller: _textController,
-                                  scrollController: _scrollController,
-                                  keyboardType: TextInputType.multiline,
-                                  maxLines: null, // 允许无限行
-                                  autofocus: true,
-                                  decoration: InputDecoration(
-                                    hintText: AppLocalizationsSimple.of(context)
-                                            ?.editorPlaceholder ??
-                                        '现在的想法是...',
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                    hintStyle: TextStyle(
+                        // 编辑区域 - 高度自适应，支持滚动
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 56,
+                                  top: 8,
+                                  bottom: 8,
+                                ),
+                                child: CompositedTransformTarget(
+                                  link: _textFieldLayerLink, // 🎯 用于跟踪光标位置
+                                  child: TextField(
+                                    controller: _textController,
+                                    focusNode: _textFocusNode,
+                                    scrollController: _scrollController,
+                                    keyboardType: TextInputType.multiline,
+                                    maxLines: null, // 允许无限行
+                                    autofocus: true,
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          AppLocalizationsSimple.of(context)
+                                                  ?.editorPlaceholder ??
+                                              '现在的想法是...',
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintStyle: TextStyle(
+                                        fontSize: 16,
+                                        color: hintTextColor,
+                                        height: 1.5,
+                                      ),
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      focusedErrorBorder: InputBorder.none,
+                                    ),
+                                    cursorColor: iconColor,
+                                    style: TextStyle(
                                       fontSize: 16,
-                                      color: hintTextColor,
+                                      color: textColor,
                                       height: 1.5,
                                     ),
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    disabledBorder: InputBorder.none,
-                                    errorBorder: InputBorder.none,
-                                    focusedErrorBorder: InputBorder.none,
-                                  ),
-                                  cursorColor: iconColor,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: textColor,
-                                    height: 1.5,
                                   ),
                                 ),
                               ),
-                            ),
 
-                            // 语音识别按钮 - 固定在右上角
-                            Positioned(
-                              top: 4,
-                              right: 12,
-                              child: _buildSpeechButton(
-                                iconColor,
-                                secondaryTextColor,
-                              ),
-                            ),
-
-                            // 实时识别文本提示 - 大厂级别的炫酷动效
-                            if (_isSpeechListening)
+                              // 语音识别按钮 - 固定在右上角
                               Positioned(
-                                bottom: 8,
-                                left: 16,
-                                right: 56,
-                                child: GestureDetector(
-                                  onTap: _toggleSpeechRecognition, // 点击整个识别框停止
-                                  behavior: HitTestBehavior.opaque, // 确保整个区域可点击
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 16,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: _partialSpeechText.isEmpty
-                                            ? [
-                                                iconColor.withOpacity(0.05),
-                                                iconColor.withOpacity(0.1),
-                                              ]
-                                            : [
-                                                iconColor.withOpacity(0.12),
-                                                iconColor.withOpacity(0.18),
-                                              ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
+                                top: 4,
+                                right: 12,
+                                child: _buildSpeechButton(
+                                  iconColor,
+                                  secondaryTextColor,
+                                ),
+                              ),
+
+                              // 实时识别文本提示 - 大厂级别的炫酷动效
+                              if (_isSpeechListening)
+                                Positioned(
+                                  bottom: 8,
+                                  left: 16,
+                                  right: 56,
+                                  child: GestureDetector(
+                                    onTap:
+                                        _toggleSpeechRecognition, // 点击整个识别框停止
+                                    behavior:
+                                        HitTestBehavior.opaque, // 确保整个区域可点击
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 16,
                                       ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: iconColor.withOpacity(0.4),
-                                        width: 1.5,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: iconColor.withOpacity(0.25),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            // 音波动画
-                                            _buildSoundWaveAnimation(iconColor),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  // 状态文字
-                                                  Text(
-                                                    _partialSpeechText.isEmpty
-                                                        ? (AppLocalizationsSimple
-                                                                    .of(context)
-                                                                ?.voiceListening ??
-                                                            '正在聆听...')
-                                                        : (AppLocalizationsSimple
-                                                                    .of(context)
-                                                                ?.voiceRecognizing ??
-                                                            '识别中'),
-                                                    style: TextStyle(
-                                                      color: iconColor,
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: _partialSpeechText.isEmpty
+                                              ? [
+                                                  iconColor.withValues(
+                                                    alpha: 0.05,
                                                   ),
-                                                  if (_partialSpeechText
-                                                      .isNotEmpty) ...[
-                                                    const SizedBox(height: 8),
-                                                    // 识别文字 - 带打字机效果
-                                                    AnimatedDefaultTextStyle(
-                                                      duration: const Duration(
-                                                        milliseconds: 150,
-                                                      ),
+                                                  iconColor.withValues(
+                                                    alpha: 0.1,
+                                                  ),
+                                                ]
+                                              : [
+                                                  iconColor.withValues(
+                                                    alpha: 0.12,
+                                                  ),
+                                                  iconColor.withValues(
+                                                    alpha: 0.18,
+                                                  ),
+                                                ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color:
+                                              iconColor.withValues(alpha: 0.4),
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: iconColor.withValues(
+                                              alpha: 0.25,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              // 音波动画
+                                              _buildSoundWaveAnimation(
+                                                iconColor,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // 状态文字
+                                                    Text(
+                                                      _partialSpeechText.isEmpty
+                                                          ? (AppLocalizationsSimple
+                                                                      .of(
+                                                                context,
+                                                              )
+                                                                  ?.voiceListening ??
+                                                              '正在聆听...')
+                                                          : (AppLocalizationsSimple
+                                                                      .of(context)
+                                                                  ?.voiceRecognizing ??
+                                                              '识别中'),
                                                       style: TextStyle(
-                                                        color: textColor,
-                                                        fontSize: 16,
+                                                        color: iconColor,
+                                                        fontSize: 12,
                                                         fontWeight:
-                                                            FontWeight.w600,
-                                                        height: 1.4,
-                                                      ),
-                                                      child: Text(
-                                                        _partialSpeechText,
-                                                        maxLines: 3,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                            FontWeight.w500,
                                                       ),
                                                     ),
+                                                    if (_partialSpeechText
+                                                        .isNotEmpty) ...[
+                                                      const SizedBox(height: 8),
+                                                      // 识别文字 - 带打字机效果
+                                                      AnimatedDefaultTextStyle(
+                                                        duration:
+                                                            const Duration(
+                                                          milliseconds: 150,
+                                                        ),
+                                                        style: TextStyle(
+                                                          color: textColor,
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          height: 1.4,
+                                                        ),
+                                                        child: Text(
+                                                          _partialSpeechText,
+                                                          maxLines: 3,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ],
-                                                ],
-                                              ),
-                                            ),
-                                            // 点击停止提示
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    iconColor.withOpacity(0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                AppLocalizationsSimple.of(
-                                                      context,
-                                                    )?.clickToStop ??
-                                                    '点击停止',
-                                                style: TextStyle(
-                                                  color: iconColor,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                              // 点击停止提示
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: iconColor.withValues(
+                                                    alpha: 0.15,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  AppLocalizationsSimple.of(
+                                                        context,
+                                                      )?.clickToStop ??
+                                                      '点击停止',
+                                                  style: TextStyle(
+                                                    color: iconColor,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      // 图片预览区域 - 水平滚动
-                      if (_imageList.isNotEmpty)
-                        Container(
-                          height: 110,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: dividerColor, width: 0.5),
-                            ),
-                          ),
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            controller: _imageScrollController,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _imageList.length,
-                            itemBuilder: (context, index) =>
-                                _buildImagePreviewItem(
-                              _imageList[index],
-                              index,
-                            ),
-                          ),
-                        ),
-
-                      // 更多选项栏（条件显示）
-                      if (_showingMoreOptions)
-                        Container(
-                          margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                          decoration: BoxDecoration(
-                            color: backgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: dividerColor.withOpacity(0.3),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: isDarkMode
-                                    ? Colors.black.withOpacity(0.3)
-                                    : Colors.grey.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
                             ],
                           ),
-                          child: SizedBox(
-                            height: 50,
-                            child: SingleChildScrollView(
+                        ),
+
+                        // 图片预览区域 - 水平滚动
+                        if (_imageList.isNotEmpty)
+                          Container(
+                            height: 110,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top:
+                                    BorderSide(color: dividerColor, width: 0.5),
+                              ),
+                            ),
+                            child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              controller: _imageScrollController,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _imageList.length,
+                              itemBuilder: (context, index) =>
+                                  _buildImagePreviewItem(
+                                _imageList[index],
+                                index,
+                              ),
+                            ),
+                          ),
+
+                        // 更多选项栏（条件显示）
+                        if (_showingMoreOptions)
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                            decoration: BoxDecoration(
+                              color: backgroundColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: dividerColor.withValues(alpha: 0.3),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDarkMode
+                                      ? Colors.black.withValues(alpha: 0.3)
+                                      : Colors.grey.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: SizedBox(
+                              height: 50,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 8),
+
+                                    // 下划线
+                                    _buildMoreOptionButton(
+                                      icon: Icons.format_underlined,
+                                      onPressed: () {
+                                        _wrapSelectedText('<u>', '</u>');
+                                        setState(
+                                          () => _showingMoreOptions = false,
+                                        );
+                                      },
+                                      secondaryTextColor: secondaryTextColor,
+                                    ),
+
+                                    // 链接
+                                    _buildMoreOptionButton(
+                                      icon: Icons.link,
+                                      onPressed: () {
+                                        setState(
+                                          () => _showingMoreOptions = false,
+                                        );
+                                        _showLinkDialog();
+                                      },
+                                      secondaryTextColor: secondaryTextColor,
+                                    ),
+
+                                    // 引用格式
+                                    _buildMoreOptionButton(
+                                      icon: Icons.format_quote,
+                                      onPressed: () {
+                                        _insertQuoteLine();
+                                        setState(
+                                          () => _showingMoreOptions = false,
+                                        );
+                                      },
+                                      secondaryTextColor: secondaryTextColor,
+                                    ),
+
+                                    // 标题
+                                    _buildMoreOptionButton(
+                                      icon: Icons.title,
+                                      onPressed: () {
+                                        _toggleHeading();
+                                        setState(
+                                          () => _showingMoreOptions = false,
+                                        );
+                                      },
+                                      secondaryTextColor: secondaryTextColor,
+                                    ),
+
+                                    // 代码
+                                    _buildMoreOptionButton(
+                                      icon: Icons.code,
+                                      onPressed: () {
+                                        _wrapSelectedText('`', '`');
+                                        setState(
+                                          () => _showingMoreOptions = false,
+                                        );
+                                      },
+                                      secondaryTextColor: secondaryTextColor,
+                                    ),
+
+                                    // 笔记引用（使用@图标）
+                                    _buildMoreOptionButton(
+                                      icon: Icons.alternate_email,
+                                      onPressed: () {
+                                        _showNoteReferenceDialog();
+                                        setState(
+                                          () => _showingMoreOptions = false,
+                                        );
+                                      },
+                                      secondaryTextColor: secondaryTextColor,
+                                    ),
+
+                                    const SizedBox(width: 8),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // AI 选项栏（条件显示）
+                        if (_showingAIOptions)
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                            decoration: BoxDecoration(
+                              color: backgroundColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: dividerColor.withValues(alpha: 0.3),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDarkMode
+                                      ? Colors.black.withValues(alpha: 0.3)
+                                      : Colors.grey.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: SizedBox(
+                              height: 50,
                               child: Row(
                                 children: [
                                   const SizedBox(width: 8),
 
-                                  // 下划线
+                                  // AI 续写 - 使用魔法棒图标表示AI自动续写
                                   _buildMoreOptionButton(
-                                    icon: Icons.format_underlined,
+                                    icon: Icons.auto_fix_high,
                                     onPressed: () {
-                                      _wrapSelectedText('<u>', '</u>');
-                                      setState(
-                                        () => _showingMoreOptions = false,
-                                      );
+                                      setState(() => _showingAIOptions = false);
+                                      _aiContinueWriting();
                                     },
                                     secondaryTextColor: secondaryTextColor,
                                   ),
 
-                                  // 链接
+                                  // 智能标签 - 使用价签图标表示标签
                                   _buildMoreOptionButton(
-                                    icon: Icons.link,
+                                    icon: Icons.local_offer_outlined,
                                     onPressed: () {
-                                      _insertText('[链接文本](链接地址)');
-                                      setState(
-                                        () => _showingMoreOptions = false,
-                                      );
-                                    },
-                                    secondaryTextColor: secondaryTextColor,
-                                  ),
-
-                                  // 引用格式
-                                  _buildMoreOptionButton(
-                                    icon: Icons.format_quote,
-                                    onPressed: () {
-                                      _insertText('\n> ');
-                                      setState(
-                                        () => _showingMoreOptions = false,
-                                      );
-                                    },
-                                    secondaryTextColor: secondaryTextColor,
-                                  ),
-
-                                  // 标题
-                                  _buildMoreOptionButton(
-                                    icon: Icons.title,
-                                    onPressed: () {
-                                      _insertText('\n# ');
-                                      setState(
-                                        () => _showingMoreOptions = false,
-                                      );
-                                    },
-                                    secondaryTextColor: secondaryTextColor,
-                                  ),
-
-                                  // 代码
-                                  _buildMoreOptionButton(
-                                    icon: Icons.code,
-                                    onPressed: () {
-                                      _wrapSelectedText('`', '`');
-                                      setState(
-                                        () => _showingMoreOptions = false,
-                                      );
-                                    },
-                                    secondaryTextColor: secondaryTextColor,
-                                  ),
-
-                                  // 笔记引用（使用@图标）
-                                  _buildMoreOptionButton(
-                                    icon: Icons.alternate_email,
-                                    onPressed: () {
-                                      _showNoteReferenceDialog();
-                                      setState(
-                                        () => _showingMoreOptions = false,
-                                      );
+                                      setState(() => _showingAIOptions = false);
+                                      _aiGenerateTags();
                                     },
                                     secondaryTextColor: secondaryTextColor,
                                   ),
@@ -1385,284 +1581,167 @@ class _NoteEditorState extends State<NoteEditor>
                               ),
                             ),
                           ),
-                        ),
 
-                      // AI 选项栏（条件显示）
-                      if (_showingAIOptions)
+                        // 底部功能栏和发送按钮
                         Container(
-                          margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          height: toolbarHeight,
                           decoration: BoxDecoration(
                             color: backgroundColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: dividerColor.withOpacity(0.3),
+                            border: Border(
+                              top: BorderSide(color: dividerColor, width: 0.5),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: isDarkMode
-                                    ? Colors.black.withOpacity(0.3)
-                                    : Colors.grey.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                          ),
+                          child: Row(
+                            children: [
+                              // 功能按钮容器
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 12),
+
+                                      // # 标签按钮
+                                      _buildToolbarIconButton(
+                                        icon: Text(
+                                          '#',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: secondaryTextColor,
+                                          ),
+                                        ),
+                                        onPressed: () => _insertText('#'),
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                      ),
+
+                                      // 图片按钮
+                                      _buildToolbarIconButton(
+                                        icon: Icon(
+                                          Icons.photo_outlined,
+                                          size: 20,
+                                          color: secondaryTextColor,
+                                        ),
+                                        onPressed: _pickImage,
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                      ),
+
+                                      // 🎯 待办按钮
+                                      _buildToolbarIconButton(
+                                        icon: Icon(
+                                          Icons.check_box_outlined,
+                                          size: 20,
+                                          color: secondaryTextColor,
+                                        ),
+                                        onPressed: _insertTodoItem,
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                      ),
+
+                                      // AI 按钮 - 与工具栏统一，点击展开/收起选项
+                                      _buildToolbarIconButton(
+                                        icon: Icon(
+                                          _showingAIOptions
+                                              ? Icons.keyboard_arrow_down
+                                              : Icons.auto_awesome,
+                                          size: 20,
+                                          color: secondaryTextColor,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _showingAIOptions =
+                                                !_showingAIOptions;
+                                          });
+                                        },
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                        isActive: _showingAIOptions,
+                                      ),
+
+                                      // B 粗体按钮
+                                      _buildToolbarIconButton(
+                                        icon: Text(
+                                          'B',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: secondaryTextColor,
+                                          ),
+                                        ),
+                                        onPressed: _toggleBold,
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                        isActive: _textController
+                                            .isMarkActive(MemoTextMark.bold),
+                                      ),
+
+                                      // 列表按钮
+                                      _buildToolbarIconButton(
+                                        icon: Icon(
+                                          Icons.format_list_bulleted,
+                                          size: 20,
+                                          color: secondaryTextColor,
+                                        ),
+                                        onPressed: _insertBulletItem,
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                      ),
+
+                                      // 更多按钮
+                                      _buildToolbarIconButton(
+                                        icon: Icon(
+                                          _showingMoreOptions
+                                              ? Icons.keyboard_arrow_down
+                                              : Icons.more_horiz,
+                                          size: 20,
+                                          color: secondaryTextColor,
+                                        ),
+                                        onPressed: _showMoreOptions,
+                                        iconColor: secondaryTextColor,
+                                        activeColor: iconColor,
+                                        isActive: _showingMoreOptions,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // 发送按钮
+                              Container(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Container(
+                                  width: 70,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: canSave
+                                        ? (isDarkMode
+                                            ? AppTheme.primaryLightColor
+                                            : AppTheme.primaryColor)
+                                        : (isDarkMode
+                                            ? Colors.grey[700]
+                                            : Colors.grey[300]),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.send,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: (canSave && !_isSaving)
+                                        ? _saveNote
+                                        : null,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          child: SizedBox(
-                            height: 50,
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 8),
-
-                                // AI 续写 - 使用魔法棒图标表示AI自动续写
-                                _buildMoreOptionButton(
-                                  icon: Icons.auto_fix_high,
-                                  onPressed: () {
-                                    setState(() => _showingAIOptions = false);
-                                    _aiContinueWriting();
-                                  },
-                                  secondaryTextColor: secondaryTextColor,
-                                ),
-
-                                // 智能标签 - 使用价签图标表示标签
-                                _buildMoreOptionButton(
-                                  icon: Icons.local_offer_outlined,
-                                  onPressed: () {
-                                    setState(() => _showingAIOptions = false);
-                                    _aiGenerateTags();
-                                  },
-                                  secondaryTextColor: secondaryTextColor,
-                                ),
-
-                                const SizedBox(width: 8),
-                              ],
-                            ),
-                          ),
                         ),
-
-                      // 底部功能栏和发送按钮
-                      Container(
-                        height: toolbarHeight,
-                        decoration: BoxDecoration(
-                          color: backgroundColor,
-                          border: Border(
-                            top: BorderSide(color: dividerColor, width: 0.5),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            // 功能按钮容器
-                            Expanded(
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    const SizedBox(width: 12),
-
-                                    // # 标签按钮
-                                    IconButton(
-                                      icon: Text(
-                                        '#',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: secondaryTextColor,
-                                        ),
-                                      ),
-                                      onPressed: () => _insertText('#'),
-                                      iconSize: 20,
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-
-                                    // 图片按钮
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.photo_outlined,
-                                        size: 20,
-                                        color: secondaryTextColor,
-                                      ),
-                                      onPressed: _pickImage,
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-
-                                    // 🎯 待办按钮
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.check_box_outlined,
-                                        size: 20,
-                                        color: secondaryTextColor,
-                                      ),
-                                      onPressed: () => _insertTodoItem(),
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-
-                                    // AI 按钮 - 与工具栏统一，点击展开/收起选项
-                                    IconButton(
-                                      icon: Icon(
-                                        _showingAIOptions
-                                            ? Icons.keyboard_arrow_down
-                                            : Icons.auto_awesome,
-                                        size: 20,
-                                        color: secondaryTextColor,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _showingAIOptions =
-                                              !_showingAIOptions;
-                                        });
-                                      },
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-
-                                    // B 粗体按钮
-                                    IconButton(
-                                      icon: Text(
-                                        'B',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: secondaryTextColor,
-                                        ),
-                                      ),
-                                      onPressed: () =>
-                                          _wrapSelectedText('**', '**'),
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-
-                                    // 列表按钮
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.format_list_bulleted,
-                                        size: 20,
-                                        color: secondaryTextColor,
-                                      ),
-                                      onPressed: () => _insertText('\n- '),
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-
-                                    // 更多按钮
-                                    IconButton(
-                                      icon: Icon(
-                                        _showingMoreOptions
-                                            ? Icons.keyboard_arrow_down
-                                            : Icons.more_horiz,
-                                        size: 20,
-                                        color: secondaryTextColor,
-                                      ),
-                                      onPressed: _showMoreOptions,
-                                      padding: const EdgeInsets.all(8),
-                                      constraints: const BoxConstraints(),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // 发送按钮
-                            Container(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Container(
-                                width: 70,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: canSave
-                                      ? (isDarkMode
-                                          ? AppTheme.primaryLightColor
-                                          : AppTheme.primaryColor)
-                                      : (isDarkMode
-                                          ? Colors.grey[700]
-                                          : Colors.grey[300]),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.send,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  onPressed: (canSave && !_isSaving)
-                                      ? () async {
-                                          if (_isSaving) return;
-
-                                          setState(() {
-                                            _isSaving = true;
-                                          });
-
-                                          try {
-                                            debugPrint('NoteEditor: 开始保存笔记...');
-
-                                            // 准备最终内容
-                                            final finalContent =
-                                                _prepareFinalContent();
-
-                                            // 如果内容为空且没有图片，不保存
-                                            if (finalContent.isEmpty &&
-                                                _imageList.isEmpty) {
-                                              setState(() {
-                                                _isSaving = false;
-                                              });
-                                              return;
-                                            }
-
-                                            await widget.onSave(finalContent);
-
-                                            // 🚀 保存成功后清除草稿并标记
-                                            await _clearDraft();
-                                            _hasSuccessfullySaved =
-                                                true; // 标记已成功保存
-
-                                            // 使用安全的方式关闭编辑器
-                                            if (mounted) {
-                                              try {
-                                                Navigator.pop(context);
-                                                debugPrint(
-                                                  'NoteEditor: 编辑器已关闭',
-                                                );
-                                              } catch (e) {
-                                                debugPrint(
-                                                  'NoteEditor: 关闭编辑器失败: $e',
-                                                );
-                                              }
-                                            }
-                                          } catch (e) {
-                                            debugPrint(
-                                              'NoteEditor: 保存笔记时出错: $e',
-                                            );
-                                            if (mounted) {
-                                              SnackBarUtils.showError(
-                                                context,
-                                                '${AppLocalizationsSimple.of(context)?.saveFailed ?? '保存失败'}: $e',
-                                              );
-                                            }
-                                          } finally {
-                                            if (mounted) {
-                                              setState(() {
-                                                _isSaving = false;
-                                              });
-                                            }
-                                          }
-                                        }
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1681,7 +1760,7 @@ class _NoteEditorState extends State<NoteEditor>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
           ),
         ),
         child: Stack(
@@ -1710,7 +1789,7 @@ class _NoteEditorState extends State<NoteEditor>
                   width: 22,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -1734,100 +1813,178 @@ class _NoteEditorState extends State<NoteEditor>
         if (index < _mdCodes.length) {
           _mdCodes.removeAt(index);
         }
+        if (index < _imageAnchors.length) {
+          _imageAnchors.removeAt(index);
+        }
       }
     });
   }
 
   // 在当前光标位置插入文本
   void _insertText(String text) {
+    _textController.insertPlainText(text);
+  }
+
+  void _insertVisualLinePrefix(String prefix) {
     final currentText = _textController.text;
     final selection = _textController.selection;
-    final newText = currentText.substring(0, selection.start) +
-        text +
-        currentText.substring(selection.end);
+    final cursorPos = selection.isValid ? selection.start : currentText.length;
+
+    final searchOffset = math.max(0, cursorPos - 1);
+    var lineStart = currentText.lastIndexOf('\n', searchOffset);
+    lineStart = lineStart == -1 ? 0 : lineStart + 1;
+
+    final lineEndIndex = currentText.indexOf('\n', cursorPos);
+    final lineEnd = lineEndIndex == -1 ? currentText.length : lineEndIndex;
+    final line = currentText.substring(lineStart, lineEnd);
+    final existingPrefixMatch = RegExp(r'^(\s*)(☐ |☑ |• |│ )').firstMatch(line);
+    final cleanLine = existingPrefixMatch == null
+        ? line
+        : '${existingPrefixMatch.group(1) ?? ''}'
+            '${line.substring(existingPrefixMatch.end)}';
+
+    final indent = RegExp(r'^\s*').firstMatch(cleanLine)?.group(0) ?? '';
+    final nextLine = '$indent$prefix${cleanLine.substring(indent.length)}';
+    final nextText = currentText.replaceRange(lineStart, lineEnd, nextLine);
+    final cursorDelta = nextLine.length - line.length;
 
     _textController.value = TextEditingValue(
-      text: newText,
+      text: nextText,
       selection: TextSelection.collapsed(
-        offset: selection.start + text.length,
+        offset: math.max(0, cursorPos + cursorDelta),
       ),
     );
   }
 
-  // 🎯 插入待办事项（智能判断是否需要换行）
+  // 🎯 插入待办事项（用户看到复选框，保存时转为 Memos Markdown）
   void _insertTodoItem() {
-    final currentText = _textController.text;
+    _insertVisualLinePrefix('☐ ');
+  }
+
+  void _insertBulletItem() {
+    _insertVisualLinePrefix('• ');
+  }
+
+  void _insertQuoteLine() {
+    _insertVisualLinePrefix('│ ');
+  }
+
+  void _toggleBold() {
+    _textController.toggleMark(MemoTextMark.bold);
+    setState(() {});
+  }
+
+  void _toggleInlineCode() {
+    _textController.toggleMark(MemoTextMark.code);
+    setState(() {});
+  }
+
+  void _toggleUnderline() {
+    _textController.toggleMark(MemoTextMark.underline);
+    setState(() {});
+  }
+
+  void _toggleHeading() {
+    _textController.toggleCurrentLineHeading();
+    setState(() {});
+  }
+
+  Future<void> _showLinkDialog() async {
     final selection = _textController.selection;
-    final cursorPos = selection.start;
+    final selectedText = selection.isValid && !selection.isCollapsed
+        ? _textController.text.substring(selection.start, selection.end)
+        : '';
+    final labelController = TextEditingController(text: selectedText);
+    final urlController = TextEditingController();
 
-    // 检查光标前的字符
-    String prefix = '';
-    if (cursorPos > 0 && currentText[cursorPos - 1] != '\n') {
-      // 光标前不是换行符，需要添加换行
-      prefix = '\n';
-    }
-
-    // 待办事项文本
-    const todoText = '- [ ] ';
-    final insertText = prefix + todoText;
-
-    final newText = currentText.substring(0, cursorPos) +
-        insertText +
-        currentText.substring(selection.end);
-
-    _textController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(
-        offset: cursorPos + insertText.length,
-      ),
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) {
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          title: Text(AppLocalizationsSimple.of(context)?.addLink ?? '添加链接'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: labelController,
+                decoration: InputDecoration(
+                  labelText:
+                      AppLocalizationsSimple.of(context)?.displayText ?? '显示文字',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: urlController,
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                  labelText:
+                      AppLocalizationsSimple.of(context)?.linkAddress ?? '链接地址',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                AppLocalizationsSimple.of(context)?.cancel ?? '取消',
+                style: TextStyle(
+                  color: isDarkMode
+                      ? AppTheme.darkTextSecondaryColor
+                      : AppTheme.textSecondaryColor,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, {
+                'label': labelController.text,
+                'url': urlController.text,
+              }),
+              child: Text(AppLocalizationsSimple.of(context)?.confirm ?? '确定'),
+            ),
+          ],
+        );
+      },
     );
+
+    labelController.dispose();
+    urlController.dispose();
+
+    if (result == null) {
+      return;
+    }
+    _textController.insertLink(result['label'] ?? '', result['url'] ?? '');
+    setState(() {});
   }
 
   // 用指定的标记包裹所选文本
   void _wrapSelectedText(String prefix, String suffix) {
-    final currentText = _textController.text;
-    final selection = _textController.selection;
-
-    // 如果没有选择文本，插入标记并将光标放在中间
-    if (selection.start == selection.end) {
-      final newText = currentText.substring(0, selection.start) +
-          prefix +
-          suffix +
-          currentText.substring(selection.end);
-
-      _textController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(
-          offset: selection.start + prefix.length,
-        ),
-      );
-    } else {
-      // 如果选择了文本，用标记包裹它
-      final selectedText =
-          currentText.substring(selection.start, selection.end);
-      final newText = currentText.substring(0, selection.start) +
-          prefix +
-          selectedText +
-          suffix +
-          currentText.substring(selection.end);
-
-      _textController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(
-          offset: selection.start +
-              prefix.length +
-              selectedText.length +
-              suffix.length,
-        ),
-      );
+    if (prefix == '**' && suffix == '**') {
+      _toggleBold();
+      return;
     }
+
+    if (prefix == '`' && suffix == '`') {
+      _toggleInlineCode();
+      return;
+    }
+
+    if (prefix == '<u>' && suffix == '</u>') {
+      _toggleUnderline();
+      return;
+    }
+
+    _textController.insertPlainText(prefix + suffix);
   }
 
   // 构建图片Widget，处理认证问题
   Widget _buildImageWidget(String uriString) {
     debugPrint('NoteEditor: 构建图片组件 - 路径: $uriString');
 
-    if (uriString.startsWith('/o/r/')) {
+    if (MemosResourceService.isServerResourcePath(uriString)) {
       // Memos服务器资源路径，需要认证
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       if (appProvider.resourceService != null) {
@@ -1892,7 +2049,7 @@ class _NoteEditorState extends State<NoteEditor>
       if (uriString.startsWith('http://') || uriString.startsWith('https://')) {
         // 网络图片
         return NetworkImage(uriString);
-      } else if (uriString.startsWith('/o/r/')) {
+      } else if (MemosResourceService.isServerResourcePath(uriString)) {
         // Memos服务器资源路径，构建完整URL并添加认证头
         final appProvider = Provider.of<AppProvider>(context, listen: false);
         if (appProvider.resourceService != null) {
@@ -1943,13 +2100,13 @@ class _NoteEditorState extends State<NoteEditor>
         // 尝试作为本地文件处理
         try {
           return FileImage(File(uriString));
-        } catch (e) {
+        } on Object catch (e) {
           debugPrint('Error loading image: $e for $uriString');
           // 默认使用资源图片
           return const AssetImage('assets/images/logo.png');
         }
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('Error in _getImageProvider: $e');
       return const AssetImage('assets/images/logo.png');
     }
@@ -2019,17 +2176,21 @@ class _NoteEditorState extends State<NoteEditor>
         widget.currentNoteId!,
         relatedMemoId,
       );
+      if (!mounted) {
+        return;
+      }
 
       if (success) {
         SnackBarUtils.showSuccess(
           context,
-          AppLocalizationsSimple.of(context)?.referenceCreated ??
-              '引用关系已创建',
+          AppLocalizationsSimple.of(context)?.referenceCreated ?? '引用关系已创建',
         );
 
         // 如果是在线模式，尝试后台同步到服务器
         if (appProvider.isLoggedIn && !appProvider.isLocalMode) {
-          _syncReferenceToServer(widget.currentNoteId!, relatedMemoId);
+          unawaited(
+            _syncReferenceToServer(widget.currentNoteId!, relatedMemoId),
+          );
         }
       } else {
         SnackBarUtils.showError(
@@ -2038,8 +2199,10 @@ class _NoteEditorState extends State<NoteEditor>
               '创建引用关系失败',
         );
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error adding note reference: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error adding note reference: $e');
+      }
       SnackBarUtils.showError(
         context,
         '${AppLocalizationsSimple.of(context)?.referenceFailed ?? '引用失败'}：$e',
@@ -2060,7 +2223,7 @@ class _NoteEditorState extends State<NoteEditor>
 
       // 调用AppProvider的引用关系处理方法
       // 这会在保存笔记时自动处理引用关系同步
-    } catch (e) {
+    } on Object {
       // 不显示错误信息，因为本地引用关系已经创建成功
     }
   }
@@ -2069,34 +2232,41 @@ class _NoteEditorState extends State<NoteEditor>
     setState(() {
       _showingMoreOptions = !_showingMoreOptions;
     });
+    _keepEditorFocused();
+  }
+
+  void _keepEditorFocused() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _textFocusNode.requestFocus();
+    });
+  }
+
+  void _focusEditorAfterOpen() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      FocusScope.of(context).requestFocus(_textFocusNode);
+      Future<void>.delayed(const Duration(milliseconds: 180), () {
+        if (!mounted) {
+          return;
+        }
+        FocusScope.of(context).requestFocus(_textFocusNode);
+      });
+    });
   }
 
   // 防止重复点击的标志
   bool _isProcessing = false;
 
-  // 重启连续识别
-  Future<void> _restartContinuousRecognition() async {
-    if (!_isSpeechListening || !_continuousMode || !mounted) return;
-
-    debugPrint('NoteEditor: 🔄 准备重启识别...');
-
-    // 先确保完全停止
-    await _speechService.stopListening();
-
-    // 等待系统释放资源
-    await Future.delayed(const Duration(milliseconds: 1000));
-
-    if (!_isSpeechListening || !mounted) return;
-
-    debugPrint('NoteEditor: 🔄 重启识别');
-    _startRecognition();
-  }
-
   // 启动识别（可重用）
   Future<void> _startRecognition() async {
     // 🎯 不在这里启动动画，等有声音时再启动（像大厂一样）
     // 动画由 onSoundLevel 回调控制
-    
+
     final success = await _speechService.startListening(
       context: context,
       onResult: (text) async {
@@ -2112,10 +2282,6 @@ class _NoteEditorState extends State<NoteEditor>
       // 🎤 监听音量变化，控制动画播放
       onSoundLevel: (level) {
         if (mounted) {
-          setState(() {
-            _soundLevel = level;
-          });
-          
           // 🎯 只在有声音时播放动画（像大厂一样）
           if (level > 0.1) {
             if (!_speechAnimationController.isAnimating) {
@@ -2155,23 +2321,25 @@ class _NoteEditorState extends State<NoteEditor>
       if (_isSpeechListening) {
         debugPrint('NoteEditor: 停止语音识别');
         // 停止语音识别 - 将当前识别的文本插入
-        if (_partialSpeechText.isNotEmpty) {
-          _insertText(_partialSpeechText);
+        final recognizedText = _partialSpeechText.trim().isNotEmpty
+            ? _partialSpeechText.trim()
+            : _speechService.lastRecognizedText.trim();
+        if (recognizedText.isNotEmpty) {
+          _insertText(recognizedText);
         }
 
         // 🔥 Android: 确保完全释放麦克风资源
         await _speechService.stopListening();
-        
+
         // 🎯 停止动画
         _speechAnimationController.stop();
         _speechAnimationController.reset();
-        
+
         setState(() {
           _isSpeechListening = false;
           _partialSpeechText = '';
-          _soundLevel = 0.0; // 重置音量级别
         });
-        
+
         // 🎯 给用户反馈，确认已停止
         if (mounted) {
           debugPrint('NoteEditor: ✅ 语音识别已停止，麦克风已释放');
@@ -2186,7 +2354,8 @@ class _NoteEditorState extends State<NoteEditor>
             if (mounted) {
               SnackBarUtils.showError(
                 context,
-                AppLocalizationsSimple.of(context)?.microphonePermissionRequired ??
+                AppLocalizationsSimple.of(context)
+                        ?.microphonePermissionRequired ??
                     '需要麦克风权限才能使用语音识别',
               );
             }
@@ -2228,6 +2397,48 @@ class _NoteEditorState extends State<NoteEditor>
         visualDensity: VisualDensity.compact,
       );
 
+  Widget _buildToolbarIconButton({
+    required Widget icon,
+    required VoidCallback onPressed,
+    required Color iconColor,
+    Color? activeColor,
+    bool isActive = false,
+  }) {
+    final effectiveActiveColor = activeColor ?? iconColor;
+    return Container(
+      width: 36,
+      height: 36,
+      margin: const EdgeInsets.symmetric(horizontal: 1),
+      decoration: BoxDecoration(
+        color: isActive ? effectiveActiveColor.withValues(alpha: 0.12) : null,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        icon: IconTheme(
+          data: IconThemeData(
+            color: isActive ? effectiveActiveColor : iconColor,
+            size: 20,
+          ),
+          child: DefaultTextStyle.merge(
+            style: TextStyle(
+              color: isActive ? effectiveActiveColor : iconColor,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+            child: icon,
+          ),
+        ),
+        onPressed: () {
+          onPressed();
+          _keepEditorFocused();
+        },
+        padding: const EdgeInsets.all(8),
+        constraints: const BoxConstraints(),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
   // 🎯 简化音波动画 - 大厂风格（Siri/微信）
   Widget _buildSoundWaveAnimation(Color color) => Row(
         mainAxisSize: MainAxisSize.min,
@@ -2242,9 +2453,9 @@ class _NoteEditorState extends State<NoteEditor>
                 (_speechAnimationController.value * 2 * math.pi) +
                     (phase * 2 * math.pi),
               );
-              
+
               // 🎯 基础高度 + 动画幅度（8-20像素，更温和）
-              final baseHeight = 12.0;
+              const baseHeight = 12.0;
               final animatedHeight = baseHeight + (value.abs() * 8);
 
               return Container(
@@ -2271,11 +2482,14 @@ class _NoteEditorState extends State<NoteEditor>
           height: 36,
           decoration: BoxDecoration(
             color: _isSpeechListening
-                ? iconColor.withOpacity(0.15)
+                ? iconColor.withValues(alpha: 0.15)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
             border: _isSpeechListening
-                ? Border.all(color: iconColor.withOpacity(0.3), width: 1.5)
+                ? Border.all(
+                    color: iconColor.withValues(alpha: 0.3),
+                    width: 1.5,
+                  )
                 : null,
           ),
           child: Stack(
@@ -2293,7 +2507,7 @@ class _NoteEditorState extends State<NoteEditor>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: iconColor.withOpacity(0.3 * (1 - value)),
+                          color: iconColor.withValues(alpha: 0.3 * (1 - value)),
                           width: 2,
                         ),
                       ),
@@ -2327,14 +2541,16 @@ class _NoteEditorState extends State<NoteEditor>
       return;
     }
 
-    if (_isAIProcessing) return;
+    if (_isAIProcessing) {
+      return;
+    }
 
     setState(() => _isAIProcessing = true);
 
     // 显示持久加载提示（使用主题色）
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final snackBar = ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -2389,7 +2605,9 @@ class _NoteEditorState extends State<NoteEditor>
         apiUrl: apiUrl,
         model: model,
         allNotes: appProvider.notes, // 🔥 传入所有笔记作为上下文
-        customPrompt: appConfig.useCustomPrompt ? appConfig.customContinuationPrompt : null, // 🔥 传递自定义续写提示词
+        customPrompt: appConfig.useCustomPrompt
+            ? appConfig.customContinuationPrompt
+            : null, // 🔥 传递自定义续写提示词
       );
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -2417,7 +2635,7 @@ class _NoteEditorState extends State<NoteEditor>
               '✅ AI continue completed!',
         );
       }
-    } catch (e) {
+    } on Object catch (e) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       SnackBarUtils.showError(context, 'AI 续写失败: $e');
     } finally {
@@ -2438,14 +2656,16 @@ class _NoteEditorState extends State<NoteEditor>
       return;
     }
 
-    if (_isAIProcessing) return;
+    if (_isAIProcessing) {
+      return;
+    }
 
     setState(() => _isAIProcessing = true);
 
     // 显示持久加载提示（使用主题色）
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final snackBar = ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -2521,7 +2741,7 @@ class _NoteEditorState extends State<NoteEditor>
               '✅ Generated ${tags.length} tags!',
         );
       }
-    } catch (e) {
+    } on Object catch (e) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       SnackBarUtils.showError(context, 'AI 标签生成失败: $e');
     } finally {
@@ -2585,7 +2805,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 25,
                 offset: const Offset(0, 10),
               ),
@@ -2603,8 +2823,8 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppTheme.primaryColor.withOpacity(0.1),
-                      AppTheme.primaryColor.withOpacity(0.05),
+                      AppTheme.primaryColor.withValues(alpha: 0.1),
+                      AppTheme.primaryColor.withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: const BorderRadius.only(
@@ -2617,7 +2837,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(50),
                       ),
                       child: const Icon(
@@ -2649,7 +2869,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                         color: (widget.isDarkMode
                                 ? Colors.white
                                 : AppTheme.textPrimaryColor)
-                            .withOpacity(0.7),
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -2662,17 +2882,17 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: AppLocalizationsSimple.of(context)
-                            ?.searchNoteContent ??
-                        '搜索笔记内容...',
+                    hintText:
+                        AppLocalizationsSimple.of(context)?.searchNoteContent ??
+                            '搜索笔记内容...',
                     prefixIcon: Icon(
                       Icons.search,
-                      color: AppTheme.primaryColor.withOpacity(0.7),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.7),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -2684,7 +2904,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                     ),
                     filled: true,
                     fillColor: widget.isDarkMode
-                        ? Colors.white.withOpacity(0.05)
+                        ? Colors.white.withValues(alpha: 0.05)
                         : Colors.grey.shade50,
                   ),
                   style: TextStyle(
@@ -2766,7 +2986,10 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                                 Text(
                                   AppLocalizationsSimple.of(context)
                                           ?.foundNotesCount
-                                          .replaceAll('{count}', '${_filteredNotes.length}') ??
+                                          .replaceAll(
+                                            '{count}',
+                                            '${_filteredNotes.length}',
+                                          ) ??
                                       '找到 ${_filteredNotes.length} 个笔记',
                                   style: const TextStyle(
                                     fontSize: 12,
@@ -2797,12 +3020,13 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: widget.isDarkMode
-                                            ? Colors.white.withOpacity(0.05)
+                                            ? Colors.white
+                                                .withValues(alpha: 0.05)
                                             : Colors.grey.shade50,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: AppTheme.primaryColor
-                                              .withOpacity(0.1),
+                                              .withValues(alpha: 0.1),
                                         ),
                                       ),
                                       child: Row(
@@ -2811,7 +3035,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
                                               color: AppTheme.primaryColor
-                                                  .withOpacity(0.1),
+                                                  .withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
@@ -2853,7 +3077,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                                                                 .darkTextSecondaryColor
                                                             : AppTheme
                                                                 .textSecondaryColor)
-                                                        .withOpacity(0.8),
+                                                        .withValues(alpha: 0.8),
                                                   ),
                                                 ),
                                               ],
@@ -2863,7 +3087,7 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                                             Icons.add_link,
                                             size: 16,
                                             color: AppTheme.primaryColor
-                                                .withOpacity(0.7),
+                                                .withValues(alpha: 0.7),
                                           ),
                                         ],
                                       ),
@@ -2887,8 +3111,8 @@ class _NoteReferenceDialogState extends State<_NoteReferenceDialog> {
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       backgroundColor: widget.isDarkMode
-                          ? AppTheme.primaryColor.withOpacity(0.1)
-                          : AppTheme.primaryColor.withOpacity(0.05),
+                          ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                          : AppTheme.primaryColor.withValues(alpha: 0.05),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -2939,4 +3163,58 @@ class _ImageItem {
         alt: alt ?? this.alt,
         uploadStatus: uploadStatus ?? this.uploadStatus,
       );
+}
+
+class _AnchoredImage {
+  const _AnchoredImage({
+    required this.offset,
+    required this.markdown,
+    required this.order,
+  });
+
+  final int offset;
+  final String markdown;
+  final int order;
+}
+
+class _TextDiff {
+  const _TextDiff({
+    required this.start,
+    required this.oldEnd,
+    required this.newEnd,
+  });
+
+  final int start;
+  final int oldEnd;
+  final int newEnd;
+
+  int transformOffset(int offset) {
+    if (offset <= start) {
+      return offset;
+    }
+    if (offset >= oldEnd) {
+      return offset + (newEnd - oldEnd);
+    }
+    return newEnd;
+  }
+
+  static _TextDiff from(String oldText, String newText) {
+    var start = 0;
+    while (start < oldText.length &&
+        start < newText.length &&
+        oldText[start] == newText[start]) {
+      start++;
+    }
+
+    var oldEnd = oldText.length;
+    var newEnd = newText.length;
+    while (oldEnd > start &&
+        newEnd > start &&
+        oldText[oldEnd - 1] == newText[newEnd - 1]) {
+      oldEnd--;
+      newEnd--;
+    }
+
+    return _TextDiff(start: start, oldEnd: oldEnd, newEnd: newEnd);
+  }
 }

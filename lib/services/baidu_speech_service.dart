@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import '../config/app_config.dart';
+import 'package:inkroot/config/app_config.dart';
 
 /// 百度语音识别服务
 /// 文档: https://ai.baidu.com/ai-doc/SPEECH/Vk38lxily
@@ -16,11 +14,11 @@ class BaiduSpeechService {
   // 🔑 百度语音识别 API 配置（从 AppConfig 读取）
   static String get _apiKey => AppConfig.baiduSpeechApiKey;
   static String get _secretKey => AppConfig.baiduSpeechSecretKey;
-  
+
   // API 端点
   static const String _tokenUrl = 'https://aip.baidubce.com/oauth/2.0/token';
   static const String _asrUrl = 'https://vop.baidu.com/server_api';
-  
+
   String? _accessToken;
   DateTime? _tokenExpireTime;
 
@@ -28,8 +26,8 @@ class BaiduSpeechService {
   Future<String?> _getAccessToken() async {
     try {
       // 检查 token 是否有效
-      if (_accessToken != null && 
-          _tokenExpireTime != null && 
+      if (_accessToken != null &&
+          _tokenExpireTime != null &&
           DateTime.now().isBefore(_tokenExpireTime!)) {
         return _accessToken;
       }
@@ -45,28 +43,28 @@ class BaiduSpeechService {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        _accessToken = data['access_token'];
-        
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        _accessToken = data['access_token'] as String?;
+
         // token 有效期 30 天，提前 1 天刷新
         final expiresIn = data['expires_in'] as int;
         _tokenExpireTime = DateTime.now().add(
           Duration(seconds: expiresIn - 86400),
         );
-        
+
         return _accessToken;
       } else {
         debugPrint('获取百度 Access Token 失败: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('获取百度 Access Token 异常: $e');
       return null;
     }
   }
 
   /// 语音识别（录音文件）
-  /// 
+  ///
   /// [audioPath] 音频文件路径，支持 pcm/wav/amr/m4a 格式
   /// [format] 音频格式，默认 wav
   /// [rate] 采样率，支持 8000 或 16000，默认 16000
@@ -115,13 +113,14 @@ class BaiduSpeechService {
       );
 
       if (response.statusCode == 200) {
-        final result = json.decode(utf8.decode(response.bodyBytes));
-        
+        final result = json.decode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
+
         // 检查错误码
         final errNo = result['err_no'];
         if (errNo == 0) {
           // 识别成功
-          final resultList = result['result'] as List;
+          final resultList = result['result'] as List<dynamic>;
           if (resultList.isNotEmpty) {
             return resultList[0] as String;
           }
@@ -133,11 +132,11 @@ class BaiduSpeechService {
         debugPrint('百度语音识别请求失败: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('百度语音识别异常: $e');
       return null;
     }
-    
+
     return null;
   }
 
@@ -145,7 +144,7 @@ class BaiduSpeechService {
   /// 注意: 百度实时语音识别需要 WebSocket，这里暂不实现
   /// 如需实时识别，建议使用本地 speech_to_text
   Future<String?> recognizeStream() async {
-    // TODO: 实现 WebSocket 流式识别
+    // 百度 WebSocket 流式识别暂未接入，实时场景走本地 speech_to_text。
     throw UnimplementedError('实时识别请使用本地 speech_to_text');
   }
 
@@ -157,31 +156,27 @@ class BaiduSpeechService {
   }
 
   /// 检查 API 配置是否有效
-  bool isConfigured() {
-    return _apiKey.isNotEmpty && 
-           _secretKey.isNotEmpty && 
-           AppConfig.enableBaiduSpeech;
-  }
+  bool isConfigured() =>
+      _apiKey.isNotEmpty &&
+      _secretKey.isNotEmpty &&
+      AppConfig.enableBaiduSpeech;
 
   /// 测试 API 连接
   Future<bool> testConnection() async {
     try {
       final token = await _getAccessToken();
       return token != null;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('百度语音 API 连接测试失败: $e');
       return false;
     }
   }
-  
+
   /// 公开获取 Access Token 方法（供实时识别使用）
-  Future<String?> getAccessToken() async {
-    return _getAccessToken();
-  }
+  Future<String?> getAccessToken() async => _getAccessToken();
 
   /// 获取使用说明
-  static String getSetupInstructions() {
-    return '''
+  static String getSetupInstructions() => '''
 百度语音识别配置步骤：
 
 1. 访问百度 AI 开放平台
@@ -211,5 +206,4 @@ class BaiduSpeechService {
 - 音频时长: 不超过 60 秒
 - 文件大小: 不超过 10MB
 ''';
-  }
 }

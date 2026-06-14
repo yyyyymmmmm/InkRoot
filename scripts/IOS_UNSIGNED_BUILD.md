@@ -55,7 +55,7 @@
 
 ```bash
 # 1. 进入项目目录
-cd /path/to/IntRoot
+cd /path/to/InkRoot
 
 # 2. 运行构建脚本
 ./scripts/build_unsigned_ipa.sh
@@ -71,7 +71,7 @@ cd /path/to/IntRoot
 
 **输出位置:**
 ```
-build/ios/unsigned/InkRoot-1.0.9-unsigned.ipa
+build/ios/unsigned/InkRoot-1.1.0-unsigned.ipa
 ```
 
 ### 方法二: 手动构建
@@ -115,7 +115,7 @@ cp -r build/ios/iphoneos/Runner.app build/ios/unsigned/Payload/
 
 # 打包成 IPA
 cd build/ios/unsigned
-zip -r InkRoot-1.0.9-unsigned.ipa Payload
+zip -r InkRoot-1.1.0-unsigned.ipa Payload
 
 # 清理临时文件
 rm -rf Payload
@@ -279,7 +279,7 @@ flutter build ios --release --no-codesign
 
 ```
 build/ios/unsigned/
-├── InkRoot-1.0.9-unsigned.ipa    # 未签名的 IPA 文件
+├── InkRoot-1.1.0-unsigned.ipa    # 未签名的 IPA 文件
 └── build.log                      # 构建日志（如果有错误）
 ```
 
@@ -309,7 +309,7 @@ build/ios/unsigned/
    ```
 
 3. **提交 Issue**
-   - GitHub: https://github.com/yyyyymmmmm/IntRoot/issues
+   - GitHub: https://github.com/yyyyymmmmm/InkRoot/issues
    - 附上错误日志和环境信息
 
 ## 📚 相关文档

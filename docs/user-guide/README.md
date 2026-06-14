@@ -226,11 +226,11 @@ InkRoot is a powerful yet simple note-taking app that helps you:
 
 ### Get Support
 - 📧 Email: [inkroot2025@gmail.com](mailto:inkroot2025@gmail.com)
-- 💬 GitHub: [Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
-- 🐛 Report Bug: [Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
+- 💬 GitHub: [Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
+- 🐛 Report Bug: [Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
 
 ### Community
-- ⭐ Star on GitHub: [InkRoot Repository](https://github.com/yyyyymmmmm/IntRoot)
+- ⭐ Star on GitHub: [InkRoot Repository](https://github.com/yyyyymmmmm/InkRoot)
 - 🌐 Website: [inkroot.cn](https://inkroot.cn)
 
 ---

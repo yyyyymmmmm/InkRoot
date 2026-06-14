@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-06-14
+
+### ✨ 维护与发布体系
+- 新增统一维护 CLI：`dart tool/inkroot.dart`
+- GitHub Actions 升级为多平台验证与构建：Android、iOS 模拟器、macOS、Windows、Linux、Web
+- 新增 PR 模板、Issue 模板、Dependabot 配置和 Gitleaks secret 扫描
+- 新增 `docs/MAINTENANCE.md`，统一说明版本、CI、签名、发版和安全基线
+
+### 🔐 Android 签名
+- Android release 签名支持本地 `android/key.properties`
+- release 签名文件保持在 Git 外，CI 通过 GitHub Secrets 注入
+- 缺少签名配置时不影响 debug/普通验证构建
+
+### 🧪 质量验证
+- `flutter analyze` 当前为 0 issues
+- `flutter test` 当前为 300 tests passed
+- iOS 模拟器启动验证通过
+
+### 🐛 修复
+- 云配置接口失败态返回字符串时不再触发 Dart 类型异常
+- 新增云验证响应模型单元测试，覆盖成功态和失败态
+
 ## [1.0.9] - 2025-11-22 ~ 2025-11-24
 
 ### ✨ 重大功能更新
@@ -600,12 +622,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[1.0.7]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.7
-[1.0.6]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.6
-[1.0.5]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.5
-[1.0.4]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.4
-[1.0.3]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.3
-[1.0.2]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.2
-[1.0.1]: https://github.com/yyyyymmmmm/IntRoot/releases/tag/v1.0.1
-[Unreleased]: https://github.com/yyyyymmmmm/IntRoot/compare/v1.0.7...HEAD
-
+[1.0.7]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.7
+[1.0.6]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.6
+[1.0.5]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.5
+[1.0.4]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.4
+[1.0.3]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.3
+[1.0.2]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.2
+[1.0.1]: https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.0.1
+[Unreleased]: https://github.com/yyyyymmmmm/InkRoot/compare/v1.0.7...HEAD

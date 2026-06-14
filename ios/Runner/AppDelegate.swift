@@ -6,7 +6,7 @@ import UserNotifications
 // Android版本保留友盟统计功能
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   // 🔥 模仿Android的pendingNoteId机制
   private var pendingPayload: String?
   private var methodChannel: FlutterMethodChannel?
@@ -18,20 +18,23 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GeneratedPluginRegistrant.register(with: self)
-    
     // 🔔 设置通知中心委托
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
     }
-    
-    // 🔥 关键：设置MethodChannel（和Android MainActivity一样）
-    let controller = window?.rootViewController as! FlutterViewController
+
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let messenger = engineBridge.applicationRegistrar.messenger()
     methodChannel = FlutterMethodChannel(
       name: "com.didichou.inkroot/native_alarm",
-      binaryMessenger: controller.binaryMessenger
+      binaryMessenger: messenger
     )
-    
+
     // 🔥 监听Flutter的查询请求（和Android getInitialNoteId一样）
     methodChannel?.setMethodCallHandler { [weak self] (call, result) in
       if call.method == "getInitialPayload" {
@@ -48,9 +51,9 @@ import UserNotifications
     // 🎨 启动页动画 MethodChannel
     let launchScreenChannel = FlutterMethodChannel(
       name: "com.didichou.inkroot/launch_screen",
-      binaryMessenger: controller.binaryMessenger
+      binaryMessenger: messenger
     )
-    
+
     launchScreenChannel.setMethodCallHandler { [weak self] (call, result) in
       if call.method == "removeLaunchScreen" {
         print("🎨 [AppDelegate] Flutter请求移除启动页（带动画）")
@@ -65,21 +68,19 @@ import UserNotifications
     // 友盟Method Channel已禁用，所有调用将返回false
     let umengChannel = FlutterMethodChannel(
       name: "com.didichou.inkroot/umeng",
-      binaryMessenger: controller.binaryMessenger
+      binaryMessenger: messenger
     )
-    
+
     umengChannel.setMethodCallHandler { (call, result) in
       // iOS平台所有友盟调用返回false（未启用）
       print("⚠️ [UmengAnalytics iOS] iOS平台已禁用友盟统计")
       result(false)
     }
-    
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
   
   // 🎨 创建启动页覆盖层（大厂标准方案）
   private func setupLaunchScreenOverlay() {
-    guard let window = self.window,
+    guard let window = activeWindow(),
           let rootViewController = window.rootViewController else {
       return
     }
@@ -96,6 +97,18 @@ import UserNotifications
       
       print("✅ [LaunchScreen] 启动页覆盖层已创建")
     }
+  }
+
+  private func activeWindow() -> UIWindow? {
+    if #available(iOS 13.0, *) {
+      return UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .filter { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }
+        .flatMap { $0.windows }
+        .first { $0.isKeyWindow }
+    }
+
+    return self.window
   }
   
   // 🎨 移除启动页（带淡出动画，模仿支付宝/小红书）

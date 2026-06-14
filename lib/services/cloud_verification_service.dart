@@ -43,7 +43,7 @@ class CloudVerificationService {
         debugPrint('获取应用配置失败，状态码: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('获取应用配置异常: $e');
       return null;
     }
@@ -84,7 +84,7 @@ class CloudVerificationService {
         debugPrint('获取应用公告失败，状态码: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('获取应用公告异常: $e');
       return null;
     }
@@ -123,7 +123,7 @@ class CloudVerificationService {
       }
 
       return false;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('版本号比较失败: $e');
       return false;
     }

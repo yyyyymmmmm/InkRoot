@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:inkroot/config/app_config.dart';
-import 'package:inkroot/models/annotation_model.dart';  // ✅ 新增：批注模型
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/services/database_service.dart';
 import 'package:inkroot/services/memos_api_service_fixed.dart';
@@ -52,7 +51,7 @@ class IncrementalSyncService {
         deletedNotes: mergeResult.deletedCount,
         duration: duration,
       );
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -70,7 +69,7 @@ class IncrementalSyncService {
       }
 
       // 🚀 增量同步：获取所有笔记，本地过滤
-      // TODO: 如果API支持 updatedAfter 参数，可以在服务器端过滤
+      // 如果 API 后续支持 updatedAfter 参数，可以移到服务器端过滤。
       final response = await _apiService!.getMemos();
       final memosList = response['memos'] as List<dynamic>;
       final allNotes = memosList
@@ -82,7 +81,7 @@ class IncrementalSyncService {
           allNotes.where((note) => note.updatedAt.isAfter(since)).toList();
 
       return updatedNotes;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -95,7 +94,8 @@ class IncrementalSyncService {
     try {
       // 获取本地所有笔记ID
       final localNotes = await _databaseService.getNotes();
-      final plan = planSyncMerge(localNotes: localNotes, updatedNotes: updatedNotes);
+      final plan =
+          planSyncMerge(localNotes: localNotes, updatedNotes: updatedNotes);
 
       // 批量操作（比逐个操作快很多）
       if (plan.toUpdate.isNotEmpty) {
@@ -124,7 +124,7 @@ class IncrementalSyncService {
         deletedCount: deletedCount,
         totalCount: totalCount,
       );
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -134,9 +134,11 @@ class IncrementalSyncService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final timestamp = prefs.getInt(_lastSyncTimeKey);
-      if (timestamp == null) return null;
+      if (timestamp == null) {
+        return null;
+      }
       return DateTime.fromMillisecondsSinceEpoch(timestamp);
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -149,7 +151,9 @@ class IncrementalSyncService {
       if (kDebugMode) {
         // 🚀 静默更新同步时间
       }
-    } catch (e) {}
+    } on Object catch (_) {
+      // Last sync time is an optimization; failure should not break sync.
+    }
   }
 
   /// 重置同步状态（强制全量同步）
@@ -157,7 +161,9 @@ class IncrementalSyncService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_lastSyncTimeKey);
-    } catch (e) {}
+    } on Object catch (_) {
+      // Resetting sync state is best-effort.
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/webdav_config.dart';
 import 'package:inkroot/providers/app_provider.dart';
@@ -25,6 +26,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
   bool _obscurePassword = true;
   bool _enabled = false;
   bool _autoBackup = false; // 改为自动备份
+  bool _backupImages = true;
   String _autoBackupTiming = '每次启动'; // 备份时机
   String _selectedPreset = '自定义';
   bool _isTesting = false;
@@ -56,6 +58,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
     _syncPathController.text = config.syncPath;
     _enabled = config.enabled;
     _autoBackup = config.autoSync; // 兼容旧配置
+    _backupImages = config.backupImages;
     // 根据旧的 interval 映射到新的 timing
     _autoBackupTiming = _getTimingFromInterval(config.autoSyncInterval);
 
@@ -64,9 +67,15 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
   }
 
   String _getTimingFromInterval(int interval) {
-    if (interval <= 0) return '每次启动';
-    if (interval <= 15) return '15分钟';
-    if (interval <= 30) return '30分钟';
+    if (interval <= 0) {
+      return '每次启动';
+    }
+    if (interval <= 15) {
+      return '15分钟';
+    }
+    if (interval <= 30) {
+      return '30分钟';
+    }
     return '1小时';
   }
 
@@ -125,10 +134,12 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: Text(
           l10n?.webdavSync ?? 'WebDAV Sync',
           style: TextStyle(
@@ -195,10 +206,9 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                       return l10n?.pleaseEnterServerAddress ??
                           'Please enter server address';
                     }
-                    if (!value.startsWith('http://') &&
-                        !value.startsWith('https://')) {
-                      return l10n?.addressMustStartWithHttp ??
-                          'Address must start with http:// or https://';
+                    final error = _validateServerUrl(value);
+                    if (error != null) {
+                      return error;
                     }
                     return null;
                   },
@@ -210,13 +220,13 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryLightColor.withOpacity(0.1)
-                        : AppTheme.primaryColor.withOpacity(0.05),
+                        ? AppTheme.primaryLightColor.withValues(alpha: 0.1)
+                        : AppTheme.primaryColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isDarkMode
-                          ? AppTheme.primaryLightColor.withOpacity(0.3)
-                          : AppTheme.primaryColor.withOpacity(0.2),
+                          ? AppTheme.primaryLightColor.withValues(alpha: 0.3)
+                          : AppTheme.primaryColor.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -246,7 +256,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                               WebDavPresets.presets[_selectedPreset] ?? '',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: textColor.withOpacity(0.6),
+                                color: textColor.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -281,7 +291,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
               _buildTextField(
                 controller: _syncPathController,
                 label: l10n?.syncFolder ?? 'Sync Folder',
-                hint: '/InkRoot/',
+                hint: AppConfig.defaultWebDavPath,
                 icon: Icons.folder,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -328,7 +338,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -357,7 +367,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
           Switch(
             value: _enabled,
             onChanged: (value) => setState(() => _enabled = value),
-            activeColor: AppTheme.primaryColor,
+            activeThumbColor: AppTheme.primaryColor,
           ),
         ],
       ),
@@ -605,7 +615,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
     final l10n = AppLocalizationsSimple.of(context);
     return ExpansionTile(
       title: Text(
-        '定时备份设置',
+        l10n?.timedBackupSettings ?? '定时备份设置',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
@@ -614,9 +624,19 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
       ),
       children: [
         SwitchListTile(
-          title: Text(l10n?.enableTimedBackup ?? 'Enable Timed Backup'),
-          subtitle:
-              Text(l10n?.autoBackupToWebdav ?? 'Auto backup notes to WebDAV'),
+          title: Text(l10n?.backupImageAttachments ?? '备份图片附件'),
+          subtitle: Text(
+            l10n?.backupImageAttachmentsDesc ??
+                '开启后会把笔记里的本地图片和 Memos 图片一起备份到 WebDAV',
+          ),
+          value: _backupImages,
+          onChanged: (value) => setState(() => _backupImages = value),
+        ),
+        SwitchListTile(
+          title: Text(l10n?.enableTimedBackup ?? '启用自动备份'),
+          subtitle: Text(
+            l10n?.autoBackupToWebdav ?? '按所选时机自动备份到 WebDAV',
+          ),
           value: _autoBackup,
           onChanged: (value) => setState(() => _autoBackup = value),
         ),
@@ -660,7 +680,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -684,15 +704,15 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
           Text(
             l10n?.webdavHelpText ??
                 '• 推荐使用坚果云等专业 WebDAV 服务\n'
-                '• ⚠️ 密码栏必须填写"应用专用密码"，不是登录密码！\n'
-                '• 点击右上角"?"查看详细配置步骤\n'
-                '• 立即测试：验证服务器连接是否正常\n'
-                '• 立即备份：单向上传，完整备份所有数据到云端\n'
-                '• 从 WebDAV 恢复：下载云端数据到本地（会覆盖本地）\n'
-                '• 定时备份：可选择每次启动或定时自动备份',
+                    '• ⚠️ 密码栏必须填写"应用专用密码"，不是登录密码！\n'
+                    '• 点击右上角"?"查看详细配置步骤\n'
+                    '• 立即测试：验证服务器连接是否正常\n'
+                    '• 立即备份：单向上传，备份笔记；开启图片附件后会同时备份可读取的图片\n'
+                    '• 从 WebDAV 恢复：下载云端数据到本地（会覆盖本地）\n'
+                    '• 定时备份：可选择每次启动或定时自动备份',
             style: TextStyle(
               fontSize: 13,
-              color: textColor.withOpacity(0.8),
+              color: textColor.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),
@@ -701,8 +721,43 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
     );
   }
 
-  Future<void> _testConnection() async {
+  String? _validateServerUrl(String value) {
+    final trimmed = value.trim();
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || uri.host.isEmpty) {
+      return AppLocalizationsSimple.of(context)?.invalidServerAddress ??
+          'Invalid server address';
+    }
+    final config = WebDavConfig(serverUrl: trimmed);
+    if (!config.usesSecureTransport) {
+      return AppLocalizationsSimple.of(context)?.webdavHttpsRequired ??
+          'Use https://. http:// is allowed only for localhost and private LAN addresses';
+    }
+    return null;
+  }
+
+  bool _validateCurrentConfig() {
     if (!_formKey.currentState!.validate()) {
+      return false;
+    }
+    final error = _validateServerUrl(_serverUrlController.text);
+    if (error != null) {
+      SnackBarUtils.showError(context, error);
+      return false;
+    }
+    if (!_syncPathController.text.trim().startsWith('/')) {
+      SnackBarUtils.showError(
+        context,
+        AppLocalizationsSimple.of(context)?.syncPathMustStartWithSlash ??
+            'Sync path must start with /',
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _testConnection() async {
+    if (!_validateCurrentConfig()) {
       return;
     }
 
@@ -717,6 +772,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         syncPath: _syncPathController.text.trim(),
         enabled: _enabled,
         autoSync: _autoBackup,
+        backupImages: _backupImages,
         autoSyncInterval: _getIntervalFromTiming(_autoBackupTiming),
       );
 
@@ -724,14 +780,25 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
 
       if (mounted) {
         if (success) {
-          SnackBarUtils.showSuccess(context, '连接测试成功！');
+          SnackBarUtils.showSuccess(
+            context,
+            AppLocalizationsSimple.of(context)?.connectionTestSuccess ??
+                'Connection test succeeded',
+          );
         } else {
-          SnackBarUtils.showError(context, '连接测试失败，请检查配置');
+          SnackBarUtils.showError(
+            context,
+            AppLocalizationsSimple.of(context)?.connectionTestFailed ??
+                'Connection test failed. Check your settings.',
+          );
         }
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '测试失败: $e');
+        SnackBarUtils.showError(
+          context,
+          '${AppLocalizationsSimple.of(context)?.testFailed ?? 'Test failed'}: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -741,7 +808,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
   }
 
   Future<void> _saveConfig() async {
-    if (!_formKey.currentState!.validate()) {
+    if (!_validateCurrentConfig()) {
       return;
     }
 
@@ -754,6 +821,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         syncPath: _syncPathController.text.trim(),
         enabled: _enabled,
         autoSync: _autoBackup,
+        backupImages: _backupImages,
         autoSyncInterval: _getIntervalFromTiming(_autoBackupTiming),
       );
 
@@ -771,16 +839,26 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         // 使用 GoRouter 的 pop 方法，避免导航历史为空的错误
         context.pop();
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '保存失败: $e');
+        SnackBarUtils.showError(
+          context,
+          '${AppLocalizationsSimple.of(context)?.saveFailed ?? 'Save failed'}: $e',
+        );
       }
     }
   }
 
   Future<void> _backupNow() async {
+    final l10n = AppLocalizationsSimple.of(context);
     if (!_enabled) {
-      SnackBarUtils.showWarning(context, '请先启用 WebDAV 同步');
+      SnackBarUtils.showWarning(
+        context,
+        l10n?.pleaseEnableWebdavFirst ?? '请先启用 WebDAV 同步',
+      );
+      return;
+    }
+    if (!_validateCurrentConfig()) {
       return;
     }
 
@@ -788,6 +866,9 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
 
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
+      if (!mounted) {
+        return;
+      }
 
       // 确保配置已保存
       final config = WebDavConfig(
@@ -797,6 +878,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         syncPath: _syncPathController.text.trim(),
         enabled: _enabled,
         autoSync: _autoBackup,
+        backupImages: _backupImages,
         autoSyncInterval: _getIntervalFromTiming(_autoBackupTiming),
       );
 
@@ -804,44 +886,62 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
       await appProvider.updateWebDavConfig(config, skipInitialize: true);
 
       // 🎯 大厂标准：显示真实进度对话框
-      if (!mounted) return;
-      await showDialog(
+      if (!mounted) {
+        return;
+      }
+      final progressError = await showDialog<Object>(
         context: context,
         barrierDismissible: false,
         builder: (context) => _ProgressDialog(
-          title: '正在备份',
-          isRestore: false,
+          title: l10n?.backingUp ?? 'Backing up...',
           onProgress: (callback) async {
             // 执行备份，传入进度回调
             final stats = await appProvider.backupWithWebDav(
               onProgress: callback,
             );
-            
+
             // 延迟一下让用户看到100%
             await Future.delayed(const Duration(milliseconds: 500));
-            
+
             // 关闭对话框
-            if (mounted) {
+            if (mounted && context.mounted) {
               Navigator.of(context).pop();
             }
 
             // 显示结果
-            if (mounted) {
+            if (mounted && context.mounted) {
               if (stats != null) {
-                final message = '✅ 备份完成\n'
-                    '📝 笔记: ${stats.uploaded} 条\n'
-                    '${stats.errors > 0 ? '⚠️ 错误: ${stats.errors}' : ''}';
+                final imageInfo = _backupImages
+                    ? '\n${l10n?.webdavResourcesUploaded(stats.resourceUploaded) ?? 'Resources: ${stats.resourceUploaded}'}'
+                    : '';
+                final errorInfo = stats.errors > 0
+                    ? '\n${l10n?.errorsCount(stats.errors) ?? 'Errors: ${stats.errors}'}'
+                    : '';
+                final message =
+                    '${l10n?.backupCompleted ?? 'Backup completed'}\n'
+                    '${l10n?.webdavBackupNotesCount(stats.uploaded) ?? 'Notes: ${stats.uploaded}'}'
+                    '$imageInfo$errorInfo';
                 SnackBarUtils.showSuccess(context, message);
               } else {
-                SnackBarUtils.showWarning(context, '备份服务未初始化');
+                SnackBarUtils.showWarning(
+                  context,
+                  l10n?.backupServiceUnavailable ??
+                      'Backup service is not ready',
+                );
               }
             }
           },
         ),
       );
-    } catch (e) {
+      if (progressError != null) {
+        throw Exception(progressError);
+      }
+    } on Object catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '备份失败: $e');
+        SnackBarUtils.showError(
+          context,
+          '${l10n?.backupFailed ?? 'Backup failed'}: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -881,7 +981,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
@@ -959,7 +1059,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                             '🔐 密码：\n'
                             '应用专用密码（参考上一条问题）\n\n'
                             '📁 同步文件夹：\n'
-                            '/InkRoot/（推荐）\n'
+                            '${AppConfig.defaultWebDavPath}（推荐）\n'
                             '或自定义任意路径，如 /备份/笔记/\n'
                             '⚠️ 必须以 / 开头和结尾！',
                       ),
@@ -985,7 +1085,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                         context,
                         question: '📤 "立即备份"是什么意思？',
                         answer:
-                            '立即备份会将所有本地笔记上传到 WebDAV 服务器。这是单向上传操作，不会下载或删除任何本地数据，可以放心使用。',
+                            '立即备份会将所有本地笔记上传到 WebDAV 服务器。这是单向上传操作，不会下载或删除任何本地数据。开启“备份图片附件”后，会同时备份本地图片和可访问的 Memos 图片。',
                       ),
                       _buildFAQItem(
                         context,
@@ -1019,7 +1119,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                             '   • 如果是自建服务，确认端口和防火墙设置\n\n'
                             '3. 📁 路径错误\n'
                             '   • 同步路径必须以 / 开头和结尾\n'
-                            '   • 正确：/InkRoot/ 或 /备份/笔记/\n'
+                            '   • 正确：${AppConfig.defaultWebDavPath} 或 /备份/笔记/\n'
                             '   • 错误：InkRoot 或 /InkRoot\n\n'
                             '4. 👤 用户名错误\n'
                             '   • 坚果云：必须填写完整邮箱\n'
@@ -1040,9 +1140,10 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                             '• 所有笔记内容\n'
                             '• 笔记的创建和修改时间\n'
                             '• 笔记的可见性设置\n'
-                            '• 笔记的标签\n\n不包含：\n'
+                            '• 笔记的标签\n'
+                            '• 可选：笔记内图片附件\n\n不包含：\n'
                             '• 应用设置\n'
-                            '• 笔记中的图片（建议使用图床）',
+                            '• 视频和无法访问的远程图片',
                       ),
                       _buildFAQItem(
                         context,
@@ -1056,7 +1157,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -1131,10 +1232,13 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
     );
   }
 
-
   Future<void> _restoreNow() async {
+    final l10n = AppLocalizationsSimple.of(context);
     if (!_enabled) {
-      SnackBarUtils.showWarning(context, '请先启用 WebDAV 同步');
+      SnackBarUtils.showWarning(
+        context,
+        l10n?.pleaseEnableWebdavFirst ?? '请先启用 WebDAV 同步',
+      );
       return;
     }
 
@@ -1142,31 +1246,40 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('⚠️ 确认恢复'),
-        content: const Text(
-          '此操作将从 WebDAV 下载所有笔记到本地。\n\n如果本地和远程有相同的笔记，将保留远程版本（覆盖本地）。\n\n是否继续？',
+        title: Text(l10n?.confirmRestore ?? '确认恢复'),
+        content: Text(
+          l10n?.confirmRestoreMessage ??
+              '此操作将从 WebDAV 下载所有笔记到本地。\n\n如果本地和远程有相同的笔记，将保留远程版本（覆盖本地）。\n\n是否继续？',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n?.cancel ?? '取消'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
             ),
-            child: const Text('确认恢复', style: TextStyle(color: Colors.white)),
+            child: Text(
+              l10n?.confirmRestore ?? '确认恢复',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() => _isRestoring = true);
 
     try {
+      if (!mounted) {
+        return;
+      }
       final appProvider = Provider.of<AppProvider>(context, listen: false);
 
       // 确保配置已保存
@@ -1177,6 +1290,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         syncPath: _syncPathController.text.trim(),
         enabled: _enabled,
         autoSync: _autoBackup,
+        backupImages: _backupImages,
         autoSyncInterval: _getIntervalFromTiming(_autoBackupTiming),
       );
 
@@ -1184,43 +1298,56 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
       await appProvider.updateWebDavConfig(config, skipInitialize: true);
 
       // 🎯 大厂标准：显示真实进度对话框
-      if (!mounted) return;
-      await showDialog(
+      if (!mounted) {
+        return;
+      }
+      final progressError = await showDialog<Object>(
         context: context,
         barrierDismissible: false,
         builder: (context) => _ProgressDialog(
-          title: '正在恢复',
+          title: l10n?.restoring ?? 'Restoring...',
           isRestore: true,
           onProgress: (callback) async {
             // 执行恢复，传入进度回调
             final stats = await appProvider.restoreFromWebDav(
               onProgress: callback,
             );
-            
+
             // 延迟一下让用户看到100%
             await Future.delayed(const Duration(milliseconds: 500));
-            
+
             // 关闭对话框
-            if (mounted) {
+            if (mounted && context.mounted) {
               Navigator.of(context).pop();
             }
 
             // 显示结果
-            if (mounted) {
+            if (mounted && context.mounted) {
               if (stats != null) {
-                final message = '✅ 恢复完成\n'
-                    '📥 已恢复: ${stats.downloaded} 条笔记';
+                final message =
+                    '${l10n?.restoreCompleted ?? 'Restore completed'}\n'
+                    '${l10n?.restoredNotesCount(stats.downloaded) ?? 'Restored: ${stats.downloaded} notes'}';
                 SnackBarUtils.showSuccess(context, message);
               } else {
-                SnackBarUtils.showWarning(context, '恢复服务未初始化');
+                SnackBarUtils.showWarning(
+                  context,
+                  l10n?.restoreServiceUnavailable ??
+                      'Restore service is not ready',
+                );
               }
             }
           },
         ),
       );
-    } catch (e) {
+      if (progressError != null) {
+        throw Exception(progressError);
+      }
+    } on Object catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '恢复失败: $e');
+        SnackBarUtils.showError(
+          context,
+          '${l10n?.restoreFailed ?? 'Restore failed'}: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -1247,9 +1374,10 @@ class _ProgressDialog extends StatefulWidget {
 }
 
 class _ProgressDialogState extends State<_ProgressDialog> {
-  double _progress = 0.0;
+  double _progress = 0;
   String _message = '';
   bool _isCompleted = false;
+  Object? _error;
 
   @override
   void initState() {
@@ -1268,8 +1396,18 @@ class _ProgressDialogState extends State<_ProgressDialog> {
           });
         }
       });
-    } catch (e) {
-      // 错误处理由外层处理
+    } on Object catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = e;
+        _message = e.toString();
+      });
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        Navigator.of(context).pop(e);
+      }
     }
   }
 
@@ -1284,9 +1422,11 @@ class _ProgressDialogState extends State<_ProgressDialog> {
     final secondaryColor = isDarkMode
         ? AppTheme.darkTextSecondaryColor
         : AppTheme.textSecondaryColor;
+    final hasError = _error != null;
+    final statusColor = hasError ? Colors.red : primaryColor;
 
-    return WillPopScope(
-      onWillPop: () async => false, // 防止用户关闭
+    return PopScope(
+      canPop: hasError,
       child: Dialog(
         backgroundColor: backgroundColor,
         shape: RoundedRectangleBorder(
@@ -1302,22 +1442,28 @@ class _ProgressDialogState extends State<_ProgressDialog> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _isCompleted 
-                      ? Icons.check_circle_outline 
-                      : (widget.isRestore ? Icons.cloud_download_outlined : Icons.cloud_upload_outlined),
+                  hasError
+                      ? Icons.error_outline
+                      : (_isCompleted
+                          ? Icons.check_circle_outline
+                          : (widget.isRestore
+                              ? Icons.cloud_download_outlined
+                              : Icons.cloud_upload_outlined)),
                   size: 32,
-                  color: primaryColor,
+                  color: statusColor,
                 ),
               ),
               const SizedBox(height: 24),
 
               // 标题
               Text(
-                widget.title,
+                hasError
+                    ? (AppLocalizationsSimple.of(context)?.failed ?? '失败')
+                    : widget.title,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -1327,34 +1473,36 @@ class _ProgressDialogState extends State<_ProgressDialog> {
               const SizedBox(height: 20),
 
               // 进度条
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: _progress,
-                  minHeight: 8,
-                  backgroundColor: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.05),
-                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+              if (!hasError)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: _progress,
+                    minHeight: 8,
+                    backgroundColor: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.05),
+                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                  ),
                 ),
-              ),
               const SizedBox(height: 16),
 
               // 百分比
-              Text(
-                '${(_progress * 100).toStringAsFixed(0)}%',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: primaryColor,
-                  height: 1,
+              if (!hasError)
+                Text(
+                  '${(_progress * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: primaryColor,
+                    height: 1,
+                  ),
                 ),
-              ),
               const SizedBox(height: 12),
 
               // 当前操作描述
               Text(
-                _message.isEmpty ? '准备中...' : _message,
+                hasError ? _message : (_message.isEmpty ? '准备中...' : _message),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -1362,25 +1510,27 @@ class _ProgressDialogState extends State<_ProgressDialog> {
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 16),
+              if (!hasError) const SizedBox(height: 16),
 
               // 提示文本
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '请勿关闭此页面',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: secondaryColor.withOpacity(0.8),
+              if (!hasError)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '请勿关闭此页面',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: secondaryColor.withValues(alpha: 0.8),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

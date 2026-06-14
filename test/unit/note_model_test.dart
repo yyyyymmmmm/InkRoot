@@ -6,6 +6,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inkroot/models/annotation_model.dart';
 import 'package:inkroot/models/note_model.dart';
 
 void main() {
@@ -138,6 +139,122 @@ void main() {
       final note = Note.fromJson(json);
       expect(note.updatedAt, equals(note.createdAt));
     });
+
+    test('TC-08B 兼容本地和 WebDAV 备份中的 createdAt / updatedAt', () {
+      final json = {
+        'id': 'local-backup-1',
+        'content': '历史笔记',
+        'createdAt': '2023-02-03T04:05:06.000',
+        'updatedAt': '2023-02-04T04:05:06.000',
+      };
+
+      final note = Note.fromJson(json);
+
+      expect(note.createdAt, DateTime.parse('2023-02-03T04:05:06.000'));
+      expect(note.updatedAt, DateTime.parse('2023-02-04T04:05:06.000'));
+    });
+
+    test('TC-08C 毫秒级字符串时间戳不会被当成当前时间', () {
+      final json = {
+        'id': 'timestamp-string',
+        'content': '时间戳笔记',
+        'createdAt': '1700000000000',
+        'updatedAt': '1700000100000',
+      };
+
+      final note = Note.fromJson(json);
+
+      expect(note.createdAt.millisecondsSinceEpoch, 1700000000000);
+      expect(note.updatedAt.millisecondsSinceEpoch, 1700000100000);
+    });
+
+    test('TC-08D 缺少创建时间但有更新时间时使用更新时间兜底', () {
+      final json = {
+        'id': 'missing-created',
+        'content': '缺少创建时间',
+        'updatedAt': '2024-07-08T09:10:11Z',
+      };
+
+      final note = Note.fromJson(json);
+
+      expect(note.createdAt, DateTime.parse('2024-07-08T09:10:11Z'));
+      expect(note.updatedAt, DateTime.parse('2024-07-08T09:10:11Z'));
+    });
+
+    test('TC-08E 缺少全部时间字段时使用稳定 epoch，不批量写成当前时间', () {
+      final before = DateTime.now().subtract(const Duration(seconds: 1));
+      final note = Note.fromJson({'id': 'no-time', 'content': '无时间'});
+      final after = DateTime.now().add(const Duration(seconds: 1));
+
+      expect(note.createdAt, DateTime.fromMillisecondsSinceEpoch(0));
+      expect(note.updatedAt, DateTime.fromMillisecondsSinceEpoch(0));
+      expect(
+        note.createdAt.isAfter(before) && note.createdAt.isBefore(after),
+        isFalse,
+      );
+    });
+
+    test('TC-08F JSON/WebDAV 备份恢复保留本地增强字段', () {
+      final source = Note(
+        id: 'backup-full',
+        content: '完整备份',
+        createdAt: DateTime(2022, 2, 3, 4, 5, 6),
+        updatedAt: DateTime(2022, 2, 4, 4, 5, 6),
+        displayTime: DateTime(2022, 2, 4, 5),
+        tags: const ['backup'],
+        isPinned: true,
+        visibility: 'PUBLIC',
+        rowStatus: 'ARCHIVED',
+        annotations: [
+          Annotation(
+            id: 'anno-1',
+            content: '批注',
+            createdAt: DateTime(2022, 2, 5),
+          ),
+        ],
+        reminderTime: DateTime(2022, 3),
+        lastSyncTime: DateTime(2022, 4),
+      );
+
+      final restored = Note.fromJson(source.toJson());
+
+      expect(restored.createdAt, source.createdAt);
+      expect(restored.updatedAt, source.updatedAt);
+      expect(restored.displayTime, source.displayTime);
+      expect(restored.isSynced, isFalse);
+      expect(restored.isPinned, isTrue);
+      expect(restored.visibility, 'PUBLIC');
+      expect(restored.rowStatus, 'ARCHIVED');
+      expect(restored.annotations.single.content, '批注');
+      expect(restored.reminderTime, source.reminderTime);
+      expect(restored.lastSyncTime, source.lastSyncTime);
+    });
+
+    test('TC-08G 兼容数据库风格 JSON 字符串字段', () {
+      final json = {
+        'id': 'db-json',
+        'content': '数据库导出',
+        'created_at': '2021-01-02T03:04:05Z',
+        'updated_at': '2021-01-03T03:04:05Z',
+        'tags': 'a,b',
+        'is_pinned': 1,
+        'resourceList': jsonEncode([
+          {'id': 'r1', 'filename': 'a.png'},
+        ]),
+        'relations': jsonEncode([
+          {'type': 'COMMENT', 'memoId': '1'},
+        ]),
+      };
+
+      final note = Note.fromJson(json);
+
+      expect(note.createdAt, DateTime.parse('2021-01-02T03:04:05Z'));
+      expect(note.updatedAt, DateTime.parse('2021-01-03T03:04:05Z'));
+      expect(note.tags, ['a', 'b']);
+      expect(note.isPinned, isTrue);
+      expect(note.resourceList.single['id'], 'r1');
+      expect(note.relations.single['type'], 'COMMENT');
+    });
   });
 
   // ─────────────────────────────────────────────────────────
@@ -205,7 +322,7 @@ void main() {
   // Note.fromMap — 本地 SQLite 读取
   // ─────────────────────────────────────────────────────────
   group('Note.fromMap — SQLite 行解析', () {
-    Map<String, dynamic> _baseMap() => {
+    Map<String, dynamic> baseMap() => {
           'id': 'local-001',
           'content': '本地笔记',
           'createdAt': '2024-01-01T00:00:00.000',
@@ -225,7 +342,7 @@ void main() {
         };
 
     test('TC-13 基础字段正确解析', () {
-      final note = Note.fromMap(_baseMap());
+      final note = Note.fromMap(baseMap());
       expect(note.id, 'local-001');
       expect(note.content, '本地笔记');
       expect(note.isSynced, isTrue);
@@ -233,28 +350,28 @@ void main() {
     });
 
     test('TC-14 tags 逗号分隔正确还原为列表', () {
-      final note = Note.fromMap(_baseMap());
+      final note = Note.fromMap(baseMap());
       expect(note.tags, ['flutter', 'dart']);
     });
 
     test('TC-15 resourceList JSON 字符串正确反序列化', () {
-      final map = _baseMap();
-      map['resourceList'] =
-          jsonEncode([{'id': 'img1', 'filename': 'a.png'}]);
+      final map = baseMap();
+      map['resourceList'] = jsonEncode([
+        {'id': 'img1', 'filename': 'a.png'},
+      ]);
       final note = Note.fromMap(map);
       expect(note.resourceList.length, 1);
       expect(note.resourceList[0]['id'], 'img1');
     });
 
     test('TC-16 isPinned=1 → true', () {
-      final map = _baseMap()..['isPinned'] = 1;
+      final map = baseMap()..['isPinned'] = 1;
       final note = Note.fromMap(map);
       expect(note.isPinned, isTrue);
     });
 
     test('TC-17 reminderTime 正确解析', () {
-      final map = _baseMap()
-        ..['reminder_time'] = '2025-01-01T09:00:00.000';
+      final map = baseMap()..['reminder_time'] = '2025-01-01T09:00:00.000';
       final note = Note.fromMap(map);
       expect(note.reminderTime, isNotNull);
       expect(note.reminderTime!.hour, 9);
@@ -265,35 +382,34 @@ void main() {
   // Note.toMap — 序列化
   // ─────────────────────────────────────────────────────────
   group('Note.toMap — 序列化', () {
-    Note _makeNote() => Note(
+    Note makeNote() => Note(
           id: 'n1',
           content: '内容',
-          createdAt: DateTime(2024, 1, 1),
+          createdAt: DateTime(2024),
           updatedAt: DateTime(2024, 1, 2),
           tags: ['tag1', 'tag2'],
           isSynced: true,
           isPinned: true,
           visibility: 'PUBLIC',
-          rowStatus: 'NORMAL',
         );
 
     test('TC-18 tags 列表序列化为逗号字符串', () {
-      final map = _makeNote().toMap();
+      final map = makeNote().toMap();
       expect(map['tags'], 'tag1,tag2');
     });
 
     test('TC-19 is_synced 布尔值序列化为整型', () {
-      final map = _makeNote().toMap();
+      final map = makeNote().toMap();
       expect(map['is_synced'], 1);
     });
 
     test('TC-20 isPinned 序列化为整型 1', () {
-      final map = _makeNote().toMap();
+      final map = makeNote().toMap();
       expect(map['isPinned'], 1);
     });
 
     test('TC-21 resourceList 默认序列化为 "[]"', () {
-      final map = _makeNote().toMap();
+      final map = makeNote().toMap();
       expect(map['resourceList'], '[]');
     });
   });
@@ -305,10 +421,8 @@ void main() {
     final original = Note(
       id: 'orig',
       content: '原始内容',
-      createdAt: DateTime(2024, 1, 1),
-      updatedAt: DateTime(2024, 1, 1),
-      isSynced: false,
-      visibility: 'PRIVATE',
+      createdAt: DateTime(2024),
+      updatedAt: DateTime(2024),
     );
 
     test('TC-22 copyWith 修改内容后原对象不变', () {
@@ -319,10 +433,18 @@ void main() {
 
     test('TC-23 clearReminderTime=true 清除提醒时间', () {
       final withReminder = original.copyWith(
-        reminderTime: DateTime(2025, 1, 1),
+        reminderTime: DateTime(2025),
       );
       final cleared = withReminder.copyWith(clearReminderTime: true);
       expect(cleared.reminderTime, isNull);
+    });
+
+    test('TC-23B clearLastSyncTime=true 清除 WebDAV 同步时间', () {
+      final synced = original.copyWith(lastSyncTime: DateTime(2025));
+      final cleared = synced.copyWith(clearLastSyncTime: true);
+
+      expect(synced.lastSyncTime, isNotNull);
+      expect(cleared.lastSyncTime, isNull);
     });
   });
 

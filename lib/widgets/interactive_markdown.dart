@@ -15,24 +15,20 @@ class InteractiveMarkdown extends StatelessWidget {
     this.styleSheet,
     this.onTapLink,
     this.imageBuilder,
-    this.builders,
+    this.builders = const {},
   });
 
   final String data;
-  final Function(String newContent)
-      onTodoToggled; // 当待办事项状态改变时的回调
+  final Function(String newContent) onTodoToggled; // 当待办事项状态改变时的回调
   final bool selectable;
   final MarkdownStyleSheet? styleSheet;
   final MarkdownTapLinkCallback? onTapLink;
   final MarkdownImageBuilder? imageBuilder;
-  final Map<String, MarkdownElementBuilder>? builders;
+  final Map<String, MarkdownElementBuilder> builders;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // 解析所有待办事项
-    final todos = TodoParser.parseTodos(data);
 
     return MarkdownBody(
       data: data,
@@ -45,7 +41,7 @@ class InteractiveMarkdown extends StatelessWidget {
         return GestureDetector(
           onTap: () {
             // 尝试通过当前值找到对应的待办事项
-            _handleCheckboxTap(value ?? false);
+            _handleCheckboxTap(value);
           },
           child: Transform.scale(
             scale: 0.9,
@@ -110,55 +106,58 @@ class SimpleTodoList extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: todos.map((todo) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Transform.scale(
-                scale: 0.9,
-                child: Checkbox(
-                  value: todo.checked,
-                  onChanged: (newValue) {
-                    // 切换这个待办事项的状态
-                    final newContent =
-                        TodoParser.toggleTodoAtLine(content, todo.lineNumber);
-                    onContentChanged(newContent);
-                  },
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  side: BorderSide(
-                    color: isDark ? Colors.grey[600]! : Colors.grey[400]!,
-                    width: 1.5,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(
-                    todo.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.grey[300] : Colors.black87,
-                      decoration:
-                          todo.checked ? TextDecoration.lineThrough : null,
-                      decorationColor:
-                          isDark ? Colors.grey[500] : Colors.grey[600],
+      children: todos
+          .map(
+            (todo) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Transform.scale(
+                    scale: 0.9,
+                    child: Checkbox(
+                      value: todo.checked,
+                      onChanged: (newValue) {
+                        // 切换这个待办事项的状态
+                        final newContent = TodoParser.toggleTodoAtLine(
+                          content,
+                          todo.lineNumber,
+                        );
+                        onContentChanged(newContent);
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      side: BorderSide(
+                        color: isDark ? Colors.grey[600]! : Colors.grey[400]!,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(3),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(
+                        todo.text,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.grey[300] : Colors.black87,
+                          decoration:
+                              todo.checked ? TextDecoration.lineThrough : null,
+                          decorationColor:
+                              isDark ? Colors.grey[500] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      }).toList(),
+            ),
+          )
+          .toList(),
     );
   }
 }
-

@@ -15,7 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AIRelatedNotesService {
   // 🚀 使用统一配置管理
   static const String _cachePrefix = AppConfig.noteCachePrefix;
-  static final Duration _cacheExpiry = Duration(hours: AppConfig.aiRelatedNotesCacheHours);
+  static const Duration _cacheExpiry =
+      Duration(hours: AppConfig.aiRelatedNotesCacheHours);
 
   /// 查找相关笔记 - 智能路由
   Future<List<RelatedNote>> findRelatedNotes({
@@ -71,7 +72,7 @@ class AIRelatedNotesService {
 
       debugPrint('✅ 找到 ${relatedNotes.length} 条相关笔记');
       return relatedNotes;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ 查找相关笔记失败: $e');
       return [];
     }
@@ -108,7 +109,9 @@ class AIRelatedNotesService {
 
       // 计算每个笔记的相似度
       for (final note in allNotes) {
-        if (note.id == currentNote.id || note.content.trim().isEmpty) continue;
+        if (note.id == currentNote.id || note.content.trim().isEmpty) {
+          continue;
+        }
 
         final noteVector = await _getEmbedding(
           text: _cleanText(note.content),
@@ -126,7 +129,7 @@ class AIRelatedNotesService {
 
       results.sort((a, b) => b.similarity.compareTo(a.similarity));
       return results.take(topK).toList();
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ Embedding 策略失败: $e');
       return _findByLocalAlgorithm(currentNote, allNotes, topK);
     }
@@ -154,11 +157,13 @@ class AIRelatedNotesService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return List<double>.from(data['data'][0]['embedding']);
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final embeddings = data['data'] as List<dynamic>;
+        final firstEmbedding = embeddings.first as Map<String, dynamic>;
+        return List<double>.from(firstEmbedding['embedding'] as List<dynamic>);
       }
       return null;
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -179,7 +184,9 @@ class AIRelatedNotesService {
           .take(30)
           .toList();
 
-      if (candidates.isEmpty) return [];
+      if (candidates.isEmpty) {
+        return [];
+      }
 
       // 构建 AI 分析的 prompt
       final prompt = _buildAnalysisPrompt(currentNote, candidates);
@@ -207,8 +214,14 @@ class AIRelatedNotesService {
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final data = json.decode(utf8.decode(response.bodyBytes));
-        final content = data['choices']?[0]?['message']?['content'] as String?;
+        final data = json.decode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
+        final choices = data['choices'] as List<dynamic>?;
+        final choice = choices?.isNotEmpty ?? false
+            ? choices!.first as Map<String, dynamic>
+            : null;
+        final message = choice?['message'] as Map<String, dynamic>?;
+        final content = message?['content'] as String?;
 
         if (content != null) {
           return _parseAIResponse(content, candidates);
@@ -218,7 +231,7 @@ class AIRelatedNotesService {
       }
 
       return _findByLocalAlgorithm(currentNote, allNotes, topK);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ AI分析策略失败: $e');
       return _findByLocalAlgorithm(currentNote, allNotes, topK);
     }
@@ -288,11 +301,11 @@ class AIRelatedNotesService {
     int topK,
   ) {
     debugPrint('📊 使用大厂级多维度算法（TF-IDF + 链接分析 + 时间衰减）');
-    
+
     // 使用改进的算法
     return _findByAdvancedAlgorithm(currentNote, allNotes, topK);
   }
-  
+
   /// 🏢 大厂级多维度算法（参考 Notion/Obsidian）
   List<RelatedNote> _findByAdvancedAlgorithm(
     Note currentNote,
@@ -300,22 +313,22 @@ class AIRelatedNotesService {
     int topK,
   ) {
     final results = <RelatedNote>[];
-    final currentText = _cleanText(currentNote.content);
     final currentTags = currentNote.tags.toSet();
     final currentLinks = _extractLinks(currentNote.content);
-    
+
     // 🔥 构建 TF-IDF 模型
     final tfidfModel = _buildTFIDF(allNotes);
     final currentVector = tfidfModel[currentNote.id] ?? {};
-    
+
     for (final note in allNotes) {
-      if (note.id == currentNote.id || note.content.trim().isEmpty) continue;
-      
-      final noteText = _cleanText(note.content);
+      if (note.id == currentNote.id || note.content.trim().isEmpty) {
+        continue;
+      }
+
       final noteTags = note.tags.toSet();
       final noteLinks = _extractLinks(note.content);
       final noteVector = tfidfModel[note.id] ?? {};
-      
+
       // 🎯 多维度评分
       final contentScore = _calculateTFIDFSimilarity(currentVector, noteVector);
       final tagScore = _calculateTagSimilarity(currentTags, noteTags);
@@ -326,58 +339,60 @@ class AIRelatedNotesService {
         noteLinks,
       );
       final timeScore = _calculateTimeScore(note.updatedAt);
-      
+
       // 🔥 加权计算最终分数
       final finalScore = contentScore * 0.4 +
           tagScore * 0.25 +
           linkScore * 0.25 +
           timeScore * 0.1;
-      
+
       if (finalScore > 0.3) {
         results.add(RelatedNote(note: note, similarity: finalScore));
       }
     }
-    
+
     results.sort((a, b) => b.similarity.compareTo(a.similarity));
-    
+
     if (kDebugMode && results.isNotEmpty) {
       debugPrint('✅ 找到 ${results.length} 条相关笔记');
-      debugPrint('📊 Top 3: ${results.take(3).map((r) => '${(r.similarity * 100).toStringAsFixed(0)}%').join(', ')}');
+      debugPrint(
+        '📊 Top 3: ${results.take(3).map((r) => '${(r.similarity * 100).toStringAsFixed(0)}%').join(', ')}',
+      );
     }
-    
+
     return results.take(topK).toList();
   }
-  
+
   /// 📊 构建 TF-IDF 模型
   Map<String, Map<String, double>> _buildTFIDF(List<Note> allNotes) {
     final documentFreq = <String, int>{};
     final termFreqs = <String, Map<String, int>>{};
-    
+
     // 统计词频
     for (final note in allNotes) {
       final text = _cleanText(note.content);
       final terms = _extractKeywords(text);
       final uniqueTerms = terms.toSet();
-      
+
       for (final term in uniqueTerms) {
         documentFreq[term] = (documentFreq[term] ?? 0) + 1;
       }
-      
+
       final tf = <String, int>{};
       for (final term in terms) {
         tf[term] = (tf[term] ?? 0) + 1;
       }
       termFreqs[note.id] = tf;
     }
-    
+
     // 计算 TF-IDF
     final tfidf = <String, Map<String, double>>{};
     final totalDocs = allNotes.length;
-    
+
     for (final note in allNotes) {
       final tf = termFreqs[note.id] ?? {};
       final vector = <String, double>{};
-      
+
       for (final entry in tf.entries) {
         final term = entry.key;
         final termFreq = entry.value;
@@ -385,50 +400,56 @@ class AIRelatedNotesService {
         final tfidfScore = termFreq * log(totalDocs / docFreq);
         vector[term] = tfidfScore;
       }
-      
+
       tfidf[note.id] = vector;
     }
-    
+
     return tfidf;
   }
-  
+
   /// 🎯 计算 TF-IDF 余弦相似度
   double _calculateTFIDFSimilarity(
     Map<String, double> vector1,
     Map<String, double> vector2,
   ) {
-    if (vector1.isEmpty || vector2.isEmpty) return 0.0;
-    
+    if (vector1.isEmpty || vector2.isEmpty) {
+      return 0;
+    }
+
     var dotProduct = 0.0;
     var norm1 = 0.0;
     var norm2 = 0.0;
-    
+
     for (final term in vector1.keys) {
       final v1 = vector1[term]!;
       final v2 = vector2[term] ?? 0.0;
       dotProduct += v1 * v2;
       norm1 += v1 * v1;
     }
-    
+
     for (final v2 in vector2.values) {
       norm2 += v2 * v2;
     }
-    
+
     norm1 = sqrt(norm1);
     norm2 = sqrt(norm2);
-    
-    if (norm1 == 0 || norm2 == 0) return 0.0;
+
+    if (norm1 == 0 || norm2 == 0) {
+      return 0;
+    }
     return dotProduct / (norm1 * norm2);
   }
-  
+
   /// 🏷️ 计算标签相似度
   double _calculateTagSimilarity(Set<String> tags1, Set<String> tags2) {
-    if (tags1.isEmpty && tags2.isEmpty) return 0.0;
+    if (tags1.isEmpty && tags2.isEmpty) {
+      return 0;
+    }
     final intersection = tags1.intersection(tags2);
     final union = tags1.union(tags2);
     return union.isEmpty ? 0.0 : intersection.length / union.length;
   }
-  
+
   /// 🔗 计算链接相似度
   double _calculateLinkSimilarity(
     String noteId1,
@@ -438,29 +459,37 @@ class AIRelatedNotesService {
   ) {
     // 直接链接
     if (links1.contains(noteId2) || links2.contains(noteId1)) {
-      return 1.0;
+      return 1;
     }
-    
+
     // 共同链接
     final commonLinks = links1.intersection(links2);
     if (commonLinks.isNotEmpty) {
       final allLinks = links1.union(links2);
       return commonLinks.length / allLinks.length * 0.8;
     }
-    
-    return 0.0;
+
+    return 0;
   }
-  
+
   /// ⏰ 时间新鲜度
   double _calculateTimeScore(DateTime noteTime) {
     final daysDiff = DateTime.now().difference(noteTime).inDays;
-    if (daysDiff <= 7) return 1.0;
-    if (daysDiff <= 30) return 0.7;
-    if (daysDiff <= 90) return 0.4;
-    if (daysDiff <= 180) return 0.2;
+    if (daysDiff <= 7) {
+      return 1;
+    }
+    if (daysDiff <= 30) {
+      return 0.7;
+    }
+    if (daysDiff <= 90) {
+      return 0.4;
+    }
+    if (daysDiff <= 180) {
+      return 0.2;
+    }
     return 0.1;
   }
-  
+
   /// 🔗 提取链接引用
   Set<String> _extractLinks(String content) {
     final links = <String>{};
@@ -541,10 +570,11 @@ class AIRelatedNotesService {
     return stopWords.contains(word);
   }
 
-
   /// 计算余弦相似度
   double _cosineSimilarity(List<double> a, List<double> b) {
-    if (a.length != b.length) return 0;
+    if (a.length != b.length) {
+      return 0;
+    }
 
     var dotProduct = 0.0;
     var normA = 0.0;
@@ -559,7 +589,9 @@ class AIRelatedNotesService {
     normA = sqrt(normA);
     normB = sqrt(normB);
 
-    if (normA == 0 || normB == 0) return 0;
+    if (normA == 0 || normB == 0) {
+      return 0;
+    }
     return dotProduct / (normA * normB);
   }
 
@@ -585,7 +617,9 @@ class AIRelatedNotesService {
 
   /// 截断文本
   String _truncateText(String text, int maxLength) {
-    if (text.length <= maxLength) return text;
+    if (text.length <= maxLength) {
+      return text;
+    }
     return '${text.substring(0, maxLength)}...';
   }
 
@@ -607,7 +641,7 @@ class AIRelatedNotesService {
         '${cacheKey}_time',
         DateTime.now().millisecondsSinceEpoch,
       );
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('⚠️ 缓存失败: $e');
     }
   }
@@ -620,7 +654,9 @@ class AIRelatedNotesService {
       final data = prefs.getString(cacheKey);
       final timestamp = prefs.getInt('${cacheKey}_time');
 
-      if (data == null || timestamp == null) return null;
+      if (data == null || timestamp == null) {
+        return null;
+      }
 
       final cacheTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
       if (DateTime.now().difference(cacheTime) > _cacheExpiry) {
@@ -630,7 +666,7 @@ class AIRelatedNotesService {
       }
 
       return List<Map<String, dynamic>>.from(json.decode(data));
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -673,7 +709,7 @@ class AIRelatedNotesService {
           await prefs.remove(key);
         }
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('⚠️ 清除缓存失败: $e');
     }
   }

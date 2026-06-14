@@ -41,13 +41,13 @@ class User {
   final String? serverUrl;
 
   // 将用户对象转换为JSON
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeToken = false}) => {
         'id': id,
         'username': username,
         'email': email,
         'nickname': nickname,
         'avatarUrl': avatarUrl,
-        'token': token,
+        if (includeToken) 'token': token,
         'role': role,
         'description': description,
         'lastSyncTime': lastSyncTime?.toIso8601String(),

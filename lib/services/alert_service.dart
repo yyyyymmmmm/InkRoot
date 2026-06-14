@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:inkroot/config/app_config.dart';
-import 'sentry_monitoring_service.dart';
+import 'package:inkroot/services/sentry_monitoring_service.dart';
 
 /// 🚀 大厂标准：告警服务
-/// 
+///
 /// 负责监控关键指标并触发告警
 class AlertService {
-  static final AlertService _instance = AlertService._internal();
   factory AlertService() => _instance;
   AlertService._internal();
+  static final AlertService _instance = AlertService._internal();
 
   final _sentry = SentryMonitoringService();
 
@@ -52,7 +52,7 @@ class AlertService {
   void recordMetric(String metricName, num value) {
     final stats = _stats.putIfAbsent(
       metricName,
-      () => _MetricStats(),
+      _MetricStats.new,
     );
 
     stats.add(value);
@@ -64,21 +64,26 @@ class AlertService {
   /// 检查是否需要告警
   void _checkAlert(String metricName, num value) {
     final rule = _rules[metricName];
-    if (rule == null) return;
+    if (rule == null) {
+      return;
+    }
 
     final stats = _stats[metricName];
-    if (stats == null) return;
+    if (stats == null) {
+      return;
+    }
 
     // 检查阈值
-    bool shouldAlert = false;
-    String reason = '';
+    var shouldAlert = false;
+    var reason = '';
 
     if (metricName.endsWith('_rate')) {
       // 比率类指标
       final rate = stats.getRate();
       if (rate > rule.threshold) {
         shouldAlert = true;
-        reason = 'Rate: ${(rate * 100).toStringAsFixed(2)}% > ${(rule.threshold * 100).toStringAsFixed(2)}%';
+        reason =
+            'Rate: ${(rate * 100).toStringAsFixed(2)}% > ${(rule.threshold * 100).toStringAsFixed(2)}%';
       }
     } else {
       // 数值类指标
@@ -149,17 +154,16 @@ class AlertService {
 
 /// 告警规则
 class AlertRule {
-  final String name;
-  final num threshold;
-  final Duration window;
-  final AlertSeverity severity;
-
   AlertRule({
     required this.name,
     required this.threshold,
     required this.window,
     required this.severity,
   });
+  final String name;
+  final num threshold;
+  final Duration window;
+  final AlertSeverity severity;
 }
 
 /// 告警级别
@@ -172,29 +176,25 @@ enum AlertSeverity {
 
 /// 告警事件
 class Alert {
-  final AlertRule rule;
-  final String reason;
-  final num value;
-  final DateTime timestamp;
-
   Alert({
     required this.rule,
     required this.reason,
     required this.value,
     required this.timestamp,
   });
+  final AlertRule rule;
+  final String reason;
+  final num value;
+  final DateTime timestamp;
 }
 
 /// 告警异常（用于Sentry错误追踪）
 class AlertException implements Exception {
+  AlertException(this.alert);
   final Alert alert;
 
-  AlertException(this.alert);
-
   @override
-  String toString() {
-    return 'AlertException: ${alert.rule.name} - ${alert.reason}';
-  }
+  String toString() => 'AlertException: ${alert.rule.name} - ${alert.reason}';
 }
 
 /// 指标统计
@@ -215,20 +215,25 @@ class _MetricStats {
   }
 
   num getAverage() {
-    if (_values.isEmpty) return 0;
+    if (_values.isEmpty) {
+      return 0;
+    }
     return _values.reduce((a, b) => a + b) / _values.length;
   }
 
   num getRate() {
     // 计算比率（用于error rate等指标）
-    if (_values.isEmpty) return 0;
+    if (_values.isEmpty) {
+      return 0;
+    }
     final successCount = _values.where((v) => v == 0).length;
     return 1 - (successCount / _values.length);
   }
 
   num getMax() {
-    if (_values.isEmpty) return 0;
+    if (_values.isEmpty) {
+      return 0;
+    }
     return _values.reduce((a, b) => a > b ? a : b);
   }
 }
-

@@ -56,7 +56,9 @@ class ImageCacheManager {
       // 因为我们已经在前端过滤了视频文件，所以旧的视频缓存会自动失效
       // 不自动清理，让用户在需要时手动清理
       // await clearAllCache();
-    } catch (e) {}
+    } on Object catch (_) {
+      // Manual cache cleanup is optional maintenance.
+    }
   }
 
   // 初始化

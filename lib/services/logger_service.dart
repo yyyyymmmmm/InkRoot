@@ -1,18 +1,21 @@
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
+import 'package:inkroot/config/app_identity.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// 统一日志服务
 /// 集成 Sentry 错误追踪，提供结构化日志
 class LoggerService {
-  static const String _tag = 'InkRoot';
+  static const String _tag = AppIdentity.name;
 
   /// 是否启用详细日志
   static bool verbose = kDebugMode;
 
   /// 调试日志
   static void debug(String message, {String? tag, Map<String, dynamic>? data}) {
-    if (!kDebugMode) return;
+    if (!kDebugMode) {
+      return;
+    }
 
     final logTag = tag ?? _tag;
     final logMessage = _formatMessage(message, data);
@@ -60,7 +63,7 @@ class LoggerService {
   static void warning(
     String message, {
     String? tag,
-    error,
+    Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
   }) {
@@ -102,7 +105,7 @@ class LoggerService {
   static void error(
     String message, {
     String? tag,
-    error,
+    Object? error,
     StackTrace? stackTrace,
     Map<String, dynamic>? data,
     bool fatal = false,
@@ -156,7 +159,7 @@ class LoggerService {
       final result = await function();
       transaction.status = const SpanStatus.ok();
       return result;
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       transaction.status = const SpanStatus.internalError();
       transaction.throwable = error;
 
@@ -209,7 +212,9 @@ class LoggerService {
 
   /// 格式化消息
   static String _formatMessage(String message, Map<String, dynamic>? data) {
-    if (data == null || data.isEmpty) return message;
+    if (data == null || data.isEmpty) {
+      return message;
+    }
 
     final dataStr = data.entries.map((e) => '${e.key}=${e.value}').join(', ');
 
@@ -236,7 +241,7 @@ class LoggerService {
           'fatal': fatal,
         }),
       );
-    } catch (e) {
+    } on Object catch (e) {
       // 如果 Sentry 上报失败，不要影响主流程
       if (kDebugMode) {
         // ignore: avoid_print
@@ -277,7 +282,7 @@ class PerformanceTimer {
   }
 
   /// 记录失败
-  void fail(error, StackTrace? stackTrace) {
+  void fail(Object? error, StackTrace? stackTrace) {
     _stopwatch.stop();
     _span?.finish(status: const SpanStatus.internalError());
 

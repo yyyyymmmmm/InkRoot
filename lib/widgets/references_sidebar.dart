@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/note_model.dart';
+import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'package:inkroot/providers/app_provider.dart';
 
 /// 引用关系侧边栏 - 对标批注侧边栏的设计
-/// 
+///
 /// 支持响应式布局：手机、平板、桌面端
 class ReferencesSidebar extends StatefulWidget {
-  final Note note;
-  final Function(String noteId) onNoteTap;
-
   const ReferencesSidebar({
-    super.key,
     required this.note,
     required this.onNoteTap,
+    super.key,
   });
+  final Note note;
+  final Function(String noteId) onNoteTap;
 
   @override
   State<ReferencesSidebar> createState() => _ReferencesSidebarState();
@@ -29,7 +28,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Container(
       width: _getResponsiveWidth(screenWidth),
       decoration: BoxDecoration(
@@ -71,7 +70,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
     final textColor = isDarkMode ? Colors.white : Colors.black87;
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final allReferences = _getAllReferences(appProvider);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -83,7 +82,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.account_tree_outlined,
             color: AppTheme.primaryColor,
             size: 24,
@@ -126,7 +125,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   /// 构建筛选栏
   Widget _buildFilterBar(bool isDarkMode) {
     final localizations = AppLocalizationsSimple.of(context);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -169,17 +168,23 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   Widget _buildFilterChip({
     required String label,
     required String value,
-    IconData? icon,
     required bool isDarkMode,
+    IconData? icon,
   }) {
     final isSelected = _filterType == value;
-    
+
     return ChoiceChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 16, color: isSelected ? AppTheme.primaryColor : (isDarkMode ? Colors.white70 : Colors.black87)),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? AppTheme.primaryColor
+                  : (isDarkMode ? Colors.white70 : Colors.black87),
+            ),
             const SizedBox(width: 4),
           ],
           Text(label),
@@ -189,10 +194,12 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
       onSelected: (selected) {
         setState(() => _filterType = value);
       },
-      selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
       backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[100],
       labelStyle: TextStyle(
-        color: isSelected ? AppTheme.primaryColor : (isDarkMode ? Colors.white70 : Colors.black87),
+        color: isSelected
+            ? AppTheme.primaryColor
+            : (isDarkMode ? Colors.white70 : Colors.black87),
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -202,12 +209,11 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   /// 构建引用列表
   Widget _buildReferencesList(bool isDarkMode) {
     final appProvider = Provider.of<AppProvider>(context);
-    final localizations = AppLocalizationsSimple.of(context);
-    
+
     final outgoingRefs = _getOutgoingReferences(appProvider);
     final incomingRefs = _getIncomingReferences(appProvider);
-    
-    List<Map<String, dynamic>> displayRefs = [];
+
+    var displayRefs = <Map<String, dynamic>>[];
     if (_filterType == 'all') {
       displayRefs = [...outgoingRefs, ...incomingRefs];
     } else if (_filterType == 'outgoing') {
@@ -215,11 +221,11 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
     } else {
       displayRefs = incomingRefs;
     }
-    
+
     if (displayRefs.isEmpty) {
       return _buildEmptyState(isDarkMode);
     }
-    
+
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: displayRefs.length,
@@ -235,7 +241,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   /// 构建空状态
   Widget _buildEmptyState(bool isDarkMode) {
     final localizations = AppLocalizationsSimple.of(context);
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -271,12 +277,12 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   ) {
     final localizations = AppLocalizationsSimple.of(context);
     final textColor = isDarkMode ? Colors.white : Colors.black87;
-    
+
     // 获取关联笔记ID
     final relatedNoteId = isOutgoing
         ? (ref['relatedMemoId']?.toString() ?? '')
         : (ref['memoId']?.toString() ?? '');
-    
+
     // 查找关联笔记
     final relatedNote = appProvider.notes.firstWhere(
       (n) => n.id == relatedNoteId,
@@ -287,7 +293,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
         updatedAt: DateTime.now(),
       ),
     );
-    
+
     return InkWell(
       onTap: () => widget.onNoteTap(relatedNoteId),
       borderRadius: BorderRadius.circular(12),
@@ -298,8 +304,8 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isOutgoing
-                ? Colors.blue.withOpacity(0.3)
-                : Colors.green.withOpacity(0.3),
+                ? Colors.blue.withValues(alpha: 0.3)
+                : Colors.green.withValues(alpha: 0.3),
           ),
         ),
         child: Column(
@@ -309,11 +315,12 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isOutgoing
-                        ? Colors.blue.withOpacity(0.1)
-                        : Colors.green.withOpacity(0.1),
+                        ? Colors.blue.withValues(alpha: 0.1)
+                        : Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
@@ -341,7 +348,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // 笔记内容预览
             Text(
               relatedNote.content.length > 100
@@ -355,9 +362,9 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // 底部信息
             Row(
               children: [
@@ -389,44 +396,44 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   }
 
   /// 获取所有引用
-  List<Map<String, dynamic>> _getAllReferences(AppProvider appProvider) {
-    return widget.note.relations.where((relation) {
-      final type = relation['type'];
-      return type == 1 || type == 'REFERENCE' || type == 'REFERENCED_BY';
-    }).toList();
-  }
+  List<Map<String, dynamic>> _getAllReferences(AppProvider appProvider) =>
+      widget.note.relations.where((relation) {
+        final type = relation['type'];
+        return type == 1 || type == 'REFERENCE' || type == 'REFERENCED_BY';
+      }).toList();
 
   /// 获取引用的笔记（正向引用）
   List<Map<String, dynamic>> _getOutgoingReferences(AppProvider appProvider) {
     final outgoingRefs = <Map<String, dynamic>>[];
-    
+
     for (final relation in widget.note.relations) {
       final type = relation['type'];
       final memoId = relation['memoId']?.toString() ?? '';
       final currentId = widget.note.id;
-      
-      if ((type == 'REFERENCE' || type == 1) && (memoId == currentId || memoId.isEmpty)) {
+
+      if ((type == 'REFERENCE' || type == 1) &&
+          (memoId == currentId || memoId.isEmpty)) {
         outgoingRefs.add(relation);
       }
     }
-    
+
     return outgoingRefs;
   }
 
   /// 获取被引用（反向引用）
   List<Map<String, dynamic>> _getIncomingReferences(AppProvider appProvider) {
     final incomingRefs = <Map<String, dynamic>>[];
-    
+
     for (final relation in widget.note.relations) {
       final type = relation['type'];
       final relatedMemoId = relation['relatedMemoId']?.toString() ?? '';
       final currentId = widget.note.id;
-      
+
       if (type == 'REFERENCED_BY' && relatedMemoId == currentId) {
         incomingRefs.add(relation);
       }
     }
-    
+
     return incomingRefs;
   }
 
@@ -434,7 +441,7 @@ class _ReferencesSidebarState extends State<ReferencesSidebar> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays < 7) {

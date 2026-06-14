@@ -1,31 +1,29 @@
-import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/annotation_model.dart';
 import 'package:inkroot/models/app_config_model.dart';
 import 'package:inkroot/models/note_model.dart';
-import 'package:inkroot/widgets/annotations_sidebar.dart';
-import 'package:inkroot/widgets/references_sidebar.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/screens/note_detail_screen.dart';
-import 'package:inkroot/services/ai_enhanced_service.dart';
 import 'package:inkroot/services/deepseek_api_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/widgets/annotations_sidebar.dart';
 import 'package:inkroot/widgets/ios_datetime_picker.dart';
 import 'package:inkroot/widgets/note_editor.dart';
 import 'package:inkroot/widgets/permission_guide_dialog.dart';
+import 'package:inkroot/widgets/references_sidebar.dart';
 import 'package:inkroot/widgets/share_image_preview_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// 📦 笔记操作服务
-/// 
+///
 /// 封装所有笔记相关的业务逻辑：
 /// - 编辑、删除、置顶
 /// - 分享（文本/图片/链接）
@@ -33,7 +31,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// - 提醒设置
 /// - 引用查看
 /// - 详情显示
-/// 
+///
 /// 所有UI组件都通过这个服务执行笔记操作
 class NoteActionsService {
   /// 编辑笔记
@@ -61,7 +59,7 @@ class NoteActionsService {
                   AppLocalizationsSimple.of(context)?.noteUpdated ?? '笔记已更新',
                 );
               }
-            } catch (e) {
+            } on Object catch (e) {
               if (context.mounted) {
                 SnackBarUtils.showError(
                   context,
@@ -86,17 +84,17 @@ class NoteActionsService {
     // 1. 流畅：无需等待确认对话框
     // 2. 安全：提供3秒撤销时间
     // 3. 批量友好：连续删除不会弹出多个对话框
-    
+
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
-      
+
       // 先保存笔记内容（用于撤销）
       final deletedNote = note;
-      
+
       // 立即删除（乐观更新）
       await appProvider.deleteNote(note.id);
       onDeleted();
-      
+
       if (context.mounted) {
         // 🎨 显示带撤销按钮的SnackBar（2.5秒，留出操作时间）
         ScaffoldMessenger.of(context).clearSnackBars(); // 🎯 清除之前的通知，避免累积
@@ -131,9 +129,12 @@ class NoteActionsService {
                       AppLocalizationsSimple.of(context)?.undoDelete ?? '已撤销删除',
                     );
                   }
-                } catch (e) {
+                } on Object catch (e) {
                   if (context.mounted) {
-                    SnackBarUtils.showError(context, '${AppLocalizationsSimple.of(context)?.undoFailed ?? '撤销失败'}: $e');
+                    SnackBarUtils.showError(
+                      context,
+                      '${AppLocalizationsSimple.of(context)?.undoFailed ?? '撤销失败'}: $e',
+                    );
                   }
                 }
               },
@@ -141,6 +142,7 @@ class NoteActionsService {
             backgroundColor: const Color(0xFF2E7D32), // 成功绿色
             behavior: SnackBarBehavior.floating,
             duration: const Duration(milliseconds: 2500), // 2.5秒（给用户足够时间撤销）
+            persist: false,
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -148,7 +150,7 @@ class NoteActionsService {
           ),
         );
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (context.mounted) {
         SnackBarUtils.showError(
           context,
@@ -174,10 +176,12 @@ class NoteActionsService {
         SnackBarUtils.showSuccess(
           context,
           // 🔥 显示切换后的状态
-          willPin ? (AppLocalizationsSimple.of(context)?.pinned ?? '已置顶') : (AppLocalizationsSimple.of(context)?.unpinned ?? '已取消置顶'),
+          willPin
+              ? (AppLocalizationsSimple.of(context)?.pinned ?? '已置顶')
+              : (AppLocalizationsSimple.of(context)?.unpinned ?? '已取消置顶'),
         );
       }
-    } catch (e) {
+    } on Object {
       if (context.mounted) {
         SnackBarUtils.showError(
           context,
@@ -195,7 +199,7 @@ class NoteActionsService {
   }) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
-    
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -219,10 +223,10 @@ class NoteActionsService {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.visibility_rounded,
                       color: AppTheme.primaryColor,
                       size: 20,
@@ -230,7 +234,8 @@ class NoteActionsService {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    AppLocalizationsSimple.of(context)?.noteVisibility ?? '笔记可见性',
+                    AppLocalizationsSimple.of(context)?.noteVisibility ??
+                        '笔记可见性',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -240,27 +245,39 @@ class NoteActionsService {
               ),
               const SizedBox(height: 8),
               Text(
-                (AppLocalizationsSimple.of(context)?.currentStatus ?? '当前：{status}').replaceAll('{status}', note.isPublic ? (AppLocalizationsSimple.of(context)?.public ?? "公开") : (AppLocalizationsSimple.of(context)?.private ?? "私有")),
+                (AppLocalizationsSimple.of(context)?.currentStatus ??
+                        '当前：{status}')
+                    .replaceAll(
+                  '{status}',
+                  note.isPublic
+                      ? (AppLocalizationsSimple.of(context)?.public ?? '公开')
+                      : (AppLocalizationsSimple.of(context)?.private ?? '私有'),
+                ),
                 style: TextStyle(
                   fontSize: 14,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // 私有选项
               _buildVisibilityOption(
                 context: context,
                 icon: Icons.lock_outline,
                 title: AppLocalizationsSimple.of(context)?.private ?? '私有',
-                description: AppLocalizationsSimple.of(context)?.privateDesc ?? '仅自己可见',
+                description:
+                    AppLocalizationsSimple.of(context)?.privateDesc ?? '仅自己可见',
                 isSelected: !note.isPublic,
                 isDarkMode: isDarkMode,
                 onTap: () async {
                   final navigator = Navigator.of(context);
                   if (!note.isPublic) {
                     navigator.pop();
-                    SnackBarUtils.showInfo(context, AppLocalizationsSimple.of(context)?.alreadyPrivate ?? '当前已是私有');
+                    SnackBarUtils.showInfo(
+                      context,
+                      AppLocalizationsSimple.of(context)?.alreadyPrivate ??
+                          '当前已是私有',
+                    );
                     return;
                   }
                   // 关闭Sheet
@@ -275,22 +292,30 @@ class NoteActionsService {
                   // 显示结果通知
                   if (context.mounted) {
                     if (success) {
-                      SnackBarUtils.showSuccess(context, AppLocalizationsSimple.of(context)?.setToPrivate ?? '已设为私有');
+                      SnackBarUtils.showSuccess(
+                        context,
+                        AppLocalizationsSimple.of(context)?.setToPrivate ??
+                            '已设为私有',
+                      );
                     } else {
-                      SnackBarUtils.showError(context, AppLocalizationsSimple.of(context)?.setFailed ?? '设置失败');
+                      SnackBarUtils.showError(
+                        context,
+                        AppLocalizationsSimple.of(context)?.setFailed ?? '设置失败',
+                      );
                     }
                   }
                 },
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // 公开选项
               _buildVisibilityOption(
                 context: context,
                 icon: Icons.public_rounded,
                 title: AppLocalizationsSimple.of(context)?.public ?? '公开',
-                description: AppLocalizationsSimple.of(context)?.publicDesc ?? '任何人可通过链接查看',
+                description: AppLocalizationsSimple.of(context)?.publicDesc ??
+                    '任何人可通过链接查看',
                 isSelected: note.isPublic,
                 isDarkMode: isDarkMode,
                 color: Colors.orange,
@@ -298,7 +323,11 @@ class NoteActionsService {
                   final navigator = Navigator.of(context);
                   if (note.isPublic) {
                     navigator.pop();
-                    SnackBarUtils.showInfo(context, AppLocalizationsSimple.of(context)?.alreadyPublic ?? '当前已是公开');
+                    SnackBarUtils.showInfo(
+                      context,
+                      AppLocalizationsSimple.of(context)?.alreadyPublic ??
+                          '当前已是公开',
+                    );
                     return;
                   }
                   // 关闭Sheet
@@ -313,9 +342,16 @@ class NoteActionsService {
                   // 显示结果通知
                   if (context.mounted) {
                     if (success) {
-                      SnackBarUtils.showSuccess(context, AppLocalizationsSimple.of(context)?.setToPublic ?? '已设为公开');
+                      SnackBarUtils.showSuccess(
+                        context,
+                        AppLocalizationsSimple.of(context)?.setToPublic ??
+                            '已设为公开',
+                      );
                     } else {
-                      SnackBarUtils.showError(context, AppLocalizationsSimple.of(context)?.setFailed ?? '设置失败');
+                      SnackBarUtils.showError(
+                        context,
+                        AppLocalizationsSimple.of(context)?.setFailed ?? '设置失败',
+                      );
                     }
                   }
                 },
@@ -326,7 +362,7 @@ class NoteActionsService {
       ),
     );
   }
-  
+
   // 构建可见性选项
   static Widget _buildVisibilityOption({
     required BuildContext context,
@@ -335,11 +371,11 @@ class NoteActionsService {
     required String description,
     required bool isSelected,
     required bool isDarkMode,
-    Color? color,
     required VoidCallback onTap,
+    Color? color,
   }) {
     final optionColor = color ?? AppTheme.primaryColor;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -349,8 +385,10 @@ class NoteActionsService {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isSelected
-                ? optionColor.withOpacity(0.1)
-                : (isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100]),
+                ? optionColor.withValues(alpha: 0.1)
+                : (isDarkMode
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey[100]),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected ? optionColor : Colors.transparent,
@@ -362,7 +400,7 @@ class NoteActionsService {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: optionColor.withOpacity(0.1),
+                  color: optionColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: optionColor, size: 24),
@@ -403,7 +441,7 @@ class NoteActionsService {
       ),
     );
   }
-  
+
   // 设置可见性
   // 返回值：true=成功, false=失败
   static Future<bool> _setVisibility({
@@ -414,58 +452,13 @@ class NoteActionsService {
   }) async {
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
-      final serverUrl = appProvider.appConfig.memosApiUrl;
-      final token = appProvider.user?.token;
-
-      if (token == null || serverUrl == null || serverUrl.isEmpty) {
-        return false;
-      }
-      
-      final response = await http.patch(
-        Uri.parse('$serverUrl/api/v1/memo/${note.id}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({'visibility': visibility}),
-      );
-
-      if (response.statusCode == 200) {
-        // 🔥 解析响应，更新本地笔记对象
-        try {
-          final responseData = json.decode(response.body);
-          if (responseData != null) {
-            // 获取新的可见性状态
-            final newVisibility = responseData['visibility'] as String? ?? 'PRIVATE';
-            
-            // 创建更新后的笔记对象
-            final updatedNote = Note(
-              id: note.id,
-              content: note.content,
-              createdAt: note.createdAt,
-              updatedAt: note.updatedAt,
-              isPinned: note.isPinned,
-              visibility: newVisibility,
-              tags: note.tags,
-              resourceList: note.resourceList,
-              relations: note.relations,
-              reminderTime: note.reminderTime,
-            );
-            
-            // 使用AppProvider的方法更新内存中的笔记
-            appProvider.updateNoteInMemory(updatedNote);
-          }
-        } catch (e) {
-          // 解析失败不影响成功状态
-          print('解析响应失败，但设置已成功: $e');
-        }
-        
+      final updatedNote = await appProvider.setNoteVisibility(note, visibility);
+      if (updatedNote != null) {
         onUpdated();
         return true;
-      } else {
-        return false;
       }
-    } catch (e) {
+      return false;
+    } on Object {
       return false;
     }
   }
@@ -476,7 +469,7 @@ class NoteActionsService {
     required Note note,
   }) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -495,7 +488,7 @@ class NoteActionsService {
         note.content,
         subject: AppLocalizationsSimple.of(context)?.shareNote ?? '分享笔记',
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (context.mounted) {
         SnackBarUtils.showError(context, '分享失败: $e');
       }
@@ -507,14 +500,16 @@ class NoteActionsService {
     required BuildContext context,
     required Note note,
   }) async {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ShareImagePreviewScreen(
-          noteId: note.id,
-          content: note.content,
-          timestamp: note.updatedAt,
+    unawaited(
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ShareImagePreviewScreen(
+            noteId: note.id,
+            content: note.content,
+            timestamp: note.updatedAt,
+          ),
+          fullscreenDialog: true,
         ),
-        fullscreenDialog: true,
       ),
     );
   }
@@ -539,7 +534,7 @@ class NoteActionsService {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final serverUrl = appProvider.appConfig.memosApiUrl;
     final shareUrl = '$serverUrl/m/${note.id}';
-    
+
     Clipboard.setData(ClipboardData(text: shareUrl));
     SnackBarUtils.showSuccess(
       context,
@@ -553,8 +548,6 @@ class NoteActionsService {
     Note note,
     VoidCallback onUpdated,
   ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -565,7 +558,7 @@ class NoteActionsService {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.public_rounded, color: Colors.orange),
@@ -573,7 +566,8 @@ class NoteActionsService {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                AppLocalizationsSimple.of(context)?.sharePermissionConfirmation ??
+                AppLocalizationsSimple.of(context)
+                        ?.sharePermissionConfirmation ??
                     '分享权限确认',
               ),
             ),
@@ -614,75 +608,55 @@ class NoteActionsService {
   ) async {
     try {
       // 显示加载对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('正在生成分享链接...'),
-            ],
+      unawaited(
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Text(
+                  AppLocalizationsSimple.of(context)?.generatingShareLink ??
+                      '正在生成分享链接...',
+                ),
+              ],
+            ),
           ),
         ),
       );
 
       final appProvider = Provider.of<AppProvider>(context, listen: false);
-      final serverUrl = appProvider.appConfig.memosApiUrl;
-      final token = appProvider.user?.token;
+      final serverUrl =
+          appProvider.appConfig.memosApiUrl ?? appProvider.user?.serverUrl;
 
-      if (token == null || serverUrl == null || serverUrl.isEmpty) {
-        if (context.mounted) Navigator.of(context).pop();
+      if (serverUrl == null || serverUrl.isEmpty) {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
         if (context.mounted) {
           SnackBarUtils.showError(context, '未登录或服务器配置错误');
         }
         return;
       }
 
-      // 设置笔记为公开
-      final response = await http.patch(
-        Uri.parse('$serverUrl/api/v1/memo/${note.id}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({'visibility': 'PUBLIC'}),
-      );
+      final updatedNote = await appProvider.setNoteVisibility(note, 'PUBLIC');
 
-      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
 
-      if (response.statusCode == 200) {
-        // 🔥 更新本地笔记对象的可见性
-        try {
-          final updatedNote = Note(
-            id: note.id,
-            content: note.content,
-            createdAt: note.createdAt,
-            updatedAt: note.updatedAt,
-            isPinned: note.isPinned,
-            visibility: 'PUBLIC', // 设置为公开
-            tags: note.tags,
-            resourceList: note.resourceList,
-            relations: note.relations,
-            reminderTime: note.reminderTime,
-          );
-          // 使用AppProvider的方法更新内存中的笔记
-          appProvider.updateNoteInMemory(updatedNote);
-        } catch (e) {
-          print('更新本地笔记失败: $e');
-        }
-        
+      if (updatedNote != null) {
         onUpdated();
-        final shareUrl = '$serverUrl/m/${note.id}';
-        Clipboard.setData(ClipboardData(text: shareUrl));
-        
+        final shareUrl = '$serverUrl/m/${updatedNote.id}';
+        unawaited(Clipboard.setData(ClipboardData(text: shareUrl)));
+
         if (context.mounted) {
           SnackBarUtils.showSuccess(
             context,
-            AppLocalizationsSimple.of(context)?.linkCopied ??
-                '链接已复制到剪贴板',
+            AppLocalizationsSimple.of(context)?.linkCopied ?? '链接已复制到剪贴板',
           );
         }
       } else {
@@ -694,10 +668,15 @@ class NoteActionsService {
           );
         }
       }
-    } catch (e) {
-      if (context.mounted) Navigator.of(context).pop();
+    } on Object catch (e) {
       if (context.mounted) {
-        SnackBarUtils.showError(context, '${AppLocalizationsSimple.of(context)?.operationFailed ?? '操作失败'}: $e');
+        Navigator.of(context).pop();
+      }
+      if (context.mounted) {
+        SnackBarUtils.showError(
+          context,
+          '${AppLocalizationsSimple.of(context)?.operationFailed ?? '操作失败'}: $e',
+        );
       }
     }
   }
@@ -726,7 +705,8 @@ class NoteActionsService {
         appConfig.aiApiKey!.isEmpty) {
       SnackBarUtils.showWarning(
         context,
-        AppLocalizationsSimple.of(context)?.configureAIFirst ?? '请先在设置中配置AI API',
+        AppLocalizationsSimple.of(context)?.configureAIFirst ??
+            '请先在设置中配置AI API',
       );
       return;
     }
@@ -737,214 +717,249 @@ class NoteActionsService {
     String? errorMessage;
 
     // 🔥 使用底部Sheet替代Dialog - 更现代的体验
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (bottomSheetContext) => StatefulBuilder(
-        builder: (context, setState) {
-          // 开始AI点评
-          if (isLoading && aiReview == null && errorMessage == null) {
-            _getAiReview(appConfig, note.content).then((result) {
-              final (review, error) = result;
-              setState(() {
-                isLoading = false;
-                aiReview = review != null
-                    ? _cleanMarkdownForReview(review)
-                    : null; // 🔥 清理Markdown符号
-                errorMessage = error;
+    unawaited(
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (bottomSheetContext) => StatefulBuilder(
+          builder: (context, setState) {
+            // 开始AI点评
+            if (isLoading && aiReview == null && errorMessage == null) {
+              _getAiReview(appConfig, note.content).then((result) {
+                final (review, error) = result;
+                setState(() {
+                  isLoading = false;
+                  aiReview = review != null
+                      ? _cleanMarkdownForReview(review)
+                      : null; // 🔥 清理Markdown符号
+                  errorMessage = error;
+                });
+                // 🔥 完成后显示提示
+                if (review != null) {
+                  if (!context.mounted) {
+                    return;
+                  }
+                  SnackBarUtils.showSuccess(
+                    context,
+                    AppLocalizationsSimple.of(context)?.aiReviewCompleted ??
+                        '✨ AI点评完成！',
+                  );
+                }
               });
-              // 🔥 完成后显示提示
-              if (review != null) {
-                SnackBarUtils.showSuccess(context, '✨ AI点评完成！');
-              }
-            });
-          }
+            }
 
-          // 🔥 大厂风格的底部Sheet
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            decoration: BoxDecoration(
-              color: isDarkMode ? AppTheme.darkCardColor : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 🔥 拖动指示器 - iOS风格
-                Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(2),
+            // 🔥 大厂风格的底部Sheet
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              decoration: BoxDecoration(
+                color: isDarkMode ? AppTheme.darkCardColor : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -2),
                   ),
-                ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🔥 拖动指示器 - iOS风格
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: (isDarkMode ? Colors.white : Colors.black)
+                          .withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
 
-                // 🔥 标题栏 - 简洁现代
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: Row(
-                    children: [
-                      const Text(
-                        '💬',
-                        style: TextStyle(fontSize: 24),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '给你的点评',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? Colors.white
-                                : AppTheme.textPrimaryColor,
-                            letterSpacing: 0.3,
+                  // 🔥 标题栏 - 简洁现代
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                    child: Row(
+                      children: [
+                        const Text(
+                          '💬',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            AppLocalizationsSimple.of(context)?.aiReviewTitle ??
+                                '给你的点评',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode
+                                  ? Colors.white
+                                  : AppTheme.textPrimaryColor,
+                              letterSpacing: 0.3,
+                            ),
                           ),
                         ),
-                      ),
-                      if (!isLoading)
-                        IconButton(
-                          icon: Icon(
-                            Icons.close,
-                            color: (isDarkMode ? Colors.white : Colors.black)
-                                .withOpacity(0.5),
+                        if (!isLoading)
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: (isDarkMode ? Colors.white : Colors.black)
+                                  .withValues(alpha: 0.5),
+                            ),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // 🔥 内容区域 - flomo风格
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: isLoading
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 60),
-                              child: Column(
-                                children: [
-                                  const CircularProgressIndicator(),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'AI正在阅读笔记...',
-                                    style: TextStyle(
-                                      color:
-                                          (isDarkMode ? Colors.white : Colors.black)
-                                              .withOpacity(0.6),
-                                      fontSize: 15,
+                  // 🔥 内容区域 - flomo风格
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: isLoading
+                          ? Center(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 60),
+                                child: Column(
+                                  children: [
+                                    const CircularProgressIndicator(),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      AppLocalizationsSimple.of(context)
+                                              ?.aiReadingNote ??
+                                          'AI正在阅读笔记...',
+                                      style: TextStyle(
+                                        color: (isDarkMode
+                                                ? Colors.white
+                                                : Colors.black)
+                                            .withValues(alpha: 0.6),
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : errorMessage != null
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 60,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        const Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red,
+                                          size: 48,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          errorMessage!,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : errorMessage != null
-                            ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 60),
-                                  child: Column(
-                                    children: [
-                                      const Icon(
-                                        Icons.error_outline,
-                                        color: Colors.red,
-                                        size: 48,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        errorMessage!,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.only(bottom: 24),
+                                  child: _buildReviewContent(
+                                    aiReview!,
+                                    isDarkMode,
                                   ),
                                 ),
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.only(bottom: 24),
-                                child: _buildReviewContent(aiReview!, isDarkMode),
-                              ),
+                    ),
                   ),
-                ),
 
-                // 🔥 底部按钮 - 简洁设计
-                if (!isLoading && aiReview != null)
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          // 复制按钮
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                ClipboardData(text: aiReview!),
-                              );
-                              SnackBarUtils.showSuccess(context, '✨ 点评已复制');
-                            },
-                            icon: const Icon(Icons.copy_rounded, size: 18),
-                            label: const Text('复制'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 14,
+                  // 🔥 底部按钮 - 简洁设计
+                  if (!isLoading && aiReview != null)
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Row(
+                          children: [
+                            // 复制按钮
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: aiReview!),
+                                );
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                SnackBarUtils.showSuccess(
+                                  context,
+                                  AppLocalizationsSimple.of(context)
+                                          ?.reviewCopiedShort ??
+                                      '✨ 点评已复制',
+                                );
+                              },
+                              icon: const Icon(Icons.copy_rounded, size: 18),
+                              label: Text(
+                                AppLocalizationsSimple.of(context)
+                                        ?.copyContent ??
+                                    '复制',
                               ),
-                              side: const BorderSide(
-                                color: AppTheme.primaryColor,
-                              ),
-                              foregroundColor: AppTheme.primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // 完成按钮
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                                side: const BorderSide(
+                                  color: AppTheme.primaryColor,
+                                ),
+                                foregroundColor: AppTheme.primaryColor,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                elevation: 0,
                               ),
-                              child: const Text(
-                                '完成',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                            ),
+                            const SizedBox(width: 12),
+                            // 完成按钮
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  '完成',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -989,7 +1004,8 @@ class NoteActionsService {
       RegExp(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)'),
       r'$1',
     );
-    cleaned = cleaned.replaceAll(RegExp('(?<!_)_(?!_)(.+?)(?<!_)_(?!_)'), r'$1');
+    cleaned =
+        cleaned.replaceAll(RegExp('(?<!_)_(?!_)(.+?)(?<!_)_(?!_)'), r'$1');
 
     // 移除删除线 (~~)
     cleaned = cleaned.replaceAll(RegExp('~~(.*?)~~'), r'$1');
@@ -1008,7 +1024,8 @@ class NoteActionsService {
     cleaned = cleaned.replaceAll(RegExp(r'^>\s*', multiLine: true), '');
 
     // 移除水平线 (--- ***)
-    cleaned = cleaned.replaceAll(RegExp(r'^[\-\*]{3,}\s*$', multiLine: true), '');
+    cleaned =
+        cleaned.replaceAll(RegExp(r'^[\-\*]{3,}\s*$', multiLine: true), '');
 
     // 移除列表符号 (- * 1.)
     cleaned = cleaned.replaceAll(RegExp(r'^[\-\*\+]\s+', multiLine: true), '');
@@ -1071,7 +1088,7 @@ class NoteActionsService {
       ];
 
       return await apiService.chat(messages: messages);
-    } catch (e) {
+    } on Object catch (e) {
       return (null, 'AI点评失败: $e');
     }
   }
@@ -1106,381 +1123,6 @@ class NoteActionsService {
     );
   }
 
-  // 保留旧的Dialog版本作为备用（已废弃）
-  static Future<void> _showReferencesDialogOld({
-    required BuildContext context,
-    required Note note,
-  }) async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final appProvider = Provider.of<AppProvider>(context, listen: false);
-    final notes = appProvider.notes;
-
-    // 过滤出所有引用类型的关系，包括正向和反向
-    final allReferences = note.relations.where((relation) {
-      final type = relation['type'];
-      return type == 1 ||
-          type == 'REFERENCE' ||
-          type == 'REFERENCED_BY'; // 包含所有引用类型
-    }).toList();
-
-    // 分类引用关系
-    final outgoingRefs = <Map<String, dynamic>>[];
-    final incomingRefs = <Map<String, dynamic>>[];
-
-    for (final relation in allReferences) {
-      final type = relation['type'];
-      final memoId = relation['memoId']?.toString() ?? '';
-      final relatedMemoId = relation['relatedMemoId']?.toString() ?? '';
-      final currentId = note.id;
-
-      if (type == 'REFERENCED_BY') {
-        // 这是一个被引用关系，其他笔记引用了当前笔记
-        // REFERENCED_BY: memoId是引用者，relatedMemoId是被引用者（当前笔记）
-        if (relatedMemoId == currentId) {
-          incomingRefs.add(relation);
-        }
-      } else if (type == 'REFERENCE' || type == 1) {
-        // 这是一个引用关系，当前笔记引用了其他笔记
-        // REFERENCE: memoId是引用者（当前笔记），relatedMemoId是被引用者
-        if (memoId == currentId || memoId.isEmpty) {
-          outgoingRefs.add(relation);
-        }
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-        backgroundColor: Colors.transparent,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isDarkMode ? AppTheme.darkCardColor : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 25,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 标题区域
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? AppTheme.primaryColor.withOpacity(0.08)
-                      : AppTheme.primaryColor.withOpacity(0.04),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: const Icon(
-                        Icons.account_tree_outlined,
-                        color: AppTheme.primaryColor,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      AppLocalizationsSimple.of(context)?.referenceRelations ??
-                          '引用关系',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: isDarkMode
-                            ? Colors.white
-                            : AppTheme.textPrimaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AppLocalizationsSimple.of(context)?.viewAllReferences ??
-                          '查看此笔记的所有引用关系',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: (isDarkMode
-                                ? Colors.white
-                                : AppTheme.textPrimaryColor)
-                            .withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 引用列表
-              Container(
-                constraints: const BoxConstraints(maxHeight: 400),
-                padding: const EdgeInsets.all(16),
-                child: allReferences.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: Icon(
-                                Icons.link_off,
-                                size: 32,
-                                color: Colors.grey.shade400,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              AppLocalizationsSimple.of(context)
-                                      ?.noReferences ??
-                                  '暂无引用关系',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              AppLocalizationsSimple.of(context)
-                                      ?.canAddReferencesWhenEditing ??
-                                  '在编辑笔记时可以添加引用关系',
-                              style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 引用的笔记部分
-                            if (outgoingRefs.isNotEmpty) ...[
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 8, bottom: 8),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.north_east,
-                                      size: 16,
-                                      color: Colors.blue,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '引用的笔记 (${outgoingRefs.length})',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ...outgoingRefs.map(
-                                (relation) => _buildReferenceItem(
-                                  relation,
-                                  notes,
-                                  isDarkMode,
-                                  true,
-                                  note,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-
-                            // 被引用部分
-                            if (incomingRefs.isNotEmpty) ...[
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 8, bottom: 8),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.north_west,
-                                      size: 16,
-                                      color: Colors.orange,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '被引用 (${incomingRefs.length})',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.orange,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ...incomingRefs.map(
-                                (relation) => _buildReferenceItem(
-                                  relation,
-                                  notes,
-                                  isDarkMode,
-                                  false,
-                                  note,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-              ),
-
-              // 底部按钮
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: isDarkMode
-                          ? AppTheme.primaryColor.withOpacity(0.1)
-                          : AppTheme.primaryColor.withOpacity(0.05),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      '关闭',
-                      style: TextStyle(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 构建单个引用项目
-  static Widget _buildReferenceItem(
-    Map<String, dynamic> relation,
-    List<Note> notes,
-    bool isDarkMode,
-    bool isOutgoing,
-    Note currentNote,
-  ) {
-    final relatedMemoId = relation['relatedMemoId']?.toString() ?? '';
-    final memoId = relation['memoId']?.toString() ?? '';
-
-    // 根据引用方向确定要显示的笔记ID
-    String targetNoteId;
-    if (isOutgoing) {
-      // 显示被引用的笔记
-      targetNoteId = relatedMemoId;
-    } else {
-      // 显示引用该笔记的笔记
-      targetNoteId = memoId;
-    }
-
-    // 查找关联的笔记
-    final relatedNote = notes.firstWhere(
-      (note) => note.id == targetNoteId,
-      orElse: () => Note(
-        id: targetNoteId,
-        content: '笔记不存在 (ID: $targetNoteId)',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    );
-
-    final preview = relatedNote.content.length > 40
-        ? '${relatedNote.content.substring(0, 40)}...'
-        : relatedNote.content;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color:
-              isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: (isOutgoing ? Colors.blue : Colors.orange).withOpacity(0.1),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color:
-                    (isOutgoing ? Colors.blue : Colors.orange).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.note_outlined,
-                color: isOutgoing ? Colors.blue : Colors.orange,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    preview,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: isDarkMode
-                          ? AppTheme.darkTextPrimaryColor
-                          : AppTheme.textPrimaryColor,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('yyyy-MM-dd HH:mm').format(relatedNote.createdAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: (isDarkMode
-                              ? AppTheme.darkTextSecondaryColor
-                              : AppTheme.textSecondaryColor)
-                          .withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 显示提醒设置（完整版 - 从详情页复制，包含权限检查和完整UI）
   /// 返回值：true=设置成功, false=设置失败, null=用户取消
   static Future<bool?> showReminderSettings({
@@ -1488,6 +1130,15 @@ class NoteActionsService {
     required Note note,
     required VoidCallback onUpdated,
   }) async {
+    if (Platform.isWindows || Platform.isLinux) {
+      SnackBarUtils.showWarning(
+        context,
+        AppLocalizationsSimple.of(context)?.desktopReminderUnsupported ??
+            '当前桌面系统暂不支持系统级定时提醒，请在手机或 macOS 上设置',
+      );
+      return false;
+    }
+
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final currentReminderTime = note.reminderTime;
 
@@ -1538,6 +1189,10 @@ class NoteActionsService {
       initialTime = now.add(const Duration(hours: 1));
     }
 
+    if (!context.mounted) {
+      return null;
+    }
+
     final reminderDateTime = await IOSDateTimePicker.show(
       context: context,
       initialDateTime: initialTime,
@@ -1545,6 +1200,9 @@ class NoteActionsService {
       maximumDateTime: now.add(const Duration(days: 365)),
       showQuickOptions: false, // 🔥 不显示快捷选择
     );
+    if (!context.mounted) {
+      return null;
+    }
 
     // 用户取消了时间选择
     if (reminderDateTime == null) {
@@ -1565,7 +1223,8 @@ class NoteActionsService {
 
     // 设置提醒
     try {
-      final success = await appProvider.setNoteReminder(note.id, reminderDateTime);
+      final success =
+          await appProvider.setNoteReminder(note.id, reminderDateTime);
 
       if (!success) {
         return false;
@@ -1573,105 +1232,11 @@ class NoteActionsService {
 
       // 重新加载笔记
       onUpdated();
-      
+
       return true;
-    } catch (e) {
+    } on Object {
       return false;
     }
-  }
-
-  // 显示提醒选项（修改或取消）
-  static Future<String?> _showReminderOptionsSheet(
-    BuildContext context,
-    DateTime currentTime,
-  ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-
-    return showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GestureDetector(
-        onTap: () => Navigator.of(context).pop(), // 🎯 点击空白区域关闭
-        behavior: HitTestBehavior.opaque,
-        child: GestureDetector(
-          onTap: () {}, // 阻止内部点击冒泡
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 拖拽指示器
-                  Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  // 当前提醒时间
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.alarm, color: Colors.orange, size: 32),
-                        const SizedBox(height: 8),
-                        Text(
-                          AppLocalizationsSimple.of(context)?.currentReminderTime ??
-                              '当前提醒时间',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('yyyy-MM-dd HH:mm').format(currentTime),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const Divider(height: 1),
-
-                  // 选项按钮
-                  ListTile(
-                    leading: const Icon(Icons.edit, color: Color(0xFF007AFF)),
-                    title: Text(
-                      AppLocalizationsSimple.of(context)?.modifyReminderTime ??
-                          '修改提醒时间',
-                    ),
-                    onTap: () => Navigator.pop(context, 'edit'),
-                  ),
-
-                  ListTile(
-                    leading: const Icon(Icons.delete_outline, color: Colors.red),
-                    title: Text(
-                      AppLocalizationsSimple.of(context)?.cancelReminder ?? '取消提醒',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    onTap: () => Navigator.pop(context, 'cancel'),
-                  ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   /// 显示笔记详情信息
@@ -1679,59 +1244,60 @@ class NoteActionsService {
     required BuildContext context,
     required Note note,
   }) async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(width: 12),
-            Text(AppLocalizationsSimple.of(context)?.detailedInfo ?? '详细信息'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDetailRow(
-              context,
-              AppLocalizationsSimple.of(context)?.characterCount ?? '字数',
-              '${note.content.length}',
-            ),
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              context,
-              AppLocalizationsSimple.of(context)?.createdTime ?? '创建时间',
-              DateFormat('yyyy-MM-dd HH:mm:ss').format(note.createdAt),
-            ),
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              context,
-              AppLocalizationsSimple.of(context)?.lastEdited ?? '最后编辑',
-              DateFormat('yyyy-MM-dd HH:mm:ss').format(note.updatedAt),
-            ),
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              context,
-              AppLocalizationsSimple.of(context)?.noteVisibility ?? '笔记状态',
-              note.isPublic
-                  ? (AppLocalizationsSimple.of(context)?.public ?? '公开')
-                  : (AppLocalizationsSimple.of(context)?.private ?? '私有'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizationsSimple.of(context)?.close ?? '关闭'),
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.info_outline,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 12),
+              Text(AppLocalizationsSimple.of(context)?.detailedInfo ?? '详细信息'),
+            ],
           ),
-        ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow(
+                context,
+                AppLocalizationsSimple.of(context)?.characterCount ?? '字数',
+                '${note.content.length}',
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                context,
+                AppLocalizationsSimple.of(context)?.createdTime ?? '创建时间',
+                DateFormat('yyyy-MM-dd HH:mm:ss').format(note.createdAt),
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                context,
+                AppLocalizationsSimple.of(context)?.lastEdited ?? '最后编辑',
+                DateFormat('yyyy-MM-dd HH:mm:ss').format(note.updatedAt),
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                context,
+                AppLocalizationsSimple.of(context)?.noteVisibility ?? '笔记状态',
+                note.isPublic
+                    ? (AppLocalizationsSimple.of(context)?.public ?? '公开')
+                    : (AppLocalizationsSimple.of(context)?.private ?? '私有'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(AppLocalizationsSimple.of(context)?.close ?? '关闭'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1775,8 +1341,6 @@ class NoteActionsService {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      isDismissible: true,  // ✅ 允许点击空白区域关闭
-      enableDrag: true,      // ✅ 允许下拉关闭
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.9,
@@ -1787,7 +1351,10 @@ class NoteActionsService {
           onAnnotationTap: (annotation) {
             Navigator.pop(context);
             final localizations = AppLocalizationsSimple.of(context);
-            SnackBarUtils.showSuccess(context, localizations?.locatedToAnnotation ?? '已定位到批注');
+            SnackBarUtils.showSuccess(
+              context,
+              localizations?.locatedToAnnotation ?? '已定位到批注',
+            );
           },
           onAddAnnotation: () {
             Navigator.pop(context);
@@ -1816,102 +1383,114 @@ class NoteActionsService {
     VoidCallback onUpdated,
   ) async {
     final textController = TextEditingController();
-    AnnotationType selectedType = AnnotationType.comment;
-    
+    var selectedType = AnnotationType.comment;
+
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           final localizations = AppLocalizationsSimple.of(context);
           return AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.add_comment, size: 20),
-              const SizedBox(width: 8),
-              Text(localizations?.addAnnotation ?? '添加批注'),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            title: Row(
               children: [
-                Text(localizations?.annotationType ?? '批注类型', style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: AnnotationType.values.map((type) {
-                    final annotation = Annotation(
-                      id: '',
-                      content: '',
-                      createdAt: DateTime.now(),
-                      type: type,
-                    );
-                    return ChoiceChip(
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(annotation.typeIcon, size: 16),
-                          const SizedBox(width: 4),
-                          Text(annotation.getTypeText(context)),
-                        ],
-                      ),
-                      selected: selectedType == type,
-                      selectedColor: annotation.typeColor.withOpacity(0.2),
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() => selectedType = type);
-                        }
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: textController,
-                  maxLines: 5,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: localizations?.annotationPlaceholder ?? '在这里写下你的批注...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
+                const Icon(Icons.add_comment, size: 20),
+                const SizedBox(width: 8),
+                Text(localizations?.addAnnotation ?? '添加批注'),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(localizations?.cancel ?? '取消'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    localizations?.annotationType ?? '批注类型',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: AnnotationType.values.map((type) {
+                      final annotation = Annotation(
+                        id: '',
+                        content: '',
+                        createdAt: DateTime.now(),
+                        type: type,
+                      );
+                      return ChoiceChip(
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(annotation.typeIcon, size: 16),
+                            const SizedBox(width: 4),
+                            Text(annotation.getTypeText(context)),
+                          ],
+                        ),
+                        selected: selectedType == type,
+                        selectedColor:
+                            annotation.typeColor.withValues(alpha: 0.2),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() => selectedType = type);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: textController,
+                    maxLines: 5,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: localizations?.annotationPlaceholder ??
+                          '在这里写下你的批注...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            FilledButton(
-              onPressed: () {
-                final content = textController.text.trim();
-                if (content.isNotEmpty) {
-                  final appProvider = Provider.of<AppProvider>(context, listen: false);
-                  final newAnnotation = Annotation(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    content: content,
-                    createdAt: DateTime.now(),
-                    type: selectedType,
-                  );
-                  final updatedAnnotations = [...note.annotations, newAnnotation];
-                  final updatedNote = note.copyWith(
-                    annotations: updatedAnnotations,
-                    updatedAt: DateTime.now(),
-                  );
-                  appProvider.updateNote(updatedNote, updatedNote.content);
-                  Navigator.pop(context);
-                  SnackBarUtils.showSuccess(context, localizations?.annotationAdded ?? '批注已添加');
-                  onUpdated();
-                }
-              },
-              child: Text(localizations?.addAnnotation ?? '添加'),
-            ),
-          ],
-        );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(localizations?.cancel ?? '取消'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final content = textController.text.trim();
+                  if (content.isNotEmpty) {
+                    final appProvider =
+                        Provider.of<AppProvider>(context, listen: false);
+                    final newAnnotation = Annotation(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      content: content,
+                      createdAt: DateTime.now(),
+                      type: selectedType,
+                    );
+                    final updatedAnnotations = [
+                      ...note.annotations,
+                      newAnnotation,
+                    ];
+                    final updatedNote = note.copyWith(
+                      annotations: updatedAnnotations,
+                      updatedAt: DateTime.now(),
+                    );
+                    appProvider.updateNote(updatedNote, updatedNote.content);
+                    Navigator.pop(context);
+                    SnackBarUtils.showSuccess(
+                      context,
+                      localizations?.annotationAdded ?? '批注已添加',
+                    );
+                    onUpdated();
+                  }
+                },
+                child: Text(localizations?.addAnnotation ?? '添加'),
+              ),
+            ],
+          );
         },
       ),
     );
@@ -1925,17 +1504,19 @@ class NoteActionsService {
     VoidCallback onUpdated,
   ) async {
     final textController = TextEditingController(text: annotation.content);
-    AnnotationType selectedType = annotation.type;
+    var selectedType = annotation.type;
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.edit_outlined, size: 20),
-              SizedBox(width: 8),
-              Text('编辑批注'),
+              const Icon(Icons.edit_outlined, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizationsSimple.of(context)?.editAnnotation ?? '编辑批注',
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -1943,7 +1524,10 @@ class NoteActionsService {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('批注类型', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  AppLocalizationsSimple.of(context)?.annotationType ?? '批注类型',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -1964,7 +1548,8 @@ class NoteActionsService {
                         ],
                       ),
                       selected: selectedType == type,
-                      selectedColor: tempAnnotation.typeColor.withOpacity(0.2),
+                      selectedColor:
+                          tempAnnotation.typeColor.withValues(alpha: 0.2),
                       onSelected: (selected) {
                         if (selected) {
                           setState(() => selectedType = type);
@@ -1979,7 +1564,9 @@ class NoteActionsService {
                   maxLines: 5,
                   autofocus: true,
                   decoration: InputDecoration(
-                    hintText: '修改批注内容...',
+                    hintText: AppLocalizationsSimple.of(context)
+                            ?.annotationEditPlaceholder ??
+                        '修改批注内容...',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -1991,13 +1578,14 @@ class NoteActionsService {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
             ),
             FilledButton(
               onPressed: () {
                 final content = textController.text.trim();
                 if (content.isNotEmpty) {
-                  final appProvider = Provider.of<AppProvider>(context, listen: false);
+                  final appProvider =
+                      Provider.of<AppProvider>(context, listen: false);
                   final updatedAnnotations = note.annotations.map((a) {
                     if (a.id == annotation.id) {
                       return a.copyWith(
@@ -2014,11 +1602,15 @@ class NoteActionsService {
                   );
                   appProvider.updateNote(updatedNote, updatedNote.content);
                   Navigator.pop(context);
-                  SnackBarUtils.showSuccess(context, '批注已更新');
+                  SnackBarUtils.showSuccess(
+                    context,
+                    AppLocalizationsSimple.of(context)?.annotationUpdated ??
+                        '批注已更新',
+                  );
                   onUpdated();
                 }
               },
-              child: const Text('保存'),
+              child: Text(AppLocalizationsSimple.of(context)?.save ?? '保存'),
             ),
           ],
         ),
@@ -2036,32 +1628,41 @@ class NoteActionsService {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除批注'),
-        content: const Text('确定要删除这条批注吗？'),
+        title: Text(
+          AppLocalizationsSimple.of(context)?.deleteAnnotation ?? '删除批注',
+        ),
+        content: Text(
+          AppLocalizationsSimple.of(context)?.confirmDeleteAnnotation ??
+              '确定要删除这条批注吗？',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
           ),
           FilledButton(
             onPressed: () {
-              final appProvider = Provider.of<AppProvider>(context, listen: false);
-              final updatedAnnotations = note.annotations
-                  .where((a) => a.id != annotationId)
-                  .toList();
+              final appProvider =
+                  Provider.of<AppProvider>(context, listen: false);
+              final updatedAnnotations =
+                  note.annotations.where((a) => a.id != annotationId).toList();
               final updatedNote = note.copyWith(
                 annotations: updatedAnnotations,
                 updatedAt: DateTime.now(),
               );
               appProvider.updateNote(updatedNote, updatedNote.content);
               Navigator.pop(context);
-              SnackBarUtils.showSuccess(context, '批注已删除');
+              SnackBarUtils.showSuccess(
+                context,
+                AppLocalizationsSimple.of(context)?.annotationDeleted ??
+                    '批注已删除',
+              );
               onUpdated();
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('删除'),
+            child: Text(AppLocalizationsSimple.of(context)?.delete ?? '删除'),
           ),
         ],
       ),
@@ -2094,13 +1695,12 @@ class NoteActionsService {
 
 /// 分享选项底部面板
 class _ShareOptionsSheet extends StatelessWidget {
-  final Note note;
-  final bool isDarkMode;
-
   const _ShareOptionsSheet({
     required this.note,
     required this.isDarkMode,
   });
+  final Note note;
+  final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
@@ -2129,7 +1729,7 @@ class _ShareOptionsSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // 分享选项
             Row(
               children: [
@@ -2141,7 +1741,10 @@ class _ShareOptionsSheet extends StatelessWidget {
                     color: AppTheme.primaryColor,
                     onTap: () {
                       Navigator.pop(context);
-                      NoteActionsService.shareText(context: context, note: note);
+                      NoteActionsService.shareText(
+                        context: context,
+                        note: note,
+                      );
                     },
                   ),
                 ),
@@ -2150,11 +1753,15 @@ class _ShareOptionsSheet extends StatelessWidget {
                   child: _buildShareOption(
                     context,
                     icon: Icons.image_rounded,
-                    label: AppLocalizationsSimple.of(context)?.shareImage ?? '图片',
+                    label:
+                        AppLocalizationsSimple.of(context)?.shareImage ?? '图片',
                     color: Colors.green,
                     onTap: () {
                       Navigator.pop(context);
-                      NoteActionsService.shareImage(context: context, note: note);
+                      NoteActionsService.shareImage(
+                        context: context,
+                        note: note,
+                      );
                     },
                   ),
                 ),
@@ -2172,35 +1779,34 @@ class _ShareOptionsSheet extends StatelessWidget {
     required String label,
     required Color color,
     required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: color,
+  }) =>
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: color, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }

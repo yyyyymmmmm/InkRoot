@@ -485,19 +485,19 @@ abstract class AppLocalizations {
   /// 保存到相册消息
   ///
   /// In zh, this message translates to:
-  /// **'正在保存到相册，请稍候'**
+  /// **'正在保存图片，请稍候'**
   String get shareImageSavingToAlbum;
 
   /// 图片保存成功消息
   ///
   /// In zh, this message translates to:
-  /// **'图片已保存到相册'**
+  /// **'图片已保存'**
   String get shareImageSaveSuccess;
 
   /// 保存失败消息
   ///
   /// In zh, this message translates to:
-  /// **'保存失败，请检查相册权限'**
+  /// **'保存失败，请检查权限或保存位置'**
   String get shareImageSaveFailed;
 
   /// 分享失败消息

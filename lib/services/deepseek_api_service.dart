@@ -47,9 +47,14 @@ class DeepSeekApiService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        final content =
-            data['choices']?[0]?['message']?['content'] as String?;
+        final data =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        final choices = data['choices'] as List<dynamic>?;
+        final choice = choices?.isNotEmpty ?? false
+            ? choices!.first as Map<String, dynamic>
+            : null;
+        final message = choice?['message'] as Map<String, dynamic>?;
+        final content = message?['content'] as String?;
 
         if (content != null) {
           return (content, null);
@@ -64,7 +69,7 @@ class DeepSeekApiService {
         final errorMessage = _parseErrorMessage(response.body);
         return (null, errorMessage ?? 'AI服务错误: ${response.statusCode}');
       }
-    } catch (e) {
+    } on Object catch (e) {
       return (null, '网络请求失败: $e');
     }
   }
@@ -77,16 +82,17 @@ class DeepSeekApiService {
     double temperature = 1.0,
     int? maxTokens,
   }) async* {
-    // TODO: 实现流式响应
+    // 流式响应暂未接入，当前保留占位输出。
     yield '流式响应功能待实现';
   }
 
   /// 解析错误消息
   String? _parseErrorMessage(String responseBody) {
     try {
-      final data = jsonDecode(responseBody);
-      return data['error']?['message'] as String?;
-    } catch (e) {
+      final data = jsonDecode(responseBody) as Map<String, dynamic>;
+      final error = data['error'] as Map<String, dynamic>?;
+      return error?['message'] as String?;
+    } on Object {
       return null;
     }
   }
@@ -112,7 +118,7 @@ class DeepSeekApiService {
       }
 
       return (false, 'API响应为空');
-    } catch (e) {
+    } on Object catch (e) {
       return (false, '连接测试失败: $e');
     }
   }
@@ -134,7 +140,7 @@ class DeepSeekApiService {
       }
 
       return null;
-    } catch (e) {
+    } on Object {
       return null;
     }
   }

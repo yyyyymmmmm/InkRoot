@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // 添加http包
 import 'package:inkroot/config/app_config.dart' as Config;
+import 'package:inkroot/models/annotation_model.dart'; // ✅ 新增：批注模型
 import 'package:inkroot/models/announcement_model.dart';
-import 'package:inkroot/models/annotation_model.dart';  // ✅ 新增：批注模型
 import 'package:inkroot/models/app_config_model.dart';
 import 'package:inkroot/models/cloud_verification_models.dart';
 import 'package:inkroot/models/load_more_state.dart';
@@ -17,7 +17,6 @@ import 'package:inkroot/models/reminder_notification_model.dart';
 import 'package:inkroot/models/sort_order.dart';
 import 'package:inkroot/models/user_model.dart';
 import 'package:inkroot/models/webdav_config.dart';
-import 'package:inkroot/services/announcement_service.dart';
 import 'package:inkroot/services/api_service.dart';
 import 'package:inkroot/services/api_service_factory.dart';
 import 'package:inkroot/services/cloud_verification_service.dart';
@@ -26,40 +25,45 @@ import 'package:inkroot/services/incremental_sync_service.dart';
 import 'package:inkroot/services/local_reference_service.dart';
 import 'package:inkroot/services/memos_api_service_fixed.dart'; // 使用修复版API服务
 import 'package:inkroot/services/memos_resource_service.dart'; // 图片上传服务
+import 'package:inkroot/services/note_sorting_helper.dart';
+import 'package:inkroot/services/note_tags_helper.dart' as note_tags;
+import 'package:inkroot/services/notes_pagination_helper.dart' as paging;
 import 'package:inkroot/services/notification_service.dart';
 import 'package:inkroot/services/notion_sync_service.dart';
 import 'package:inkroot/services/preferences_service.dart';
 import 'package:inkroot/services/reminder_notification_service.dart';
+import 'package:inkroot/services/sync_merge_helper.dart' as sync_merge;
+import 'package:inkroot/services/sync_status_helper.dart' as sync_status;
 import 'package:inkroot/services/umeng_analytics_service.dart';
 import 'package:inkroot/services/unified_reference_manager.dart';
 import 'package:inkroot/services/webdav_service.dart';
 import 'package:inkroot/services/webdav_sync_engine.dart';
-import 'package:inkroot/utils/network_utils.dart';
+import 'package:inkroot/utils/error_handler.dart';
+// 🚀 大厂标准：监控工具
+import 'package:inkroot/utils/logger.dart';
+import 'package:inkroot/utils/performance_tracker.dart';
 import 'package:inkroot/widgets/cached_avatar.dart';
 import 'package:inkroot/widgets/update_dialog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-// 🚀 大厂标准：监控工具
-import 'package:inkroot/utils/logger.dart';
-import 'package:inkroot/utils/performance_tracker.dart';
-import 'package:inkroot/utils/error_handler.dart';
 
-class AppProvider with ChangeNotifier {
+part 'app_provider_sync.part.dart';
+
+class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   User? _user;
   List<Note> _notes = [];
   bool _isLoading = false;
   bool _isInitialized = false;
 
   // 🚀 大厂标准：分页加载相关
-  LoadMoreState _loadMoreState = LoadMoreState.idle;
-  bool _hasMoreData = true;
-  int _currentPage = 0;
+  paging.NotesPaginationState _pagingState =
+      paging.initialNotesPaginationState();
   static const int _pageSize = 50;
-  
+
   // 🚀 大厂标准：并发控制（防止重复加载）
   Completer<void>? _loadMoreCompleter;
-  
+
   // 🚀 大厂标准：性能监控
   int _totalNotesCount = 0; // 数据库总笔记数
   DateTime? _lastLoadTime; // 上次加载时间
@@ -89,19 +93,36 @@ class AppProvider with ChangeNotifier {
   bool _isSyncing = false;
   String? _syncMessage;
 
+  void _setSyncUi({bool? syncing, String? message, bool notify = true}) {
+    if (syncing != null) {
+      _isSyncing = syncing;
+    }
+    _syncMessage = message;
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  void _setSyncMessage(String? message, {bool notify = true}) {
+    _syncMessage = message;
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
   // 🚀 删除队列相关（大厂级批量处理）
   final List<String> _deleteQueue = [];
   bool _isProcessingDelete = false;
   Timer? _deleteDebounceTimer;
-  static const Duration _deleteBatchDelay =
-      Duration(milliseconds: 500); // 收集500ms内的删除请求
+  static const Duration deleteUndoWindow = Duration(milliseconds: 3200);
+  static const Duration _deleteBatchDelay = Duration(milliseconds: 500);
 
   // 🚀 撤销删除相关变量
   Note? _lastDeletedNote;
   int? _lastDeletedIndex;
+  Timer? _pendingDeleteCommitTimer;
 
   // 通知相关属性
-  final AnnouncementService _announcementService = AnnouncementService();
   final CloudVerificationService _cloudService = CloudVerificationService();
   final NotificationService _notificationService = NotificationService();
   // 🔥 暴露notificationService供main.dart使用
@@ -126,28 +147,7 @@ class AppProvider with ChangeNotifier {
       Duration(minutes: 5); // 🚀 缓存5分钟
 
   // 获取排序后的笔记
-  List<Note> _getSortedNotes() {
-    final sortedNotes = List<Note>.from(_notes);
-
-    // 首先按置顶状态排序，然后按照选择的排序方式排序
-    sortedNotes.sort((a, b) {
-      // 置顶的笔记始终排在前面
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-
-      // 如果两个笔记的置顶状态相同，则按照选择的排序方式排序
-      switch (_sortOrder) {
-        case SortOrder.newest:
-          return b.createdAt.compareTo(a.createdAt);
-        case SortOrder.oldest:
-          return a.createdAt.compareTo(b.createdAt);
-        case SortOrder.updated:
-          return b.updatedAt.compareTo(a.updatedAt);
-      }
-    });
-
-    return sortedNotes;
-  }
+  List<Note> _getSortedNotes() => sortedNotesCopy(_notes, _sortOrder);
 
   // 设置排序方式
   void setSortOrder(SortOrder sortOrder) {
@@ -160,13 +160,16 @@ class AppProvider with ChangeNotifier {
   // Getters
   User? get user => _user;
   // 🔥 过滤掉归档笔记，只返回正常笔记
-  List<Note> get notes => _getSortedNotes().where((note) => note.isNormal).toList();
-  
+  List<Note> get notes =>
+      _getSortedNotes().where((note) => note.isNormal).toList();
+
   // 🚀 大厂标准：细粒度状态访问
-  bool get isLoadingMore => _loadMoreState.isLoading;
-  bool get hasMoreData => _hasMoreData && _loadMoreState != LoadMoreState.noMore;
-  LoadMoreState get loadMoreState => _loadMoreState;
-  
+  bool get isLoadingMore => _pagingState.loadMoreState.isLoading;
+  bool get hasMoreData =>
+      _pagingState.hasMoreData &&
+      _pagingState.loadMoreState != LoadMoreState.noMore;
+  LoadMoreState get loadMoreState => _pagingState.loadMoreState;
+
   // 🚀 大厂标准：性能指标访问
   int get totalNotesCount => _totalNotesCount;
   int get loadedNotesCount => _notes.length;
@@ -176,7 +179,7 @@ class AppProvider with ChangeNotifier {
   Note? getNoteById(String noteId) {
     try {
       return _notes.firstWhere((note) => note.id == noteId);
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -202,6 +205,11 @@ class AppProvider with ChangeNotifier {
   CloudAppConfigData? get cloudAppConfig => _cloudAppConfig;
   CloudNoticeData? get cloudNotice => _cloudNotice;
 
+  Future<List<Note>> searchNotes(String query) async =>
+      _databaseService.searchNotes(query);
+
+  Future<List<Note>> getAllNotesForStats() async => _databaseService.getNotes();
+
   // 🚀 WebDAV getters
   WebDavConfig get webDavConfig => _webDavConfig;
   bool get isWebDavEnabled => _webDavConfig.enabled;
@@ -222,7 +230,10 @@ class AppProvider with ChangeNotifier {
   bool _notificationServiceInitialized = false;
 
   Future<void> initializeNotificationService() async {
-    if (_notificationServiceInitialized) return; // 已初始化，跳过
+    if (_notificationServiceInitialized) {
+      // 已初始化，跳过
+      return;
+    }
 
     try {
       // 🔥 清理过期的提醒通知（首次启动时执行）
@@ -249,31 +260,35 @@ class AppProvider with ChangeNotifier {
         // 🔥 自动清除已触发的提醒（市面上常见做法）
         try {
           await cancelNoteReminder(noteIdString);
-        } catch (error) {}
+        } on Object catch (_) {
+          // Reminder cleanup is best-effort during notification callbacks.
+        }
 
-        // TODO: 需要在main.dart中处理跳转，因为这里没有appRouter引用
+        // 后续如需点击通知直达详情页，需要由 main.dart 注入 appRouter。
       });
 
       _notificationServiceInitialized = true;
-    } catch (e) {}
+    } on Object catch (_) {
+      // Notifications are optional; app startup must continue without them.
+    }
   }
 
   Future<void> initializeApp() async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      return;
+    }
 
     // 开始初始化应用
 
     try {
-      // 设置LocalReferenceService的AppProvider引用
-      LocalReferenceService.instance.setAppProvider(this);
-
       // 初始化统一引用管理器
       UnifiedReferenceManager().initialize(
         databaseService: _databaseService,
         onNotesUpdated: (updatedNotes) {
           // 🔧 修复：确保引用关系更新时能实时反映到UI
           // 分页加载时不直接替换整个列表
-          if (_currentPage == 0 && updatedNotes.length <= _pageSize) {
+          if (_pagingState.currentPage == 0 &&
+              updatedNotes.length <= _pageSize) {
             _notes = updatedNotes;
           } else {
             // 更新已加载的笔记
@@ -305,7 +320,9 @@ class AppProvider with ChangeNotifier {
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           clearExpiredReminders().catchError((e) {
-            if (kDebugMode) debugPrint('AppProvider: 清理过期提醒失败: $e');
+            if (kDebugMode) {
+              debugPrint('AppProvider: 清理过期提醒失败: $e');
+            }
           });
         }
       });
@@ -341,7 +358,7 @@ class AppProvider with ChangeNotifier {
         // 🚀 使用分页加载，只加载首页数据
         await loadInitialNotes();
         // 本地数据首页加载完成
-      } catch (e) {
+      } on Object {
         // 加载本地数据失败
         _notes = []; // 确保有默认空列表
       }
@@ -351,8 +368,8 @@ class AppProvider with ChangeNotifier {
       notifyListeners(); // 通知UI更新，此时已经有本地数据可以显示
 
       // 🌐 在后台继续处理网络相关操作，不阻塞UI显示
-      _initializeNetworkOperationsInBackground();
-    } catch (e) {
+      unawaited(_initializeNetworkOperationsInBackground());
+    } on Object {
       // 初始化应用异常
       // 即使出错也确保初始化标志为true，避免卡在启动页
       _isInitialized = true;
@@ -379,16 +396,23 @@ class AppProvider with ChangeNotifier {
       // 🚀 大厂级优化：延迟3秒后再进行数据同步（让用户先看到界面）
       // 微信/抖音策略：先显示本地数据，后台静默同步
       Future.delayed(const Duration(seconds: 3), () {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         // 如果API服务已初始化，尝试获取服务器数据并同步
         if (_memosApiService != null && !_appConfig.isLocalMode) {
           // 后台从服务器获取最新数据（不扫描引用关系）
           fetchNotesFromServer().catchError((e) {
-            if (kDebugMode) debugPrint('AppProvider: 后台获取数据失败: $e');
+            if (kDebugMode) {
+              debugPrint('AppProvider: 后台获取数据失败: $e');
+            }
             // 如果获取失败，至少尝试同步本地数据
             syncLocalDataToServer().catchError((e2) {
-              if (kDebugMode) debugPrint('AppProvider: 后台同步失败: $e2');
+              if (kDebugMode) {
+                debugPrint('AppProvider: 后台同步失败: $e2');
+              }
+              return false;
             });
           });
         }
@@ -397,18 +421,26 @@ class AppProvider with ChangeNotifier {
       // 🚀 延迟5秒加载云验证和公告（进一步降低启动负担）
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
-          if (kDebugMode) debugPrint('AppProvider: 延迟加载通知和云验证');
+          if (kDebugMode) {
+            debugPrint('AppProvider: 延迟加载通知和云验证');
+          }
           refreshAnnouncements()
               .then((_) => refreshUnreadAnnouncementsCount())
               .catchError((e) {
-            if (kDebugMode) debugPrint('AppProvider: 加载通知失败: $e');
+            if (kDebugMode) {
+              debugPrint('AppProvider: 加载通知失败: $e');
+            }
           });
         }
       });
 
-      if (kDebugMode) debugPrint('AppProvider: 后台网络操作初始化完成（数据同步已延迟）');
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 后台网络操作失败: $e');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 后台网络操作初始化完成（数据同步已延迟）');
+      }
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 后台网络操作失败: $e');
+      }
     }
   }
 
@@ -470,8 +502,10 @@ class AppProvider with ChangeNotifier {
       if (success) {
         // 更新本地关系的同步状态
         await _markRelationAsSynced(sourceId, targetId, action);
-      } else {}
-    } catch (e) {}
+      }
+    } on Object catch (_) {
+      // Reference sync runs in the background and should not block the UI.
+    }
   }
 
   // 标记引用关系为已同步
@@ -521,7 +555,9 @@ class AppProvider with ChangeNotifier {
 
       // 刷新UI
       notifyListeners();
-    } catch (e) {}
+    } on Object catch (_) {
+      // Local sync markers are best-effort; relations remain usable offline.
+    }
   }
 
   // 在后台加载剩余数据
@@ -536,43 +572,55 @@ class AppProvider with ChangeNotifier {
   // 从本地数据库加载笔记
   Future<void> loadNotesFromLocal({bool reset = false}) async {
     // 🚀 大厂标准：性能监控
-    await PerformanceTracker().startTrace('load_notes_from_local', attributes: {
-      'reset': reset.toString(),
-    });
+    await PerformanceTracker().startTrace(
+      'load_notes_from_local',
+      attributes: {
+        'reset': reset.toString(),
+      },
+    );
     Log.database.debug('Loading notes from local', data: {'reset': reset});
-    
+
     try {
       // 🔥 修复：完整加载所有笔记（用于刷新场景，如导入后）
       // 这是刷新操作，需要显示最新的完整数据
-      _currentPage = 0;
-      _hasMoreData = true;
+      _pagingState = paging.initialNotesPaginationState();
       _notes = await _databaseService.getNotes();
-      
+
       // 更新总数统计
       _totalNotesCount = _notes.length;
 
       // 修复失效的图片路径
-      final hasUpdates = await _fixBrokenImagePaths();
+      await _fixBrokenImagePaths();
 
       // 重新提取所有笔记的标签
       _refreshAllNoteTags();
 
       notifyListeners();
-      
+
       // 🚀 大厂标准：成功监控
-      await PerformanceTracker().stopTrace('load_notes_from_local', 
-        success: true,
+      await PerformanceTracker().stopTrace(
+        'load_notes_from_local',
         metrics: {'note_count': _notes.length},
       );
-      Log.database.info('Notes loaded successfully', data: {'count': _notes.length});
-    } catch (e, stackTrace) {
+      Log.database
+          .info('Notes loaded successfully', data: {'count': _notes.length});
+    } on Object catch (e, stackTrace) {
       // 🚀 大厂标准：错误监控
-      await PerformanceTracker().stopTrace('load_notes_from_local', success: false);
-      Log.database.error('Failed to load notes from local', error: e, stackTrace: stackTrace);
-      await ErrorHandler.captureException(e, stackTrace: stackTrace, context: {
-        'operation': 'load_notes_from_local',
-        'reset': reset,
-      });
+      await PerformanceTracker()
+          .stopTrace('load_notes_from_local', success: false);
+      Log.database.error(
+        'Failed to load notes from local',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      await ErrorHandler.captureException(
+        e,
+        stackTrace: stackTrace,
+        context: {
+          'operation': 'load_notes_from_local',
+          'reset': reset,
+        },
+      );
       rethrow;
     }
   }
@@ -581,29 +629,30 @@ class AppProvider with ChangeNotifier {
   /// 三阶段加载：极速首屏 → 预加载 → 后台任务
   Future<void> loadInitialNotes() async {
     try {
-      _currentPage = 0;
-      _hasMoreData = true;
-      _loadMoreState = LoadMoreState.idle;
+      _pagingState = paging.initialNotesPaginationState();
 
       // 用 COUNT 获取总数，避免全量加载仅用于计数
       _totalNotesCount = await _databaseService.getNotesCount();
 
       // SQLite 本地读取极快（< 10ms），直接加载完整第一页，无需分步延迟
-      final firstPage = await _databaseService.getNotesPaged(
-        page: 0,
-        pageSize: _pageSize,
-      );
+      final firstPage = await _databaseService.getNotesPaged();
 
       _notes = firstPage;
-      _currentPage = 0;
-      _hasMoreData = firstPage.length >= _pageSize;
+      _pagingState = _pagingState.copyWith(
+        currentPage: 0,
+        hasMoreData: firstPage.length >= _pageSize,
+      );
 
       notifyListeners();
       if (kDebugMode) {
-        debugPrint('AppProvider: ✅ 本地数据加载完成，已加载 ${_notes.length}/$_totalNotesCount 条笔记');
+        debugPrint(
+          'AppProvider: ✅ 本地数据加载完成，已加载 ${_notes.length}/$_totalNotesCount 条笔记',
+        );
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 加载初始笔记失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 加载初始笔记失败: $e');
+      }
       rethrow;
     }
   }
@@ -618,8 +667,10 @@ class AppProvider with ChangeNotifier {
     }
 
     // 2️⃣ 状态检查：使用细粒度状态判断
-    if (!_loadMoreState.canLoadMore || !_hasMoreData) {
-      debugPrint('AppProvider: ⏸️ 无法加载更多 - 状态: ${_loadMoreState.description}, 有更多数据: $_hasMoreData');
+    if (!paging.canStartLoadMore(_pagingState)) {
+      debugPrint(
+        'AppProvider: ⏸️ 无法加载更多 - 状态: ${_pagingState.loadMoreState.description}, 有更多数据: ${_pagingState.hasMoreData}',
+      );
       return;
     }
 
@@ -629,31 +680,34 @@ class AppProvider with ChangeNotifier {
     // 4️⃣ 开始性能监控
     _loadStopwatch.reset();
     _loadStopwatch.start();
-    final loadStartTime = DateTime.now();
-
     try {
       // 5️⃣ 更新状态为加载中
-      _loadMoreState = LoadMoreState.loadingMore;
+      _pagingState = paging.beginLoadMore(_pagingState);
       notifyListeners();
-
-      _currentPage++;
-      debugPrint('AppProvider: 📄 开始加载第 $_currentPage 页笔记... (状态: ${_loadMoreState.description})');
+      debugPrint(
+        'AppProvider: 📄 开始加载第 ${_pagingState.currentPage} 页笔记... (状态: ${_pagingState.loadMoreState.description})',
+      );
 
       // 6️⃣ 执行数据加载
       final moreNotes = await _databaseService.getNotesPaged(
-        page: _currentPage,
-        pageSize: _pageSize,
+        page: _pagingState.currentPage,
       );
 
       // 7️⃣ 处理加载结果
-      if (moreNotes.isEmpty) {
-        _hasMoreData = false;
-        _loadMoreState = LoadMoreState.noMore;
-        debugPrint('AppProvider: ✅ 所有笔记已加载完成，共 ${_notes.length}/$_totalNotesCount 条');
-      } else {
+      if (moreNotes.isNotEmpty) {
         _notes.addAll(moreNotes);
-        _loadMoreState = LoadMoreState.success;
-        debugPrint('AppProvider: ✅ 第 $_currentPage 页加载完成，本页 ${moreNotes.length} 条，总计 ${_notes.length}/$_totalNotesCount 条');
+        debugPrint(
+          'AppProvider: ✅ 第 ${_pagingState.currentPage} 页加载完成，本页 ${moreNotes.length} 条，总计 ${_notes.length}/$_totalNotesCount 条',
+        );
+      }
+      _pagingState = paging.applyLoadMoreResult(
+        state: _pagingState,
+        itemCount: moreNotes.length,
+      );
+      if (moreNotes.isEmpty) {
+        debugPrint(
+          'AppProvider: ✅ 所有笔记已加载完成，共 ${_notes.length}/$_totalNotesCount 条',
+        );
       }
 
       // 8️⃣ 停止性能监控
@@ -662,30 +716,31 @@ class AppProvider with ChangeNotifier {
 
       // 9️⃣ 性能埋点上报
       _reportLoadPerformance(
-        page: _currentPage,
+        page: _pagingState.currentPage,
         itemCount: moreNotes.length,
         duration: _loadStopwatch.elapsedMilliseconds,
         success: true,
       );
 
       notifyListeners();
-      
+
       // 🔟 完成 Completer
       _loadMoreCompleter!.complete();
-    } catch (e, stackTrace) {
+    } on Object catch (e, stackTrace) {
       // ❌ 错误处理
       _loadStopwatch.stop();
-      _loadMoreState = LoadMoreState.failed;
-      _currentPage--; // 回退页码
-      
-      debugPrint('AppProvider: ❌ 加载第 ${_currentPage + 1} 页失败: $e');
+      _pagingState = paging.applyLoadMoreFailure(_pagingState);
+
+      debugPrint(
+        'AppProvider: ❌ 加载第 ${_pagingState.currentPage + 1} 页失败: $e',
+      );
       if (kDebugMode) {
         debugPrint('AppProvider: 错误堆栈: $stackTrace');
       }
 
       // 性能埋点上报（失败）
       _reportLoadPerformance(
-        page: _currentPage + 1,
+        page: _pagingState.currentPage + 1,
         itemCount: 0,
         duration: _loadStopwatch.elapsedMilliseconds,
         success: false,
@@ -693,16 +748,14 @@ class AppProvider with ChangeNotifier {
       );
 
       notifyListeners();
-      
+
       // 完成 Completer（带错误）
       _loadMoreCompleter!.completeError(e, stackTrace);
-      
+
       rethrow;
     } finally {
       // 重置状态（如果不是 noMore）
-      if (_loadMoreState != LoadMoreState.noMore) {
-        _loadMoreState = LoadMoreState.idle;
-      }
+      _pagingState = paging.endLoadAttempt(_pagingState);
     }
   }
 
@@ -723,8 +776,8 @@ class AppProvider with ChangeNotifier {
         'total_in_db': _totalNotesCount.toString(),
         'duration_ms': duration.toString(),
         'success': success.toString(),
-        'has_more': _hasMoreData.toString(),
-        'state': _loadMoreState.description,
+        'has_more': _pagingState.hasMoreData.toString(),
+        'state': _pagingState.loadMoreState.description,
       };
 
       if (error != null) {
@@ -747,9 +800,9 @@ class AppProvider with ChangeNotifier {
       // Debug模式下打印详细信息
       if (kDebugMode) {
         debugPrint('📊 [性能监控] 加载第$page页: ${success ? '成功' : '失败'} | '
-            '耗时${duration}ms | 本页${itemCount}条 | 总计${_notes.length}条');
+            '耗时${duration}ms | 本页$itemCount条 | 总计${_notes.length}条');
       }
-    } catch (e) {
+    } on Object catch (e) {
       // 埋点失败不应该影响主流程
       if (kDebugMode) {
         debugPrint('⚠️ 性能埋点上报失败: $e');
@@ -763,8 +816,7 @@ class AppProvider with ChangeNotifier {
     for (var i = 0; i < _notes.length; i++) {
       final note = _notes[i];
       final tags = extractTags(note.content);
-      if (tags.length != note.tags.length ||
-          !note.tags.toSet().containsAll(tags)) {
+      if (note_tags.tagsChanged(oldTags: note.tags, newTags: tags)) {
         debugPrint(
           'AppProvider: 更新笔记 ${note.id} 的标签: ${note.tags.join(',')} -> ${tags.join(',')}',
         );
@@ -782,8 +834,7 @@ class AppProvider with ChangeNotifier {
       for (var i = 0; i < _notes.length; i++) {
         final note = _notes[i];
         final tags = extractTags(note.content);
-        if (tags.length != note.tags.length ||
-            !note.tags.toSet().containsAll(tags)) {
+        if (note_tags.tagsChanged(oldTags: note.tags, newTags: tags)) {
           debugPrint(
             'AppProvider: 更新笔记 ${note.id} 的标签: ${note.tags.join(',')} -> ${tags.join(',')}',
           );
@@ -793,7 +844,7 @@ class AppProvider with ChangeNotifier {
         }
       }
       notifyListeners();
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 更新所有笔记标签失败: $e');
     } finally {
       _setLoading(false);
@@ -829,7 +880,9 @@ class AppProvider with ChangeNotifier {
         final imageRegex = RegExp(r'!\[图片\]\(file://([^)]+)\)');
         final matches = imageRegex.allMatches(note.content);
 
-        if (matches.isEmpty) continue;
+        if (matches.isEmpty) {
+          continue;
+        }
 
         var updatedContent = note.content;
         var noteUpdated = false;
@@ -875,7 +928,7 @@ class AppProvider with ChangeNotifier {
           }
         });
       }
-    } catch (e) {
+    } on Object {
       // 修复图片路径失败
     }
 
@@ -889,19 +942,114 @@ class AppProvider with ChangeNotifier {
     return digest.toString();
   }
 
-  // 检查是否存在相同内容的笔记
-  Future<bool> _isDuplicateNote(Note note) async {
-    final noteHash = _calculateNoteHash(note);
-
-    // 检查本地数据库中是否有相同哈希值的笔记
-    final allNotes = await _databaseService.getNotes();
-    for (final existingNote in allNotes) {
-      if (_calculateNoteHash(existingNote) == noteHash) {
-        return true;
-      }
+  Future<Note> _prepareNoteForMemosUpload(Note note) async {
+    if (_resourceService == null) {
+      return note;
     }
 
-    return false;
+    final imageRegex = RegExp(r'!\[([^\]]*)\]\((file://[^)]+)\)');
+    var updatedContent = note.content;
+    var changed = false;
+
+    for (final match in imageRegex.allMatches(note.content).toList()) {
+      final fullMatch = match.group(0);
+      final alt = match.group(1) ?? '图片';
+      final localUri = match.group(2);
+      if (fullMatch == null || localUri == null) {
+        continue;
+      }
+
+      final localPath = localUri.replaceFirst('file://', '');
+      final imageFile = File(localPath);
+      if (!await imageFile.exists()) {
+        debugPrint('AppProvider: 本地图片不存在，暂不上传: $localPath');
+        continue;
+      }
+
+      final uploadResult = await _resourceService!.uploadImage(imageFile);
+      final serverMarkdown = MemosResourceService.generateImageMarkdown(
+        uploadResult,
+        alt: alt.isEmpty ? '图片' : alt,
+      );
+      updatedContent = updatedContent.replaceAll(fullMatch, serverMarkdown);
+      changed = true;
+    }
+
+    if (!changed) {
+      return note;
+    }
+
+    final updatedNote = note.copyWith(
+      content: updatedContent,
+      isSynced: false,
+    );
+    await _databaseService.updateNote(updatedNote);
+    final index = _notes.indexWhere((n) => n.id == note.id);
+    if (index != -1) {
+      _notes[index] = updatedNote;
+      notifyListeners();
+    }
+    return updatedNote;
+  }
+
+  bool _isLocalOnlyNoteId(String id) =>
+      id.startsWith('local_') || id.contains('-');
+
+  Note _mergeServerNoteWithLocalState(
+    Note serverNote,
+    Note localNote, {
+    bool preserveLocalTimeline = false,
+  }) =>
+      sync_merge.mergeServerNoteWithLocalState(
+        serverNote,
+        localNote,
+        preserveLocalTimeline: preserveLocalTimeline,
+      );
+
+  Future<Note> _syncUnsyncedNoteToMemos(Note note) async {
+    if (_memosApiService == null) {
+      throw Exception('Memos API 未初始化');
+    }
+
+    final uploadableNote = await _prepareNoteForMemosUpload(note);
+    final oldId = uploadableNote.id;
+    final visibility = uploadableNote.visibility.isNotEmpty
+        ? uploadableNote.visibility
+        : _appConfig.defaultNoteVisibility;
+
+    final Note serverNote;
+    if (_isLocalOnlyNoteId(uploadableNote.id)) {
+      serverNote = await _memosApiService!.createMemo(
+        content: uploadableNote.content,
+        visibility: visibility,
+      );
+    } else {
+      serverNote = await _memosApiService!.updateMemo(
+        uploadableNote.id,
+        content: uploadableNote.content,
+        visibility: visibility,
+      );
+    }
+
+    final syncedNote = _mergeServerNoteWithLocalState(
+      serverNote,
+      uploadableNote,
+      preserveLocalTimeline: true,
+    );
+    if (oldId != syncedNote.id) {
+      await _updateReferenceIdsAfterSync(oldId, syncedNote.id);
+      await _databaseService.deleteNote(oldId);
+      _notes.removeWhere((n) => n.id == oldId);
+    }
+
+    await _databaseService.saveNote(syncedNote);
+    final index = _notes.indexWhere((n) => n.id == syncedNote.id);
+    if (index != -1) {
+      _notes[index] = syncedNote;
+    } else {
+      _notes.insert(0, syncedNote);
+    }
+    return syncedNote;
   }
 
   // 检测本地是否有数据
@@ -912,13 +1060,15 @@ class AppProvider with ChangeNotifier {
 
   // 检测云端是否有数据
   Future<bool> hasServerData() async {
-    if (!isLoggedIn || _memosApiService == null) return false;
+    if (!isLoggedIn || _memosApiService == null) {
+      return false;
+    }
 
     try {
       final response = await _memosApiService!.getMemos();
       final serverNotes = response['memos'] as List<dynamic>;
       return serverNotes.isNotEmpty;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('检查云端数据失败: $e');
       return false;
     }
@@ -988,7 +1138,9 @@ class AppProvider with ChangeNotifier {
 
   // 设置主题选择
   Future<void> setThemeSelection(String themeSelection) async {
-    if (themeSelection == _appConfig.themeSelection) return;
+    if (themeSelection == _appConfig.themeSelection) {
+      return;
+    }
 
     // 同时更新isDarkMode以保持向后兼容
     var isDarkMode = themeSelection == AppConfig.THEME_DARK;
@@ -1011,7 +1163,9 @@ class AppProvider with ChangeNotifier {
 
   // 设置主题模式
   Future<void> setThemeMode(String mode) async {
-    if (mode == _appConfig.themeMode) return;
+    if (mode == _appConfig.themeMode) {
+      return;
+    }
 
     final updatedConfig = _appConfig.copyWith(themeMode: mode);
     await updateConfig(updatedConfig);
@@ -1019,7 +1173,9 @@ class AppProvider with ChangeNotifier {
 
   // 设置语言
   Future<void> setLocale(String? locale) async {
-    if (locale == _appConfig.locale) return;
+    if (locale == _appConfig.locale) {
+      return;
+    }
 
     debugPrint('🌍 [AppProvider.setLocale] 准备更新locale: $locale');
     final updatedConfig = _appConfig.copyWith(
@@ -1041,14 +1197,18 @@ class AppProvider with ChangeNotifier {
 
   // 同步本地数据到云端
   Future<bool> syncLocalToServer() async {
-    if (!isLoggedIn || _memosApiService == null) return false;
+    if (!isLoggedIn || _memosApiService == null) {
+      return false;
+    }
 
     _setLoading(true);
 
     try {
       // 获取本地笔记
       final localNotes = await _databaseService.getNotes();
-      if (localNotes.isEmpty) return true;
+      if (localNotes.isEmpty) {
+        return true;
+      }
 
       // 获取服务器笔记以检查重复
       final response = await _memosApiService!.getMemos();
@@ -1063,7 +1223,9 @@ class AppProvider with ChangeNotifier {
       var syncedCount = 0;
       for (final note in localNotes) {
         // 如果笔记已经同步，跳过
-        if (note.isSynced) continue;
+        if (note.isSynced) {
+          continue;
+        }
 
         // 计算本地笔记的哈希值
         final noteHash = _calculateNoteHash(note);
@@ -1077,22 +1239,9 @@ class AppProvider with ChangeNotifier {
         }
 
         try {
-          // 创建服务器笔记
-          final serverNote = await _memosApiService!.createMemo(
-            content: note.content,
-            visibility: note.visibility,
-          );
-
-          // 更新本地笔记的同步状态
-          final updatedNote = note.copyWith(
-            isSynced: true,
-          );
-
-          // 更新数据库
-          await _databaseService.updateNote(updatedNote);
-
+          await _syncUnsyncedNoteToMemos(note);
           syncedCount++;
-        } catch (e) {
+        } on Object catch (e) {
           debugPrint('同步笔记失败: ${note.id} - $e');
         }
       }
@@ -1102,7 +1251,7 @@ class AppProvider with ChangeNotifier {
 
       debugPrint('成功同步 $syncedCount 条笔记到云端');
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('同步本地数据到云端失败: $e');
       return false;
     } finally {
@@ -1112,7 +1261,9 @@ class AppProvider with ChangeNotifier {
 
   // 同步云端数据到本地
   Future<bool> syncServerToLocal() async {
-    if (!isLoggedIn || _memosApiService == null) return false;
+    if (!isLoggedIn || _memosApiService == null) {
+      return false;
+    }
 
     _setLoading(true);
 
@@ -1122,13 +1273,16 @@ class AppProvider with ChangeNotifier {
       final serverNotes = (response['memos'] as List<dynamic>)
           .map((m) => Note.fromJson(m as Map<String, dynamic>))
           .toList();
-      if (serverNotes.isEmpty) return true;
+      if (serverNotes.isEmpty) {
+        return true;
+      }
 
       // 获取本地笔记以检查重复
       final localNotes = await _databaseService.getNotes();
 
       // 计算所有本地笔记的哈希值
       final localHashes = localNotes.map(_calculateNoteHash).toSet();
+      final localNotesById = {for (final note in localNotes) note.id: note};
 
       // 同步每个服务器笔记到本地
       var syncedCount = 0;
@@ -1141,8 +1295,11 @@ class AppProvider with ChangeNotifier {
           continue;
         }
 
-        // 保存到本地数据库
-        await _databaseService.saveNote(serverNote);
+        final localNote = localNotesById[serverNote.id];
+        final noteToSave = localNote == null
+            ? serverNote
+            : _mergeServerNoteWithLocalState(serverNote, localNote);
+        await _databaseService.saveNote(noteToSave);
         syncedCount++;
       }
 
@@ -1151,7 +1308,7 @@ class AppProvider with ChangeNotifier {
 
       debugPrint('成功同步 $syncedCount 条笔记到本地');
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('同步云端数据到本地失败: $e');
       return false;
     } finally {
@@ -1210,7 +1367,7 @@ class AppProvider with ChangeNotifier {
           return (false, '注册成功，请手动登录');
         }
       } else {
-        final errorData = jsonDecode(response.body);
+        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
         final serverMessage = errorData['message']?.toString() ?? '';
         String userFriendlyMessage;
 
@@ -1274,7 +1431,7 @@ class AppProvider with ChangeNotifier {
         debugPrint('AppProvider: 注册失败: $serverMessage');
         return (false, userFriendlyMessage);
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 注册异常: $e');
       String userFriendlyMessage;
 
@@ -1315,204 +1472,80 @@ class AppProvider with ChangeNotifier {
 
       debugPrint('AppProvider: 规范化后的URL: $normalizedUrl');
 
-      // 检测服务器版本以选择正确的登录格式
-      final serverVersion = await MemosApiServiceFixed.getServerVersion(normalizedUrl);
+      final tokenService = MemosApiServiceFixed(baseUrl: normalizedUrl);
+      final token = await tokenService.createAccessToken(username, password);
+      final serverVersion =
+          await MemosApiServiceFixed.getServerVersion(normalizedUrl);
       debugPrint('AppProvider: 服务器版本: 0.$serverVersion.x');
 
-      // v0.26.0+: 需要将凭据包装在 passwordCredentials 字段中
-      // v0.21–v0.25: 平铺的 {username, password} 格式
-      final Map<String, dynamic> requestBody = serverVersion >= 26
-          ? {'passwordCredentials': {'username': username, 'password': password}}
-          : {'username': username, 'password': password};
+      final userInfoService = MemosApiServiceFixed(
+        baseUrl: normalizedUrl,
+        token: token,
+      );
+      final apiUser = await userInfoService.getUserInfo();
 
-      debugPrint('AppProvider: 登录请求体: ${jsonEncode(requestBody)}');
-
-      // 调用登录API
-      final response = await http.post(
-        Uri.parse('$normalizedUrl/api/v1/auth/signin'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(requestBody),
+      final user = apiUser.copyWith(
+        token: token,
+        username: apiUser.username.isNotEmpty ? apiUser.username : username,
+        serverUrl: normalizedUrl,
       );
 
-      debugPrint('AppProvider: 登录API响应状态: ${response.statusCode}');
-      debugPrint('AppProvider: 登录API响应体: ${response.body}');
+      // 保存用户信息到持久化存储和内存
+      await _preferencesService.saveUser(user);
+      _user = user;
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        debugPrint('AppProvider: 登录成功，解析用户信息');
+      // 注意：新token登录成功后，服务器端的旧token应该会自动失效
+      // 这是大多数现代认证系统的标准行为
+      // 如果服务器不支持自动撤销旧token，可以考虑：
+      // 1. 在登录前调用logout API撤销旧token（需要旧token仍有效）
+      // 2. 设置更短的token过期时间
+      // 3. 要求服务器端实现单点登录机制
 
-        // ── Token 提取（三种来源按版本优先级尝试）────────────────────────
-        String? token;
+      // 更新应用配置
+      _appConfig = _appConfig.copyWith(
+        memosApiUrl: normalizedUrl,
+        lastToken: remember ? token : null,
+        lastUsername: remember ? username : null,
+        lastServerUrl: normalizedUrl,
+        rememberLogin: remember,
+        autoLogin: true, // 登录成功后自动开启自动登录
+        isLocalMode: false, // 登录成功后切换到在线模式
+      );
 
-        // v0.26.0+: accessToken 直接在响应体
-        if (token == null && responseData['accessToken'] != null) {
-          token = responseData['accessToken'] as String?;
-          debugPrint('AppProvider: 从响应体获取Token (v0.26+)');
-        }
+      // 保存配置更新
+      await _preferencesService.saveAppConfig(_appConfig);
 
-        // v0.22–v0.25: token 在 Set-Cookie 响应头
-        if (token == null) {
-          final cookies = response.headers['set-cookie'] ?? '';
-          final cookieRegex = RegExp(r'memos\.access-token=([^;,\s]+)');
-          final match = cookieRegex.firstMatch(cookies);
-          if (match != null) {
-            token = match.group(1);
-            debugPrint('AppProvider: 从Cookie获取Token (v0.22-0.25)');
-          }
-        }
-
-        // v0.21.0: token 在响应体 "token" 字段
-        if (token == null && responseData['token'] != null) {
-          token = responseData['token'] as String?;
-          debugPrint('AppProvider: 从响应体获取Token (v0.21)');
-        }
-
-        if (token == null || token.isEmpty) {
-          if (serverVersion >= 22 && serverVersion < 26) {
-            throw Exception(
-              '登录成功但无法获取访问令牌。\n\n'
-              '您的 Memos 服务器（v0.22–v0.25）通过 Set-Cookie 返回 Token，'
-              '但反向代理可能屏蔽了该响应头。\n\n'
-              '建议：升级 Memos 至 v0.26.0+，或修正代理配置确保 Set-Cookie 头透传。',
-            );
-          }
-          throw Exception('登录成功但无法获取访问令牌，请重试或联系管理员');
-        }
-
-        // ── 用户信息解析（v0.26+: user 嵌套在 responseData['user'] 中）──
-        // v0.21–v0.25: user 字段在 responseData 顶层
-        // v0.26+: {user: {...}, accessToken: "..."}
-        final Map<String, dynamic> userData = serverVersion >= 26
-            ? (responseData['user'] as Map<String, dynamic>? ?? responseData)
-            : responseData;
-
-        // 从资源名称中提取数字 ID（v0.22+: "users/1" → "1"）
-        String userId = userData['id']?.toString() ?? '';
-        if (userId.isEmpty) {
-          final name = userData['name'] as String? ?? '';
-          if (name.contains('/')) userId = name.split('/').last;
-        }
-
-        // HOST 角色（v0.25 及之前）映射为 ADMIN（v0.26+）
-        final rawRole = userData['role'] as String? ?? 'USER';
-        final role = (rawRole == 'HOST' || rawRole == 'ROLE_HOST') ? 'ADMIN' : rawRole;
-
-        // 创建用户对象
-        final user = User(
-          id: userId,
-          username: userData['username'] as String? ?? username,
-          email: userData['email'] as String? ?? '',
-          nickname: userData['nickname'] as String?
-              ?? userData['username'] as String?
-              ?? username,
-          avatarUrl: userData['avatarUrl'] as String?,
-          role: role,
+      // 如果选择记住登录，保存到安全存储
+      if (remember) {
+        await saveLoginInfo(
+          normalizedUrl,
+          username,
           token: token,
+          password: password,
         );
-
-        // 保存用户信息到持久化存储和内存
-        await _preferencesService.saveUser(user);
-        _user = user;
-
-        // 注意：新token登录成功后，服务器端的旧token应该会自动失效
-        // 这是大多数现代认证系统的标准行为
-        // 如果服务器不支持自动撤销旧token，可以考虑：
-        // 1. 在登录前调用logout API撤销旧token（需要旧token仍有效）
-        // 2. 设置更短的token过期时间
-        // 3. 要求服务器端实现单点登录机制
-
-        // 更新应用配置
-        _appConfig = _appConfig.copyWith(
-          memosApiUrl: normalizedUrl,
-          lastToken: remember ? token : null,
-          lastUsername: remember ? username : null,
-          lastServerUrl: normalizedUrl,
-          rememberLogin: remember,
-          autoLogin: true, // 登录成功后自动开启自动登录
-          isLocalMode: false, // 登录成功后切换到在线模式
-        );
-
-        // 保存配置更新
-        await _preferencesService.saveAppConfig(_appConfig);
-
-        // 如果选择记住登录，保存到安全存储
-        if (remember) {
-          await saveLoginInfo(
-            normalizedUrl,
-            username,
-            token: token,
-            password: password,
-          );
-        }
-
-        // 初始化API服务
-        _memosApiService = await ApiServiceFactory.createApiService(
-          baseUrl: normalizedUrl,
-          token: token,
-        ) as MemosApiServiceFixed;
-
-        // 初始化资源服务
-        _resourceService = MemosResourceService(
-          baseUrl: normalizedUrl,
-          token: token,
-        );
-
-        debugPrint('AppProvider: 账号密码登录成功');
-        notifyListeners();
-
-        // 🖼️ 预加载用户头像（提升用户体验）
-        _preloadUserAvatarAsync();
-
-        return (true, null);
-      } else {
-        final errorData = jsonDecode(response.body);
-        final serverMessage = errorData['message']?.toString() ?? '';
-        String userFriendlyMessage;
-
-        // 根据状态码和服务器消息给出通俗易懂的错误提示
-        switch (response.statusCode) {
-          case 401:
-            if (serverMessage.toLowerCase().contains('password') ||
-                serverMessage.toLowerCase().contains('credentials')) {
-              userFriendlyMessage = '用户名或密码不对，请检查后重新输入';
-            } else if (serverMessage.toLowerCase().contains('deactivated')) {
-              userFriendlyMessage = '当前服务器不允许使用密码登录，请联系管理员开启该功能';
-            } else {
-              userFriendlyMessage = '账号或密码不正确，请重新检查后再试';
-            }
-            break;
-          case 403:
-            if (serverMessage.toLowerCase().contains('archived')) {
-              userFriendlyMessage = '该账号已被停用，如有疑问请联系管理员';
-            } else {
-              userFriendlyMessage = '该账号暂时无法登录，请联系管理员了解原因';
-            }
-            break;
-          case 404:
-            userFriendlyMessage = '找不到服务器，请检查服务器地址是否填写正确';
-            break;
-          case 429:
-            userFriendlyMessage = '登录太频繁了，请等几分钟后再试';
-            break;
-          case 500:
-            userFriendlyMessage = '服务器出了点问题，请稍后再试，或联系管理员';
-            break;
-          case 503:
-            userFriendlyMessage = '服务器正在维护中，请稍后再试';
-            break;
-          default:
-            userFriendlyMessage = '登录失败，请检查网络和服务器地址后重试';
-        }
-
-        debugPrint('AppProvider: 登录失败 - 状态码: ${response.statusCode}');
-        debugPrint('AppProvider: 服务器原始消息: $serverMessage');
-        debugPrint('AppProvider: 完整响应体: ${response.body}');
-        return (false, userFriendlyMessage);
       }
-    } catch (e) {
+
+      // 初始化API服务
+      _memosApiService = await ApiServiceFactory.createApiService(
+        baseUrl: normalizedUrl,
+        token: token,
+      ) as MemosApiServiceFixed;
+
+      // 初始化资源服务
+      _resourceService = MemosResourceService(
+        baseUrl: normalizedUrl,
+        token: token,
+        serverVersion: serverVersion,
+      );
+
+      debugPrint('AppProvider: 账号密码登录成功');
+      notifyListeners();
+
+      // 🖼️ 预加载用户头像（提升用户体验）
+      _preloadUserAvatarAsync();
+
+      return (true, null);
+    } on Object catch (e) {
       debugPrint('AppProvider: 账号密码登录失败: $e');
       String userFriendlyMessage;
 
@@ -1559,9 +1592,12 @@ class AppProvider with ChangeNotifier {
       ) as MemosApiServiceFixed;
 
       // 初始化资源服务
+      final serverVersion =
+          await MemosApiServiceFixed.getServerVersion(normalizedUrl);
       _resourceService = MemosResourceService(
         baseUrl: normalizedUrl,
         token: token,
+        serverVersion: serverVersion,
       );
 
       // 验证Token并获取用户信息（版本感知，由 MemosApiServiceFixed 自动处理）
@@ -1607,12 +1643,12 @@ class AppProvider with ChangeNotifier {
         }
 
         return (true, null);
-      } catch (e, stackTrace) {
+      } on Object catch (e, stackTrace) {
         debugPrint('AppProvider: 验证Token失败: $e');
         debugPrint('AppProvider: 错误堆栈: $stackTrace');
         throw Exception('验证Token失败: $e');
       }
-    } catch (e, stackTrace) {
+    } on Object catch (e, stackTrace) {
       debugPrint('AppProvider: Token登录失败: $e');
       debugPrint('AppProvider: 错误堆栈: $stackTrace');
       return (false, e.toString());
@@ -1624,9 +1660,8 @@ class AppProvider with ChangeNotifier {
     try {
       debugPrint('AppProvider: 登录后检查本地数据');
 
-      // 检查本地和服务器是否有数据
+      // 检查本地是否有数据
       final hasLocalData = await this.hasLocalData();
-      final hasServerData = await this.hasServerData();
 
       if (hasLocalData) {
         debugPrint('AppProvider: 检测到本地有数据');
@@ -1642,7 +1677,7 @@ class AppProvider with ChangeNotifier {
         // 直接获取服务器数据
         await fetchNotesFromServer();
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 检查同步状态失败: $e');
       // 出错时，至少确保加载了数据
       await loadNotesFromLocal();
@@ -1652,7 +1687,9 @@ class AppProvider with ChangeNotifier {
   // 同步本地引用关系到服务器
   Future<int> syncLocalReferencesToServer() async {
     if (!isLoggedIn || _memosApiService == null) {
-      if (kDebugMode) debugPrint('AppProvider: 未登录或API服务未初始化，无法同步引用关系');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 未登录或API服务未初始化，无法同步引用关系');
+      }
       return 0;
     }
 
@@ -1661,7 +1698,9 @@ class AppProvider with ChangeNotifier {
       final unsyncedRefs = await localRefService.getUnsyncedReferences();
 
       if (unsyncedRefs.isEmpty) {
-        if (kDebugMode) debugPrint('AppProvider: 没有未同步的引用关系');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 没有未同步的引用关系');
+        }
         return 0;
       }
 
@@ -1679,11 +1718,13 @@ class AppProvider with ChangeNotifier {
             await localRefService.markReferenceAsSynced(noteId, relation);
             syncedCount++;
           }
-        } catch (e) {}
+        } on Object catch (_) {
+          // Continue syncing the remaining queued references.
+        }
       }
 
       return syncedCount;
-    } catch (e) {
+    } on Object {
       return 0;
     }
   }
@@ -1695,78 +1736,13 @@ class AppProvider with ChangeNotifier {
   ) async {
     try {
       final relatedMemoId = relation['relatedMemoId']?.toString();
-      if (relatedMemoId == null) return false;
-
-      // 使用v1 API: POST /api/v1/memo/{memoId}/relation
-      final url = '${_appConfig.memosApiUrl}/api/v1/memo/$noteId/relation';
-      final headers = {
-        'Authorization': 'Bearer ${_user!.token}',
-        'Content-Type': 'application/json',
-      };
-
-      final body = {
-        'relatedMemoId': int.parse(relatedMemoId),
-        'type': 'REFERENCE',
-      };
-
-      final response = await NetworkUtils.directPost(
-        Uri.parse(url),
-        headers: headers,
-        body: jsonEncode(body),
-      );
-
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // 从服务器获取单个memo的引用关系
-  Future<List<Map<String, dynamic>>> _fetchMemoRelationsFromServer(
-    String memoId,
-  ) async {
-    try {
-      // 使用v1 API: GET /api/v1/memo/{memoId}/relation
-      final url = '${_appConfig.memosApiUrl}/api/v1/memo/$memoId/relation';
-      final headers = {
-        'Authorization': 'Bearer ${_user!.token}',
-        'Content-Type': 'application/json',
-      };
-
-      final client = http.Client();
-      final response = await client
-          .get(
-            Uri.parse(url),
-            headers: headers,
-          )
-          .timeout(const Duration(seconds: 30));
-      client.close();
-
-      if (response.statusCode == 200) {
-        final List<dynamic> relations = jsonDecode(response.body);
-        final formattedRelations = <Map<String, dynamic>>[];
-
-        for (final relation in relations) {
-          // 转换为我们的格式，确保包含所有必要字段
-          formattedRelations.add({
-            'memoId': relation['memoId'], // 确保包含memoId
-            'relatedMemoId': relation['relatedMemoId'],
-            'type': relation['type'],
-          });
-        }
-
-        if (kDebugMode && formattedRelations.isNotEmpty) {
-          debugPrint(
-            'AppProvider: 从服务器获取笔记 $memoId 的引用关系: ${formattedRelations.length} 个',
-          );
-        }
-
-        return formattedRelations;
-      } else {
-        return [];
+      if (relatedMemoId == null || _memosApiService == null) {
+        return false;
       }
-    } catch (e) {
-      return [];
+
+      return _memosApiService!.addMemoReference(noteId, relatedMemoId);
+    } on Object {
+      return false;
     }
   }
 
@@ -1800,28 +1776,9 @@ class AppProvider with ChangeNotifier {
         // 正在后台同步笔记 ${i + 1}/${unsyncedNotes.length}
 
         try {
-          if (note.id.startsWith('local_')) {
-            // 新建笔记
-            final createdNote = await _memosApiService!.createMemo(
-              content: note.content,
-              visibility: note.visibility,
-            );
-            await _databaseService.updateNoteServerId(
-              note.id,
-              createdNote.id,
-            );
-            syncedCount++;
-          } else {
-            // 更新笔记
-            await _memosApiService!.updateMemo(
-              note.id,
-              content: note.content,
-              visibility: note.visibility,
-            );
-            await _databaseService.markNoteSynced(note.id);
-            syncedCount++;
-          }
-        } catch (e) {
+          await _syncUnsyncedNoteToMemos(note);
+          syncedCount++;
+        } on Object catch (e) {
           debugPrint('AppProvider: 同步笔记失败: ${note.id}, 错误: $e');
           continue;
         }
@@ -1846,7 +1803,7 @@ class AppProvider with ChangeNotifier {
       // 后台同步完成
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 后台同步失败: $e');
       // 同步失败也静默处理，不影响用户体验
       return false;
@@ -1856,7 +1813,7 @@ class AppProvider with ChangeNotifier {
   // 从文本内容中提取标签（改进版，排除URL中的#）
   List<String> extractTags(String content) {
     // 使用统一的标签提取逻辑（与Note.extractTagsFromContent一致）
-    return Note.extractTagsFromContent(content);
+    return note_tags.extractTags(content);
   }
 
   // 获取所有标签
@@ -1870,35 +1827,7 @@ class AppProvider with ChangeNotifier {
 
   // 排序笔记
   void sortNotes(SortOrder order) {
-    switch (order) {
-      case SortOrder.newest:
-        _notes.sort((a, b) {
-          // 先按是否置顶排序，置顶的在前面
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-          // 再按创建时间排序
-          return b.createdAt.compareTo(a.createdAt);
-        });
-        break;
-      case SortOrder.oldest:
-        _notes.sort((a, b) {
-          // 先按是否置顶排序，置顶的在前面
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-          // 再按创建时间排序
-          return a.createdAt.compareTo(b.createdAt);
-        });
-        break;
-      case SortOrder.updated:
-        _notes.sort((a, b) {
-          // 先按是否置顶排序，置顶的在前面
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-          // 再按更新时间排序
-          return b.updatedAt.compareTo(a.updatedAt);
-        });
-        break;
-    }
+    _notes.sort(noteComparator(order));
     notifyListeners();
   }
 
@@ -1919,7 +1848,7 @@ class AppProvider with ChangeNotifier {
       if (index != -1) {
         _notes[index] = updatedNote;
       }
-      
+
       // 立即通知UI更新
       notifyListeners();
 
@@ -1932,10 +1861,11 @@ class AppProvider with ChangeNotifier {
             pinned: updatedNote.isPinned,
           );
 
-          // 更新本地数据库（服务器返回的数据已包含正确的 isPinned 状态）
-          final syncedNote = serverNote.copyWith(
-            isSynced: true,
-          );
+          final syncedNote = _mergeServerNoteWithLocalState(
+            serverNote,
+            updatedNote,
+            preserveLocalTimeline: true,
+          ).copyWith(isPinned: updatedNote.isPinned);
           await _databaseService.updateNote(syncedNote);
 
           // 更新内存中的列表为服务器返回的数据
@@ -1943,9 +1873,9 @@ class AppProvider with ChangeNotifier {
           if (serverIndex != -1) {
             _notes[serverIndex] = syncedNote;
           }
-          
+
           debugPrint('置顶状态已同步到服务器: ${updatedNote.isPinned}');
-        } catch (e) {
+        } on Object catch (e) {
           // 如果同步失败，本地状态已经更新，不需要额外处理
           debugPrint('同步置顶状态到服务器失败（正常，本地笔记或网络问题）: $e');
         }
@@ -1956,32 +1886,14 @@ class AppProvider with ChangeNotifier {
       sortNotes(currentOrder);
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('切换置顶状态失败: $e');
       return false;
     }
   }
 
   // 获取当前的排序方式
-  SortOrder _getCurrentSortOrder() {
-    if (_notes.length < 2) return SortOrder.newest;
-
-    // 忽略置顶状态，仅根据时间判断排序方式
-    final unpinnedNotes = _notes.where((note) => !note.isPinned).toList();
-    if (unpinnedNotes.length < 2) return SortOrder.newest;
-
-    if (unpinnedNotes[0].createdAt.isAfter(unpinnedNotes[1].createdAt)) {
-      return SortOrder.newest;
-    } else if (unpinnedNotes[0]
-        .createdAt
-        .isBefore(unpinnedNotes[1].createdAt)) {
-      return SortOrder.oldest;
-    } else if (unpinnedNotes[0].updatedAt.isAfter(unpinnedNotes[1].updatedAt)) {
-      return SortOrder.updated;
-    }
-
-    return SortOrder.newest; // 默认返回最新排序
-  }
+  SortOrder _getCurrentSortOrder() => inferCurrentSortOrder(_notes);
 
   // 切换到本地模式
   Future<void> switchToLocalMode() async {
@@ -1999,9 +1911,7 @@ class AppProvider with ChangeNotifier {
       _setLoading(true);
     } else {
       // 设置同步状态
-      _isSyncing = true;
-      _syncMessage = '正在处理退出登录...';
-      notifyListeners();
+      _setSyncUi(syncing: true, message: '正在处理退出登录...');
     }
 
     try {
@@ -2019,14 +1929,12 @@ class AppProvider with ChangeNotifier {
 
       // 如果不保留本地数据，则清空数据库
       if (!keepLocalData) {
-        _syncMessage = '清空本地数据库...';
-        notifyListeners();
+        _setSyncMessage('清空本地数据库...');
 
         debugPrint('AppProvider: 清空本地数据库');
         await _databaseService.clearAllNotes();
       } else {
-        _syncMessage = '保存本地数据...';
-        notifyListeners();
+        _setSyncMessage('保存本地数据...');
 
         debugPrint('AppProvider: 保留本地数据');
       }
@@ -2037,14 +1945,17 @@ class AppProvider with ChangeNotifier {
 
       // 🔐 在清除本地信息前，先撤销服务器端的token
       if (_memosApiService != null && !_appConfig.isLocalMode) {
-        _syncMessage = '撤销服务器token...';
-        notifyListeners();
+        _setSyncMessage('撤销服务器token...');
 
         try {
           await _memosApiService!.logout();
-          if (kDebugMode) debugPrint('AppProvider: 服务器token撤销成功');
-        } catch (e) {
-          if (kDebugMode) debugPrint('AppProvider: 服务器token撤销失败: $e');
+          if (kDebugMode) {
+            debugPrint('AppProvider: 服务器token撤销成功');
+          }
+        } on Object catch (e) {
+          if (kDebugMode) {
+            debugPrint('AppProvider: 服务器token撤销失败: $e');
+          }
           // 继续执行，不阻塞登出流程
         }
       }
@@ -2053,13 +1964,12 @@ class AppProvider with ChangeNotifier {
       _user = null;
       await _preferencesService.clearUser();
 
-      _syncMessage = '清除登录信息...';
-      notifyListeners();
+      _setSyncMessage('清除登录信息...');
 
       // 🔐 总是清除 token（退出登录后不应该自动登录）
       // 但如果之前选择了"记住密码"，保留 username 和 password
       final rememberLogin = _appConfig.rememberLogin;
-      
+
       if (rememberLogin) {
         // 只清除 token，保留 username 和 password
         await _preferencesService.clearLoginInfo();
@@ -2070,14 +1980,12 @@ class AppProvider with ChangeNotifier {
         debugPrint('AppProvider: 已清除所有登录信息');
       }
 
-      _syncMessage = '更新配置...';
-      notifyListeners();
+      _setSyncMessage('更新配置...');
 
       // 更新配置为本地模式，不保留 token
       _appConfig = _appConfig.copyWith(
         isLocalMode: true,
         rememberLogin: rememberLogin,
-        lastToken: null, // 退出登录后总是清除 token
         lastServerUrl: rememberLogin ? _appConfig.lastServerUrl : null,
       );
       await _preferencesService.saveAppConfig(_appConfig);
@@ -2088,38 +1996,32 @@ class AppProvider with ChangeNotifier {
 
       // 重新加载本地笔记
       if (keepLocalData) {
-        _syncMessage = '加载本地笔记...';
-        notifyListeners();
+        _setSyncMessage('加载本地笔记...');
 
         await loadNotesFromLocal();
       } else {
         _notes = [];
       }
 
-      _syncMessage = '退出登录完成';
-      notifyListeners();
+      _setSyncMessage('退出登录完成');
 
       // 延迟一点时间再清除同步状态
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          _isSyncing = false;
-          _syncMessage = null;
-          notifyListeners();
+          _setSyncUi(syncing: false);
         }
       });
 
       return (true, null);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('退出登录失败: $e');
 
-      _syncMessage = '退出登录失败: ${e.toString().split('\n')[0]}';
-      notifyListeners();
+      _setSyncMessage('退出登录失败: ${sync_status.shortFirstLine(e)}');
 
       // 延迟一点时间再清除同步状态
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted) {
-          _isSyncing = false;
-          _syncMessage = null;
+          _setSyncUi(syncing: false, notify: false);
           _setLoading(false);
           notifyListeners();
         }
@@ -2140,7 +2042,7 @@ class AppProvider with ChangeNotifier {
       // 获取服务器数据
       await fetchNotesFromServer();
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 获取服务器数据失败: $e');
       return false;
     }
@@ -2172,62 +2074,8 @@ class AppProvider with ChangeNotifier {
         updatedAt: noteUpdatedAt,
       );
 
-      // 如果是在线模式且已登录，先尝试保存到服务器
-      if (!_appConfig.isLocalMode && isLoggedIn && _memosApiService != null) {
-        debugPrint('AppProvider: 尝试保存到服务器');
-        try {
-          final serverNote = await _memosApiService!.createMemo(
-            content: content,
-            visibility: _appConfig.defaultNoteVisibility,
-          );
-
-          // 确保服务器返回的笔记标记为已同步
-          final syncedServerNote = serverNote.copyWith(isSynced: true);
-
-          // 保存到本地
-          await _databaseService.saveNote(syncedServerNote);
-
-          // 添加到内存列表
-          _notes.insert(0, syncedServerNote); // 添加到列表顶部而不是末尾
-
-          debugPrint('AppProvider: 笔记已保存到服务器和本地');
-
-          // 处理引用关系
-          await _processNoteReferences(syncedServerNote);
-
-          // 应用当前排序
-          _applyCurrentSort();
-          notifyListeners();
-
-          return syncedServerNote;
-        } catch (e) {
-          debugPrint('AppProvider: 保存到服务器失败: $e');
-
-          // 检查是否为Token过期异常
-          if (e is TokenExpiredException ||
-              e.toString().contains('Token无效或已过期')) {
-            debugPrint('AppProvider: 检测到Token过期，强制用户重新登录');
-            await _handleTokenExpired();
-            throw Exception('登录已过期，请重新登录');
-          } else {
-            debugPrint('AppProvider: 将改为本地保存');
-
-            // 服务器保存失败，尝试重新初始化API服务
-            if (_appConfig.memosApiUrl != null && _user?.token != null) {
-              _initializeApiService(_appConfig.memosApiUrl!, _user!.token!)
-                  .then((_) {
-                // API服务重新初始化后，尝试同步未同步的笔记
-                syncNotesWithServer();
-              });
-            }
-
-            // 继续本地保存流程
-          }
-        }
-      }
-
-      // 本地模式或服务器保存失败，保存到本地
-      debugPrint('AppProvider: 本地保存');
+      // 本地优先保存。在线发布由后台同步完成，避免弱网阻塞记录动作。
+      debugPrint('AppProvider: 本地优先保存');
       await _databaseService.saveNote(note);
 
       // 添加到内存列表
@@ -2240,12 +2088,24 @@ class AppProvider with ChangeNotifier {
       _applyCurrentSort();
 
       notifyListeners();
-      
+
       // 🚀 自动同步到 Notion（异步执行，不阻塞UI）
-      _autoSyncToNotion();
-      
+      unawaited(_autoSyncToNotion());
+
+      if (!_appConfig.isLocalMode && isLoggedIn && _memosApiService != null) {
+        unawaited(
+          Future.microtask(() async {
+            try {
+              await syncNotesWithServer();
+            } on Object catch (e) {
+              debugPrint('AppProvider: 后台同步新笔记失败: $e');
+            }
+          }),
+        );
+      }
+
       return note;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 创建笔记失败: $e');
       throw Exception('创建笔记失败: $e');
     }
@@ -2268,8 +2128,10 @@ class AppProvider with ChangeNotifier {
         updatedAt: DateTime.now(), // 自动更新为当前时间
         isSynced: false,
       );
-      
-      debugPrint('AppProvider: updatedAt - 原始: ${note.updatedAt}, 新: ${updatedNote.updatedAt}');
+
+      debugPrint(
+        'AppProvider: updatedAt - 原始: ${note.updatedAt}, 新: ${updatedNote.updatedAt}',
+      );
 
       // 提取标签
       debugPrint('AppProvider: 提取标签');
@@ -2291,27 +2153,30 @@ class AppProvider with ChangeNotifier {
       if (!_appConfig.isLocalMode && isLoggedIn && _memosApiService != null) {
         try {
           debugPrint('AppProvider: 尝试同步到服务器，笔记ID: ${noteWithTags.id}');
+          final uploadableNote = await _prepareNoteForMemosUpload(noteWithTags);
+
           // 使用Memos API更新笔记
           final serverNote = await _memosApiService!.updateMemo(
-            noteWithTags.id,
-            content: newContent,
+            uploadableNote.id,
+            content: uploadableNote.content,
+            visibility: uploadableNote.visibility,
           );
 
           // 检查返回的笔记ID是否与原笔记ID不同
-          if (serverNote.id != noteWithTags.id) {
+          if (serverNote.id != uploadableNote.id) {
             debugPrint(
-              'AppProvider: 服务器返回了新的笔记ID: ${serverNote.id}，原ID: ${noteWithTags.id}',
+              'AppProvider: 服务器返回了新的笔记ID: ${serverNote.id}，原ID: ${uploadableNote.id}',
             );
             // 删除本地旧笔记
-            await _databaseService.deleteNote(noteWithTags.id);
+            await _databaseService.deleteNote(uploadableNote.id);
 
             // 保存新笔记
             final newSyncedNote =
-                serverNote.copyWith(isSynced: true, tags: tags);
+                _mergeServerNoteWithLocalState(serverNote, uploadableNote);
             await _databaseService.saveNote(newSyncedNote);
 
             // 更新内存中的列表 - 删除旧笔记
-            _notes.removeWhere((n) => n.id == noteWithTags.id);
+            _notes.removeWhere((n) => n.id == uploadableNote.id);
             // 添加新笔记
             _notes.insert(0, newSyncedNote); // 添加到列表顶部
 
@@ -2327,19 +2192,20 @@ class AppProvider with ChangeNotifier {
           // 获取当前内存中的笔记（包含本地引用关系和批注）
           final index = _notes.indexWhere((n) => n.id == note.id);
           var existingRelations = <Map<String, dynamic>>[];
-          var existingAnnotations = <Annotation>[];  // ✅ 保护批注
-          
+          var existingAnnotations = <Annotation>[]; // ✅ 保护批注
+
           if (index != -1) {
             existingRelations = _notes[index].relations;
-            existingAnnotations = _notes[index].annotations;  // ✅ 保护批注
+            existingAnnotations = _notes[index].annotations; // ✅ 保护批注
           }
 
-          // 创建同步后的笔记，保留本地引用关系和批注
-          final syncedNote = serverNote.copyWith(
-            isSynced: true,
-            tags: tags,
-            relations: existingRelations, // 🔧 保护本地引用关系
-            annotations: existingAnnotations,  // ✅ 保护批注数据
+          final syncedNote = _mergeServerNoteWithLocalState(
+            serverNote,
+            uploadableNote.copyWith(
+              tags: tags,
+              relations: existingRelations,
+              annotations: existingAnnotations,
+            ),
           );
           await _databaseService.updateNote(syncedNote);
 
@@ -2358,7 +2224,7 @@ class AppProvider with ChangeNotifier {
 
           debugPrint('AppProvider: 笔记更新完成（已同步到服务器）');
           return true;
-        } catch (e) {
+        } on Object catch (e) {
           debugPrint('AppProvider: 同步到服务器失败: $e');
           // 如果同步失败，保持本地更新
           final index = _notes.indexWhere((n) => n.id == note.id);
@@ -2372,10 +2238,10 @@ class AppProvider with ChangeNotifier {
           _applyCurrentSort();
           notifyListeners();
           debugPrint('AppProvider: 笔记更新完成（仅本地更新）');
-          
+
           // 🚀 自动同步到 Notion（异步执行，不阻塞UI）
-          _autoSyncToNotion();
-          
+          unawaited(_autoSyncToNotion());
+
           return true;
         }
       } else {
@@ -2398,13 +2264,13 @@ class AppProvider with ChangeNotifier {
         debugPrint('AppProvider: 调用notifyListeners()');
         notifyListeners();
         debugPrint('AppProvider: 笔记本地更新完成');
-        
+
         // 🚀 自动同步到 Notion（异步执行，不阻塞UI）
-        _autoSyncToNotion();
-        
+        unawaited(_autoSyncToNotion());
+
         return true;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 更新笔记失败: $e');
       return false;
     }
@@ -2415,11 +2281,11 @@ class AppProvider with ChangeNotifier {
   Future<bool> updateNoteLocally(Note note) async {
     try {
       debugPrint('AppProvider: 开始本地更新笔记 ID: ${note.id}');
-      
+
       // 更新本地数据库
       await _databaseService.updateNote(note);
       debugPrint('AppProvider: 本地数据库更新完成');
-      
+
       // 更新内存中的笔记
       final index = _notes.indexWhere((n) => n.id == note.id);
       if (index != -1) {
@@ -2428,16 +2294,70 @@ class AppProvider with ChangeNotifier {
       } else {
         debugPrint('AppProvider: ⚠️ 在内存列表中找不到笔记！');
       }
-      
+
       // 应用排序并通知UI更新
       _applyCurrentSort();
       notifyListeners();
       debugPrint('AppProvider: 本地更新完成');
-      
+
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 本地更新笔记失败: $e');
       return false;
+    }
+  }
+
+  Future<Note?> setNoteVisibility(Note note, String visibility) async {
+    final normalizedVisibility = visibility.toUpperCase();
+    try {
+      final uploadableNote = await _prepareNoteForMemosUpload(note);
+      final optimisticNote = uploadableNote.copyWith(
+        visibility: normalizedVisibility,
+        isSynced: false,
+      );
+      await _databaseService.updateNote(optimisticNote);
+
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      if (index != -1) {
+        _notes[index] = optimisticNote;
+        notifyListeners();
+      }
+
+      if (_appConfig.isLocalMode || !isLoggedIn || _memosApiService == null) {
+        return optimisticNote;
+      }
+
+      final serverNote = await _memosApiService!.updateMemoVisibility(
+        optimisticNote.id,
+        content: optimisticNote.content,
+        visibility: normalizedVisibility,
+      );
+      final syncedNote = _mergeServerNoteWithLocalState(
+        serverNote,
+        optimisticNote,
+      ).copyWith(visibility: normalizedVisibility);
+
+      if (syncedNote.id != optimisticNote.id) {
+        await _updateReferenceIdsAfterSync(optimisticNote.id, syncedNote.id);
+        await _databaseService.deleteNote(optimisticNote.id);
+        await _databaseService.saveNote(syncedNote);
+        _notes.removeWhere((n) => n.id == optimisticNote.id);
+        _notes.insert(0, syncedNote);
+        _applyCurrentSort();
+        notifyListeners();
+        return syncedNote;
+      }
+
+      await _databaseService.updateNote(syncedNote);
+      final syncedIndex = _notes.indexWhere((n) => n.id == optimisticNote.id);
+      if (syncedIndex != -1) {
+        _notes[syncedIndex] = syncedNote;
+        notifyListeners();
+      }
+      return syncedNote;
+    } on Object catch (e) {
+      debugPrint('AppProvider: 更新笔记可见性失败: $e');
+      return null;
     }
   }
 
@@ -2466,18 +2386,15 @@ class AppProvider with ChangeNotifier {
       // 如果是在线模式且已登录，尝试同步到服务器
       if (!_appConfig.isLocalMode && isLoggedIn && _memosApiService != null) {
         try {
-          await _memosApiService!.updateMemo(
-            updatedNote.id,
-            content: updatedNote.content,
-          );
-        } catch (e) {
+          await _syncUnsyncedNoteToMemos(updatedNote);
+        } on Object catch (e) {
           debugPrint('AppProvider: 同步标签到服务器失败: $e');
         }
       }
 
       notifyListeners();
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 更新笔记标签失败: $e');
       return false;
     }
@@ -2506,11 +2423,19 @@ class AppProvider with ChangeNotifier {
 
       debugPrint('AppProvider: ⚡ UI已更新（笔记已从列表移除）');
 
-      // 2. 🔄 后台异步执行实际删除操作（不阻塞UI）
-      _performBackgroundDelete(id);
+      // 2. 等撤销窗口结束后再真实删除本地和远端，避免撤销时远端已丢失。
+      _pendingDeleteCommitTimer?.cancel();
+      _pendingDeleteCommitTimer = Timer(deleteUndoWindow, () {
+        _pendingDeleteCommitTimer = null;
+        if (_lastDeletedNote?.id == id) {
+          _lastDeletedNote = null;
+          _lastDeletedIndex = null;
+        }
+        unawaited(_performBackgroundDelete(id));
+      });
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 删除笔记失败: $e');
       return false;
     }
@@ -2534,7 +2459,9 @@ class AppProvider with ChangeNotifier {
 
   // 📦 处理删除队列（大厂级批量删除，智能协调）
   Future<void> _processDeleteQueue() async {
-    if (_isProcessingDelete || _deleteQueue.isEmpty) return;
+    if (_isProcessingDelete || _deleteQueue.isEmpty) {
+      return;
+    }
 
     _isProcessingDelete = true;
 
@@ -2549,10 +2476,13 @@ class AppProvider with ChangeNotifier {
 
       // 批量删除本地数据
       for (final id in idsToDelete) {
+        if (_notes.any((note) => note.id == id)) {
+          continue;
+        }
         try {
           await _databaseService.deleteNote(id);
           await _cleanupReferencesForDeletedNote(id);
-        } catch (e) {
+        } on Object {
           // 单个失败不影响其他
         }
       }
@@ -2562,7 +2492,7 @@ class AppProvider with ChangeNotifier {
         final deleteFutures = idsToDelete.map((id) async {
           try {
             await _memosApiService!.deleteMemo(id);
-          } catch (e) {
+          } on Object {
             // 服务器删除失败不影响用户体验
           }
         });
@@ -2573,7 +2503,7 @@ class AppProvider with ChangeNotifier {
           onTimeout: () => [],
         );
       }
-    } catch (e) {
+    } on Object {
       // 批量处理失败，记录但不影响UI
     }
 
@@ -2587,7 +2517,7 @@ class AppProvider with ChangeNotifier {
     // 5. 如果队列中又有新的删除请求，继续处理
     if (_deleteQueue.isNotEmpty) {
       await Future.delayed(const Duration(milliseconds: 200));
-      _processDeleteQueue();
+      unawaited(_processDeleteQueue());
     }
   }
 
@@ -2600,6 +2530,9 @@ class AppProvider with ChangeNotifier {
 
     try {
       debugPrint('AppProvider: 🔙 开始撤销删除笔记 ID: ${_lastDeletedNote!.id}');
+      _pendingDeleteCommitTimer?.cancel();
+      _pendingDeleteCommitTimer = null;
+      _deleteQueue.remove(_lastDeletedNote!.id);
 
       // 1. 恢复到内存列表
       _notes.insert(_lastDeletedIndex!, _lastDeletedNote!);
@@ -2615,7 +2548,7 @@ class AppProvider with ChangeNotifier {
       _lastDeletedIndex = null;
 
       return true;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -2636,7 +2569,7 @@ class AppProvider with ChangeNotifier {
       notifyListeners();
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 从本地删除笔记失败: $e');
       throw Exception('删除本地笔记失败: $e');
     }
@@ -2667,12 +2600,18 @@ class AppProvider with ChangeNotifier {
           _notes[i] = updatedNote;
           hasChanges = true;
 
-          final removedCount = originalRelationsCount - cleanedRelations.length;
+          if (kDebugMode) {
+            debugPrint(
+              'AppProvider: 清理 ${originalRelationsCount - cleanedRelations.length} 条失效引用',
+            );
+          }
         }
       }
 
       if (hasChanges) {}
-    } catch (e) {}
+    } on Object catch (_) {
+      // Invalid relation cleanup is non-critical maintenance.
+    }
   }
 
   // 仅从服务器删除笔记
@@ -2687,661 +2626,93 @@ class AppProvider with ChangeNotifier {
       // 从服务器删除
       await _memosApiService!.deleteMemo(id);
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 从服务器删除笔记失败: $e');
       throw Exception('从服务器删除笔记失败: $e');
     }
   }
 
-  // 手动刷新数据（从服务器获取最新数据）
-  Future<void> refreshFromServer() async {
-    await fetchNotesFromServer();
-  }
+  // NOTE: `fetchNotesFromServer` moved to `app_provider_sync.part.dart`.
 
-  /// 🚀 优化版：增量刷新数据
-  /// 只同步变化的数据，速度快10倍以上
-  /// 🎯 大厂策略：缓存优先 + 智能合并 + 同步更新引用
+  /// 🚀 快速从服务器刷新（增量同步）
+  /// HomeScreen 下拉刷新依赖这个方法。
   Future<void> refreshFromServerFast() async {
     if (!isLoggedIn || _memosApiService == null) {
-      throw Exception('用户未登录');
-    }
-
-    if (_incrementalSyncService == null) {
-      // 如果增量同步服务未初始化，使用传统方式
-      debugPrint('AppProvider: 增量同步服务未初始化，使用传统同步');
-      await fetchNotesFromServer();
       return;
     }
 
-    _isSyncing = true;
-    _syncMessage = '智能同步中...';
-    
-    // 🎯 优化1: 缓存优先 - 立即显示现有数据（0ms响应）
-    if (_notes.isNotEmpty) {
-      // 已有数据，立即通知UI显示
-      notifyListeners();
-      debugPrint('AppProvider: 使用缓存数据立即响应 ${_notes.length} 条');
-    } else {
-      // 首次加载，从数据库读取
-      _notes = await _databaseService.getNotes();
-      notifyListeners();
-      debugPrint('AppProvider: 首次加载本地数据 ${_notes.length} 条');
-    }
-
+    _setSyncUi(syncing: true, message: '正在快速同步...');
     try {
-      final startTime = DateTime.now();
+      _incrementalSyncService ??=
+          IncrementalSyncService(_databaseService, _memosApiService);
 
-      // 2. 后台增量同步
-      _syncMessage = '检查更新...';
+      await _incrementalSyncService!.incrementalSync();
 
-      final syncResult = await _incrementalSyncService!.incrementalSync();
-
-      // 3. 🎯 优化2: 智能合并数据（不清空现有数据）
-      if (syncResult.newNotes > 0 || syncResult.updatedNotes > 0) {
-        await _smartMergeNotes();
-        debugPrint('AppProvider: 智能合并完成 - 新增:${syncResult.newNotes} 更新:${syncResult.updatedNotes}');
-        
-        // 4. 🎯 优化3: 同步更新引用关系（在通知UI之前完成）
-        await _updateReferencesSync();
-        debugPrint('AppProvider: 引用关系同步更新完成');
-      }
-
-      final duration = DateTime.now().difference(startTime);
-      _syncMessage = '同步完成 (${duration.inMilliseconds}ms)';
-
-      debugPrint('AppProvider: $syncResult');
-
-      // 5. 🎯 优化4: 一次性通知UI更新（所有数据准备完毕）
-      notifyListeners();
-    } catch (e) {
-      debugPrint('AppProvider: 增量同步失败: $e');
-      _syncMessage = '同步失败: ${e.toString().split('\n')[0]}';
-      notifyListeners();
+      // 同步后从本地重新加载，保证 UI/内存态一致
+      await loadNotesFromLocal(reset: true);
+    } on Object catch (e) {
+      _setSyncMessage(sync_status.syncFailedMessage(e));
       rethrow;
     } finally {
-      // 延迟清除同步状态
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (mounted) {
-          _isSyncing = false;
-          _syncMessage = null;
-          notifyListeners();
-        }
-      });
+      _setSyncUi(syncing: false);
     }
   }
 
-  /// 🎯 智能合并笔记数据（不清空现有数据）
-  /// 大厂策略：只更新变化的数据，保持UI稳定
-  Future<void> _smartMergeNotes() async {
-    try {
-      final dbNotes = await _databaseService.getNotes();
-      
-      // 创建ID到笔记的映射，用于快速查找
-      final dbNotesMap = {for (var note in dbNotes) note.id: note};
-      final existingIds = _notes.map((n) => n.id).toSet();
-      
-      // 收集新笔记
-      final newNotes = <Note>[];
-      
-      // 遍历数据库笔记
-      for (final note in dbNotes) {
-        if (existingIds.contains(note.id)) {
-          // ✅ 智能合并：保留内存中的批注数据
-          final index = _notes.indexWhere((n) => n.id == note.id);
-          if (index != -1) {
-            final existingNote = _notes[index];
-            // 合并：使用数据库的基础数据 + 内存中的批注
-            final mergedNote = note.copyWith(
-              annotations: existingNote.annotations,  // ✅ 保留批注
-            );
-            _notes[index] = mergedNote;
-          }
-        } else {
-          // 新笔记，稍后添加到列表开头
-          newNotes.add(note);
-        }
-      }
-      
-      // 将新笔记添加到列表开头（最新的在前面）
-      if (newNotes.isNotEmpty) {
-        _notes.insertAll(0, newNotes);
-        debugPrint('AppProvider: 添加 ${newNotes.length} 条新笔记到列表开头');
-      }
-      
-      // 移除已删除的笔记（数据库中不存在的）
-      final dbIds = dbNotesMap.keys.toSet();
-      final removedCount = _notes.length;
-      _notes.removeWhere((note) => !dbIds.contains(note.id));
-      final actualRemoved = removedCount - _notes.length;
-      if (actualRemoved > 0) {
-        debugPrint('AppProvider: 移除 $actualRemoved 条已删除的笔记');
-      }
-    } catch (e) {
-      debugPrint('AppProvider: 智能合并失败，回退到全量加载: $e');
-      // 出错时回退到全量加载
-      _notes = await _databaseService.getNotes();
-    }
-  }
-
-  /// 🎯 同步更新引用关系（在UI更新前完成）
-  /// 大厂策略：确保UI渲染时数据完整
-  Future<void> _updateReferencesSync() async {
-    try {
-      // 重建所有引用关系
-      await rebuildAllReferences();
-      
-      // 重新加载笔记以获取最新的引用关系
-      final updatedNotes = await _databaseService.getNotes();
-      final updatedNotesMap = {for (var note in updatedNotes) note.id: note};
-      
-      // 更新内存中笔记的引用关系
-      for (var i = 0; i < _notes.length; i++) {
-        final updatedNote = updatedNotesMap[_notes[i].id];
-        if (updatedNote != null) {
-          _notes[i] = updatedNote;
-        }
-      }
-      
-      debugPrint('AppProvider: 引用关系同步更新完成');
-    } catch (e) {
-      debugPrint('AppProvider: 更新引用关系失败: $e');
-      // 不抛出异常，避免影响主流程
-    }
-  }
-
-  /// 后台重建引用关系（不阻塞UI）
-  /// ⚠️ 已废弃：改用同步更新 _updateReferencesSync()
-  @Deprecated('Use _updateReferencesSync() instead')
-  Future<void> _rebuildReferencesInBackground() async {
-    try {
-      // 🚀 后台重建（静默）
-      await rebuildAllReferences();
-      if (kDebugMode) debugPrint('AppProvider: 后台引用关系重建完成');
-      // ⚠️ 问题：异步执行导致UI先渲染，箭头延迟显示
-      notifyListeners(); // 需要再次通知UI更新
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 后台重建失败: $e');
-    }
-  }
-
-  // 完整的数据同步（用户手动刷新时调用）
-  Future<void> performCompleteSync() async {
-    try {
-      if (!isLoggedIn || _memosApiService == null) {
-        throw Exception('用户未登录或API服务未初始化');
-      }
-
-      _syncMessage = '开始完整同步...';
-      notifyListeners();
-
-      // 1. 获取所有本地数据
-      _syncMessage = '分析本地数据...';
-      notifyListeners();
-
-      final localNotes = await _databaseService.getNotes();
-      final unsyncedNotes = localNotes.where((note) => !note.isSynced).toList();
-      final unsyncedRelations = await _getUnsyncedRelations();
-
-      // 2. 上传未同步的本地笔记
-      if (unsyncedNotes.isNotEmpty) {
-        _syncMessage = '上传本地笔记 (${unsyncedNotes.length}条)...';
-        notifyListeners();
-
-        for (final note in unsyncedNotes) {
-          try {
-            await _uploadLocalNoteToServer(note);
-          } catch (e) {}
-        }
-      }
-
-      // 3. 获取服务器数据并合并
-      _syncMessage = '获取服务器数据...';
-      notifyListeners();
-
-      await fetchNotesFromServer();
-
-      // 4. 重新处理所有引用关系
-      _syncMessage = '同步引用关系...';
-      notifyListeners();
-
-      await _syncAllNotesReferences();
-
-      // 5. 清理无效的引用关系
-      _syncMessage = '清理无效数据...';
-      notifyListeners();
-
-      await _cleanupInvalidReferences();
-
-      // 6. 清理所有孤立的引用关系
-      _syncMessage = '清理孤立引用关系...';
-      notifyListeners();
-
-      await _cleanupAllOrphanedReferences();
-
-      // 🔧 新增：使用UnifiedReferenceManager进行额外的无效引用清理
-      await UnifiedReferenceManager().cleanupInvalidReferences();
-
-      _syncMessage = '';
-      notifyListeners();
-    } catch (e) {
-      _syncMessage = '';
-      notifyListeners();
-      throw Exception('同步失败: $e');
-    }
-  }
-
-  // 上传单个本地笔记到服务器
-  Future<void> _uploadLocalNoteToServer(Note note) async {
-    try {
-      final serverNote = await _memosApiService!.createMemo(
-        content: note.content,
-        visibility: note.visibility,
-      );
-
-      // 如果服务器返回了不同的ID，需要更新本地记录
-      if (serverNote.id != note.id) {
-        // 删除旧的本地记录
-        await _databaseService.deleteNote(note.id);
-
-        // 保存新的记录
-        final syncedNote = serverNote.copyWith(
-          isSynced: true,
-          tags: note.tags,
-          relations: note.relations,
-        );
-        await _databaseService.saveNote(syncedNote);
-
-        // 更新内存中的笔记列表
-        final index = _notes.indexWhere((n) => n.id == note.id);
-        if (index != -1) {
-          _notes[index] = syncedNote;
-        }
-      } else {
-        // ID相同，只需要标记为已同步
-        final syncedNote = note.copyWith(isSynced: true);
-        await _databaseService.updateNote(syncedNote);
-
-        final index = _notes.indexWhere((n) => n.id == note.id);
-        if (index != -1) {
-          _notes[index] = syncedNote;
-        }
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // 获取所有未同步的引用关系
-  Future<List<Map<String, dynamic>>> _getUnsyncedRelations() async {
-    final unsyncedRelations = <Map<String, dynamic>>[];
-
-    for (final note in _notes) {
-      for (final relation in note.relations) {
-        if (relation['synced'] == false) {
-          unsyncedRelations.add({
-            ...relation,
-            'noteId': note.id,
-          });
-        }
-      }
-    }
-
-    return unsyncedRelations;
-  }
-
-  // 同步所有笔记的引用关系
-  Future<void> _syncAllNotesReferences() async {
-    try {
-      for (final note in _notes) {
-        await _processNoteReferences(note);
-        // 添加小延迟避免请求过于频繁
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-    } catch (e) {}
-  }
-
-  // 清理所有笔记的孤立引用关系
-  Future<void> _cleanupAllOrphanedReferences() async {
-    try {
-      var totalCleaned = 0;
-
-      // 遍历所有笔记
-      for (var i = 0; i < _notes.length; i++) {
-        final note = _notes[i];
-
-        // 查找孤立的REFERENCED_BY关系
-        final orphanedReverseRelations = note.relations.where((rel) {
-          final type = rel['type'];
-          final fromMemoId = rel['memoId']?.toString();
-
-          // 如果是REFERENCED_BY类型，检查源笔记是否还存在对应的REFERENCE关系
-          if (type == 'REFERENCED_BY' &&
-              fromMemoId != null &&
-              fromMemoId != note.id) {
-            final sourceNoteIndex =
-                _notes.indexWhere((n) => n.id == fromMemoId);
-            if (sourceNoteIndex != -1) {
-              final sourceNote = _notes[sourceNoteIndex];
-
-              // 检查源笔记是否还有对当前笔记的引用关系
-              final hasCorrespondingReference = sourceNote.relations.any(
-                (sourceRel) =>
-                    sourceRel['type'] == 'REFERENCE' &&
-                    sourceRel['memoId']?.toString() == fromMemoId &&
-                    sourceRel['relatedMemoId']?.toString() == note.id,
-              );
-
-              if (!hasCorrespondingReference) {
-                return true; // 这是一个孤立的关系，需要删除
-              }
-            } else {
-              // 源笔记不存在，也是孤立关系
-              return true;
-            }
-          }
-          return false;
-        }).toList();
-
-        // 删除孤立的REFERENCED_BY关系
-        if (orphanedReverseRelations.isNotEmpty) {
-          final cleanedRelations = note.relations
-              .where((rel) => !orphanedReverseRelations.contains(rel))
-              .toList();
-          final cleanedNote = note.copyWith(relations: cleanedRelations);
-          await _databaseService.updateNote(cleanedNote);
-
-          _notes[i] = cleanedNote;
-          totalCleaned += orphanedReverseRelations.length;
-        }
-      }
-
-      if (totalCleaned > 0) {
-        notifyListeners(); // 更新UI
-      } else {}
-    } catch (e) {}
-  }
-
-  // 清理无效的引用关系
-  Future<void> _cleanupInvalidReferences() async {
-    try {
-      final allNotes = await _databaseService.getNotes();
-      final noteIds = allNotes.map((n) => n.id).toSet();
-
-      for (final note in allNotes) {
-        var hasInvalidReferences = false;
-        final validRelations = <Map<String, dynamic>>[];
-
-        for (final relation in note.relations) {
-          final relatedId = relation['relatedMemoId']?.toString();
-          if (relatedId != null && noteIds.contains(relatedId)) {
-            validRelations.add(relation);
-          } else {
-            hasInvalidReferences = true;
-          }
-        }
-
-        if (hasInvalidReferences) {
-          final updatedNote = note.copyWith(relations: validRelations);
-          await _databaseService.updateNote(updatedNote);
-
-          // 更新内存中的笔记
-          final index = _notes.indexWhere((n) => n.id == note.id);
-          if (index != -1) {
-            _notes[index] = updatedNote;
-          }
-        }
-      }
-    } catch (e) {}
-  }
-
-  /// 🔧 新增：在笔记ID变化后更新所有引用关系
+  /// 当本地临时ID笔记上传到服务器后，ID 可能发生变化。
+  /// 这里负责把所有 relations 中的旧ID替换为新ID，避免引用关系断裂。
   Future<void> _updateReferenceIdsAfterSync(String oldId, String newId) async {
-    try {
-      final allNotes = await _databaseService.getNotes();
-      var hasUpdates = false;
+    if (oldId == newId) {
+      return;
+    }
 
-      for (final note in allNotes) {
-        var noteUpdated = false;
-        final updatedRelations = <Map<String, dynamic>>[];
+    Future<List<Map<String, dynamic>>> rewriteRelations(
+      List<Map<String, dynamic>> relations,
+    ) async {
+      var changed = false;
+      final updated = relations.map((rel) {
+        final memoId = rel['memoId']?.toString();
+        final relatedMemoId = rel['relatedMemoId']?.toString();
 
-        for (final relation in note.relations) {
-          final relationMap = Map<String, dynamic>.from(relation);
-
-          // 更新 memoId
-          if (relationMap['memoId'] == oldId) {
-            relationMap['memoId'] = newId;
-            noteUpdated = true;
-          }
-
-          // 更新 relatedMemoId
-          if (relationMap['relatedMemoId'] == oldId) {
-            relationMap['relatedMemoId'] = newId;
-            noteUpdated = true;
-          }
-
-          updatedRelations.add(relationMap);
+        final next = <String, dynamic>{...rel};
+        if (memoId == oldId) {
+          next['memoId'] = newId;
+          changed = true;
         }
-
-        if (noteUpdated) {
-          final updatedNote = note.copyWith(relations: updatedRelations);
-          await _databaseService.updateNote(updatedNote);
-          hasUpdates = true;
+        if (relatedMemoId == oldId) {
+          next['relatedMemoId'] = newId;
+          changed = true;
         }
-      }
-
-      if (hasUpdates) {
-        // 重新加载内存中的笔记
-        await loadNotesFromLocal();
-        notifyListeners();
-      }
-    } catch (e) {}
-  }
-
-  // 从服务器获取笔记
-  Future<void> fetchNotesFromServer() async {
-    // 设置同步状态
-    _isSyncing = true;
-    _syncMessage = '正在从服务器获取数据...';
-    notifyListeners();
-
-    try {
-      // 检查并快速重新初始化API服务
-      if (_memosApiService == null) {
-        await _ensureApiServiceInitialized();
-      }
-
-      // 首先获取本地所有笔记（包括已同步和未同步的）
-      _syncMessage = '备份本地笔记...';
-      notifyListeners();
-
-      debugPrint('AppProvider: 获取所有本地笔记');
-      final localNotes = await _databaseService.getNotes();
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
-      debugPrint(
-        'AppProvider: 本地共有 ${localNotes.length} 条笔记，其中 ${unsyncedNotes.length} 条未同步',
-      );
-
-      _syncMessage = '获取远程笔记...';
-      notifyListeners();
-
-      debugPrint('AppProvider: 从服务器获取笔记');
-      final response = await _memosApiService!.getMemos();
-
-      _syncMessage = '处理笔记数据...';
-      notifyListeners();
-
-      final memosList = response['memos'] as List<dynamic>;
-      final serverNotes = memosList
-          .map((memo) => Note.fromJson(memo as Map<String, dynamic>))
-          .where((note) => note.isNormal) // 🔥 过滤掉归档笔记
-          .toList();
-
-      // 🚀 性能优化：批量处理标签提取，不阻塞UI
-      // Note.fromJson已经包含relationList，无需单独请求引用关系
-      for (var i = 0; i < serverNotes.length; i++) {
-        final note = serverNotes[i];
-        final tags = Note.extractTagsFromContent(note.content);
-
-        // 确保服务器笔记都标记为已同步，relations已在fromJson中处理
-        serverNotes[i] = note.copyWith(
-          tags: tags,
-          isSynced: true,
-        );
-      }
-
-      _syncMessage = '智能合并数据...';
-      notifyListeners();
-
-      // 智能合并策略：优先保留服务器数据，但不丢失本地未同步的数据
-      final mergedNotes = <Note>[];
-      final serverNoteIds = serverNotes.map((note) => note.id).toSet();
-      final serverNoteHashes = serverNotes.map(_calculateNoteHash).toSet();
-
-      // 1. 添加所有服务器笔记，但保留本地的引用关系和置顶状态
-      for (final serverNote in serverNotes) {
-        // 查找对应的本地笔记，获取其引用关系和置顶状态
-        final localNote = localNotes.firstWhere(
-          (note) => note.id == serverNote.id,
-          orElse: () => Note(
-            id: '',
-            content: '',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        );
-
-        // 如果本地笔记存在，合并本地状态（引用关系、置顶状态等）
-        if (localNote.id.isNotEmpty) {
-          // 🔥 保留本地的relations和isPinned状态（客户端优先策略）
-          final mergedNote = serverNote.copyWith(
-            relations: localNote.relations.isNotEmpty 
-                ? localNote.relations 
-                : serverNote.relations,
-            isPinned: localNote.isPinned, // 保留本地置顶状态
-          );
-          mergedNotes.add(mergedNote);
-        } else {
-          mergedNotes.add(serverNote);
-        }
-      }
-      debugPrint('AppProvider: 添加 ${serverNotes.length} 条服务器笔记');
-
-      // 2. 添加本地未同步的笔记（避免重复）
-      var addedUnsyncedCount = 0;
-      for (var note in unsyncedNotes) {
-        final noteHash = _calculateNoteHash(note);
-
-        // 检查是否与服务器数据重复
-        final isDuplicate = serverNoteHashes.contains(noteHash);
-        final hasIdConflict =
-            serverNoteIds.contains(note.id) && !note.id.startsWith('local_');
-
-        if (!isDuplicate) {
-          // 如果ID冲突但内容不重复，生成新的本地ID
-          if (hasIdConflict) {
-            note = note.copyWith(
-              id: 'local_${DateTime.now().millisecondsSinceEpoch}_$addedUnsyncedCount',
-              isSynced: false,
-            );
-          }
-          mergedNotes.add(note);
-          addedUnsyncedCount++;
-        } else {
-          debugPrint('AppProvider: 跳过重复笔记: ${note.id}');
-        }
-      }
-
-      debugPrint('AppProvider: 添加 $addedUnsyncedCount 条本地未同步笔记');
-
-      // 3. 更新本地数据库（upsert 策略：不清空，避免写入中断时丢失数据）
-      debugPrint('AppProvider: 更新本地数据库');
-      await _databaseService.saveNotes(mergedNotes);
-      // 删除服务器已不存在的本地已同步笔记，未同步笔记保留
-      await _databaseService.deleteSyncedNotesNotIn(serverNoteIds.toList());
-
-      // 4. 🚀 同步完成后重新完整加载笔记
-      // 大厂标准：同步完成后应该从数据库重新加载全部数据，确保数据一致性
-      _totalNotesCount = mergedNotes.length;
-      
-      // 🔥 关键修复：从数据库重新加载全部笔记（确保数据新鲜且正确排序）
-      final dbNotes = await _databaseService.getNotes(); // 加载全部数据
-      
-      // ✅ 保护内存中的批注数据（批注是本地增强功能，不同步到服务器）
-      final memoryNotesMap = {for (var note in _notes) note.id: note};
-      
-      _notes = dbNotes.map((dbNote) {
-        // 如果内存中有这个笔记且有批注，保留其批注
-        final memoryNote = memoryNotesMap[dbNote.id];
-        if (memoryNote != null && memoryNote.annotations.isNotEmpty) {
-          return dbNote.copyWith(annotations: memoryNote.annotations);
-        }
-        return dbNote;
+        return next;
       }).toList();
-      
-      // 重置分页状态
-      _currentPage = (_notes.length / _pageSize).floor(); // 根据实际加载的数量计算页码
-      _loadMoreState = LoadMoreState.idle;
-      _hasMoreData = false; // 已经全部加载
-      
-      _syncMessage = '同步完成';
+      return changed ? updated : relations;
+    }
+
+    var anyChanged = false;
+    for (var i = 0; i < _notes.length; i++) {
+      final note = _notes[i];
+      if (note.relations.isEmpty) {
+        continue;
+      }
+
+      final nextRelations = await rewriteRelations(note.relations);
+      if (!identical(nextRelations, note.relations)) {
+        final updatedNote = note.copyWith(relations: nextRelations);
+        _notes[i] = updatedNote;
+        await _databaseService.updateNote(updatedNote);
+        anyChanged = true;
+      }
+    }
+
+    if (anyChanged) {
       notifyListeners();
-
-      debugPrint('AppProvider: ✅ 笔记同步完成！数据库总计 $_totalNotesCount 条，已全部加载 ${_notes.length} 条到内存');
-    } catch (e, stackTrace) {
-      debugPrint('AppProvider: 从服务器获取数据失败: $e');
-      debugPrint('AppProvider: 错误堆栈: $stackTrace');
-
-      // 🔥 过滤 Firebase 错误（项目未使用 Firebase，忽略相关错误）
-      final errorString = e.toString();
-      if (errorString.contains('Firebase') || 
-          errorString.contains('[core/no-app]') ||
-          errorString.contains('FirebaseApp')) {
-        debugPrint('⚠️ 检测到 Firebase 相关错误，已忽略（项目未使用 Firebase）');
-        _isSyncing = false;
-        _syncMessage = null;
-        notifyListeners();
-        // 继续加载本地数据
-        await loadNotesFromLocal();
-        return;
-      }
-
-      // 检查是否为Token过期异常
-      if (e is TokenExpiredException || errorString.contains('Token无效或已过期')) {
-        debugPrint('AppProvider: 检测到Token过期，强制用户重新登录');
-        _syncMessage = '登录已过期，请重新登录';
-        notifyListeners();
-        await _handleTokenExpired();
-        return;
-      }
-
-      _syncMessage = '同步失败: ${errorString.split('\n')[0]}';
-      notifyListeners();
-
-      // 如果是API服务初始化失败，尝试清除登录状态
-      if (e.toString().contains('API服务初始化失败')) {
-        await logout(force: true);
-      }
-
-      debugPrint('AppProvider: 保留本地数据');
-      // 加载本地数据作为后备
-      await loadNotesFromLocal();
-
-      rethrow;
-    } finally {
-      // 延迟一点时间再清除同步状态，让用户有时间看到"同步完成"
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _isSyncing = false;
-          _syncMessage = null;
-          notifyListeners();
-        }
-      });
     }
   }
 
   // 同步本地未同步的笔记到服务器
   Future<void> syncNotesWithServer() async {
-    if (!isLoggedIn || _memosApiService == null) return;
+    if (!isLoggedIn || _memosApiService == null) {
+      return;
+    }
 
     // 🚀 大厂标准：性能监控
     await PerformanceTracker().startTrace('sync_notes_to_server');
@@ -3353,8 +2724,8 @@ class AppProvider with ChangeNotifier {
 
       if (unsyncedNotes.isEmpty) {
         Log.sync.debug('No unsynced notes');
-        await PerformanceTracker().stopTrace('sync_notes_to_server', 
-          success: true,
+        await PerformanceTracker().stopTrace(
+          'sync_notes_to_server',
           metrics: {'note_count': 0},
         );
         return;
@@ -3363,88 +2734,70 @@ class AppProvider with ChangeNotifier {
       Log.sync.info('Syncing notes', data: {'count': unsyncedNotes.length});
 
       // 逐一同步到服务器
-      int successCount = 0;
+      var successCount = 0;
       for (final note in unsyncedNotes) {
         try {
-          final oldId = note.id;
-
-          // 创建服务器笔记
-          final serverNote = await _memosApiService!.createMemo(
-            content: note.content,
-            visibility: note.visibility.isNotEmpty
-                ? note.visibility
-                : _appConfig.defaultNoteVisibility,
-          );
-
-          final newId = serverNote.id;
-
-          // 🔧 修复：如果ID发生变化，更新所有引用关系
-          if (oldId != newId) {
-            await _updateReferenceIdsAfterSync(oldId, newId);
-          }
-
-          // 删除本地笔记（使用临时ID）
-          await _databaseService.deleteNote(note.id);
-
-          // 保存服务器返回的笔记（带有服务器ID）
-          await _databaseService.saveNote(serverNote);
-
-          // 更新内存中的列表
-          final index = _notes.indexWhere((n) => n.id == note.id);
-          if (index != -1) {
-            _notes[index] = serverNote;
-          }
-          
+          await _syncUnsyncedNoteToMemos(note);
           successCount++;
-        } catch (e, stackTrace) {
-          Log.sync.error('Failed to sync note', error: e, stackTrace: stackTrace, data: {
-            'note_id': note.id,
-          });
-          await ErrorHandler.captureException(e, stackTrace: stackTrace, context: {
-            'operation': 'sync_single_note',
-            'note_id': note.id,
-          });
+        } on Object catch (e, stackTrace) {
+          Log.sync.error(
+            'Failed to sync note',
+            error: e,
+            stackTrace: stackTrace,
+            data: {
+              'note_id': note.id,
+            },
+          );
+          await ErrorHandler.captureException(
+            e,
+            stackTrace: stackTrace,
+            context: {
+              'operation': 'sync_single_note',
+              'note_id': note.id,
+            },
+          );
         }
       }
 
       // 刷新内存中的列表
       await loadNotesFromLocal();
-      
+
       // 🚀 大厂标准：成功监控
-      await PerformanceTracker().stopTrace('sync_notes_to_server', 
-        success: true,
+      await PerformanceTracker().stopTrace(
+        'sync_notes_to_server',
         metrics: {
           'total_count': unsyncedNotes.length,
           'success_count': successCount,
           'failure_count': unsyncedNotes.length - successCount,
         },
       );
-      Log.sync.info('Sync completed', data: {
-        'success': successCount,
-        'failed': unsyncedNotes.length - successCount,
-      });
-    } catch (e, stackTrace) {
+      Log.sync.info(
+        'Sync completed',
+        data: {
+          'success': successCount,
+          'failed': unsyncedNotes.length - successCount,
+        },
+      );
+    } on Object catch (e, stackTrace) {
       // 🚀 大厂标准：错误监控
-      await PerformanceTracker().stopTrace('sync_notes_to_server', success: false);
+      await PerformanceTracker()
+          .stopTrace('sync_notes_to_server', success: false);
       Log.sync.error('Sync to server failed', error: e, stackTrace: stackTrace);
-      await ErrorHandler.captureException(e, stackTrace: stackTrace, context: {
-        'operation': 'sync_notes_to_server',
-      });
+      await ErrorHandler.captureException(
+        e,
+        stackTrace: stackTrace,
+        context: {
+          'operation': 'sync_notes_to_server',
+        },
+      );
     }
-  }
-
-  // 创建同步定时器
-  void _createSyncTimer() {
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(
-      Duration(minutes: _appConfig.syncInterval),
-      (_) => syncNotesToServer(),
-    );
   }
 
   // 同步笔记到服务器
   Future<bool> syncNotesToServer() async {
-    if (!isLoggedIn || _memosApiService == null) return false;
+    if (!isLoggedIn || _memosApiService == null) {
+      return false;
+    }
 
     try {
       // 获取未同步的笔记
@@ -3453,35 +2806,8 @@ class AppProvider with ChangeNotifier {
       // 逐一同步到服务器
       for (final note in unsyncedNotes) {
         try {
-          final oldId = note.id;
-
-          // 创建服务器笔记
-          final serverNote = await _memosApiService!.createMemo(
-            content: note.content,
-            visibility: note.visibility.isNotEmpty
-                ? note.visibility
-                : _appConfig.defaultNoteVisibility,
-          );
-
-          final newId = serverNote.id;
-
-          // 🔧 修复：如果ID发生变化，更新所有引用关系
-          if (oldId != newId) {
-            await _updateReferenceIdsAfterSync(oldId, newId);
-          }
-
-          // 删除本地笔记（使用临时ID）
-          await _databaseService.deleteNote(note.id);
-
-          // 保存服务器返回的笔记（带有服务器ID）
-          await _databaseService.saveNote(serverNote);
-
-          // 更新内存中的列表
-          final index = _notes.indexWhere((n) => n.id == note.id);
-          if (index != -1) {
-            _notes[index] = serverNote;
-          }
-        } catch (e) {
+          await _syncUnsyncedNoteToMemos(note);
+        } on Object catch (e) {
           debugPrint('同步笔记失败: ${note.id} - $e');
         }
       }
@@ -3489,7 +2815,7 @@ class AppProvider with ChangeNotifier {
       // 刷新内存中的列表
       await loadNotesFromLocal();
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('同步笔记到服务器失败: $e');
       return false;
     }
@@ -3502,7 +2828,9 @@ class AppProvider with ChangeNotifier {
     String? avatarUrl,
     String? description,
   }) async {
-    if (!isLoggedIn || _memosApiService == null || _user == null) return false;
+    if (!isLoggedIn || _memosApiService == null || _user == null) {
+      return false;
+    }
 
     _setLoading(true);
 
@@ -3521,8 +2849,30 @@ class AppProvider with ChangeNotifier {
 
       notifyListeners();
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('更新用户信息失败: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (!isLoggedIn || _memosApiService == null || _user == null) {
+      return false;
+    }
+
+    _setLoading(true);
+    try {
+      return await _memosApiService!.updatePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+    } on Object catch (e) {
+      debugPrint('更新密码失败: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -3623,177 +2973,10 @@ class AppProvider with ChangeNotifier {
     debugPrint('AppProvider: 自动同步已停止');
   }
 
-  // 初始化API服务
-  Future<void> _initializeApiService(String baseUrl, String token) async {
-    try {
-      debugPrint('AppProvider: 开始初始化API服务，URL：$baseUrl');
-      final normalizedUrl = ApiServiceFactory.normalizeApiUrl(baseUrl);
-      debugPrint('AppProvider: 规范化后的URL: $normalizedUrl');
-
-      _memosApiService = await ApiServiceFactory.createApiService(
-        baseUrl: normalizedUrl,
-        token: token,
-      ) as MemosApiServiceFixed;
-
-      // 验证API服务是否正常工作
-      final testResponse = await _memosApiService!.getMemos();
-      // 初始化增量同步服务
-      _incrementalSyncService =
-          IncrementalSyncService(_databaseService, _memosApiService);
-      debugPrint('AppProvider: 增量同步服务已初始化');
-
-      // 更新配置
-      final updatedConfig = _appConfig.copyWith(
-        memosApiUrl: normalizedUrl,
-        lastToken: token,
-        isLocalMode: false,
-      );
-      await updateConfig(updatedConfig);
-
-      // 启动自动同步
-      startAutoSync();
-    } catch (e) {
-      debugPrint('AppProvider: API服务初始化失败: $e');
-      _memosApiService = null;
-      // 清除保存的凭证
-      await _preferencesService.clearLoginInfo();
-      rethrow;
-    }
-  }
-
-  // 从云端同步数据
-  Future<void> syncWithServer() async {
-    if (!isLoggedIn || _memosApiService == null) {
-      throw Exception('请先登录您的账号');
-    }
-
-    // 设置同步状态
-    _isSyncing = true;
-    _syncMessage = '准备同步...';
-    notifyListeners();
-
-    try {
-      // 1. 先将本地未同步的笔记上传到服务器
-      _syncMessage = '上传本地笔记...';
-      notifyListeners();
-
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
-      debugPrint('AppProvider: 发现 ${unsyncedNotes.length} 条未同步笔记');
-
-      for (final note in unsyncedNotes) {
-        try {
-          final oldId = note.id;
-
-          // 创建服务器笔记
-          final serverNote = await _memosApiService!.createMemo(
-            content: note.content,
-            visibility: note.visibility.isNotEmpty
-                ? note.visibility
-                : _appConfig.defaultNoteVisibility,
-          );
-
-          final newId = serverNote.id;
-
-          // 🔧 修复：如果ID发生变化，更新所有引用关系
-          if (oldId != newId) {
-            await _updateReferenceIdsAfterSync(oldId, newId);
-          }
-
-          // 删除本地笔记（使用临时ID）
-          await _databaseService.deleteNote(note.id);
-
-          // 保存服务器返回的笔记（带有服务器ID）
-          await _databaseService.saveNote(serverNote);
-
-          // 更新内存中的列表
-          final index = _notes.indexWhere((n) => n.id == note.id);
-          if (index != -1) {
-            _notes[index] = serverNote;
-          }
-        } catch (e) {
-          debugPrint('同步笔记到服务器失败: ${note.id} - $e');
-        }
-      }
-
-      // 2. 从服务器获取最新数据
-      _syncMessage = '获取服务器数据...';
-      notifyListeners();
-
-      final response = await _memosApiService!.getMemos();
-
-      final memosList = response['memos'] as List<dynamic>;
-      final serverNotes = memosList
-          .map((memo) => Note.fromJson(memo as Map<String, dynamic>))
-          .where((note) => note.isNormal) // 🔥 过滤掉归档笔记
-          .toList();
-
-      // 3. 为所有服务器笔记重新提取标签
-      _syncMessage = '处理笔记数据...';
-      notifyListeners();
-
-      for (var i = 0; i < serverNotes.length; i++) {
-        final note = serverNotes[i];
-        final tags = Note.extractTagsFromContent(note.content);
-        if (tags.isNotEmpty) {
-          serverNotes[i] = note.copyWith(tags: tags);
-        }
-      }
-
-      // 4. 更新本地数据库（upsert 策略）
-      _syncMessage = '更新本地数据...';
-      notifyListeners();
-
-      await _databaseService.saveNotes(serverNotes);
-      final syncedServerIds = serverNotes.map((n) => n.id).toList();
-      await _databaseService.deleteSyncedNotesNotIn(syncedServerIds);
-
-      // 5. 更新内存中的列表
-      _notes = await _databaseService.getNotes();
-
-      _syncMessage = '同步完成';
-      notifyListeners();
-
-      // 延迟一点时间再清除同步状态
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _isSyncing = false;
-          _syncMessage = null;
-          notifyListeners();
-        }
-      });
-    } catch (e) {
-      debugPrint('同步失败: $e');
-      _syncMessage = '同步失败: ${e.toString().split('\n')[0]}';
-      notifyListeners();
-
-      // 延迟一点时间再清除同步状态
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          _isSyncing = false;
-          _syncMessage = null;
-          notifyListeners();
-        }
-      });
-
-      rethrow;
-    }
-  }
-
-  // 初始化通知并检查更新
-  Future<void> _initializeAnnouncements() async {
-    try {
-      // 使用云验证数据检查更新
-      await checkForUpdatesOnStartup();
-
-      // 🔄 使用新的状态管理机制设置通知数量
-      await _updateUnreadCount();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('初始化通知异常: $e');
-    }
-  }
+  // NOTE: `syncWithServer` moved to `app_provider_sync.part.dart`.
 
   // 刷新未读通知数量
+  @override
   Future<void> refreshUnreadAnnouncementsCount() async {
     try {
       // 🚀 不立即刷新云验证数据，而是检查缓存
@@ -3807,7 +2990,7 @@ class AppProvider with ChangeNotifier {
       // 🔄 使用新的状态管理机制更新通知数量
       await _updateUnreadCount();
       notifyListeners();
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('刷新未读通知数量异常: $e');
     }
   }
@@ -3834,7 +3017,7 @@ class AppProvider with ChangeNotifier {
         );
         _pendingCurrentVersion = currentVersion;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('启动时检查更新异常: $e');
     }
   }
@@ -3909,14 +3092,18 @@ class AppProvider with ChangeNotifier {
       if (!readNotifications.contains(id)) {
         readNotifications.add(id);
         await prefs.setStringList('read_notifications', readNotifications);
-        if (kDebugMode) debugPrint('AppProvider: 通知 $id 已标记为已读');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 通知 $id 已标记为已读');
+        }
       }
 
       // 重新计算未读数量
       await _updateUnreadCount();
       notifyListeners();
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 标记通知已读失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 标记通知已读失败: $e');
+      }
     }
   }
 
@@ -3931,13 +3118,17 @@ class AppProvider with ChangeNotifier {
           !readNotifications.contains(currentAnnouncementId)) {
         readNotifications.add(currentAnnouncementId);
         await prefs.setStringList('read_notifications', readNotifications);
-        if (kDebugMode) debugPrint('AppProvider: 所有通知已标记为已读');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 所有通知已标记为已读');
+        }
       }
 
       await _updateUnreadCount();
       notifyListeners();
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 标记所有通知已读失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 标记所有通知已读失败: $e');
+      }
     }
   }
 
@@ -3946,8 +3137,10 @@ class AppProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final readNotifications = prefs.getStringList('read_notifications') ?? [];
       return readNotifications.contains(id);
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 检查通知已读状态失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 检查通知已读状态失败: $e');
+      }
       return false;
     }
   }
@@ -3972,14 +3165,18 @@ class AppProvider with ChangeNotifier {
       try {
         reminderUnreadCount =
             await _reminderNotificationService.getUnreadCount();
-      } catch (e) {
-        if (kDebugMode) debugPrint('AppProvider: 获取提醒通知未读数量失败: $e');
+      } on Object catch (e) {
+        if (kDebugMode) {
+          debugPrint('AppProvider: 获取提醒通知未读数量失败: $e');
+        }
       }
 
       // 🔥 合并两种通知的未读数量
       _unreadAnnouncementsCount = systemUnreadCount + reminderUnreadCount;
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 更新未读数量失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 更新未读数量失败: $e');
+      }
       _unreadAnnouncementsCount = 0;
     }
   }
@@ -3999,7 +3196,9 @@ class AppProvider with ChangeNotifier {
         }
       }
 
-      if (kDebugMode) debugPrint('AppProvider: 开始加载云验证数据');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 开始加载云验证数据');
+      }
 
       // 并行加载配置和公告
       final futures = await Future.wait([
@@ -4017,7 +3216,9 @@ class AppProvider with ChangeNotifier {
         // 检查是否需要更新
         await _checkCloudUpdate();
       } else {
-        if (kDebugMode) debugPrint('AppProvider: 云配置加载失败');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 云配置加载失败');
+        }
       }
 
       // 处理公告响应
@@ -4030,13 +3231,13 @@ class AppProvider with ChangeNotifier {
 
       // 🚀 更新缓存时间
       _lastCloudVerificationTime = DateTime.now();
-    } catch (e) {
+    } on Object {
       // 加载云验证数据异常
     }
   }
 
   /// 检查云端更新
-  /// 
+  ///
   /// iOS: 通过iTunes API检查App Store版本（符合Apple规范）
   /// Android: 通过自有服务器检查版本
   Future<void> _checkCloudUpdate() async {
@@ -4047,9 +3248,11 @@ class AppProvider with ChangeNotifier {
         // 这里不自动检查，避免启动时频繁访问App Store API
         return;
       }
-      
+
       // Android平台继续使用原有逻辑
-      if (_cloudAppConfig == null) return;
+      if (_cloudAppConfig == null) {
+        return;
+      }
 
       // 获取当前应用版本
       final currentVersion = Config.AppConfig.appVersion;
@@ -4066,7 +3269,7 @@ class AppProvider with ChangeNotifier {
         );
         debugPrint('AppProvider: 强制更新: ${_cloudAppConfig!.isForceUpdate}');
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 检查云端更新异常: $e');
     }
   }
@@ -4087,7 +3290,9 @@ class AppProvider with ChangeNotifier {
   /// 是否有云端更新
   Future<bool> hasCloudUpdate() async {
     try {
-      if (_cloudAppConfig == null) return false;
+      if (_cloudAppConfig == null) {
+        return false;
+      }
 
       final currentVersion = Config.AppConfig.appVersion;
 
@@ -4095,7 +3300,7 @@ class AppProvider with ChangeNotifier {
         currentVersion,
         _cloudAppConfig!.version,
       );
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('AppProvider: 检查是否有云端更新异常: $e');
       return false;
     }
@@ -4167,11 +3372,15 @@ class AppProvider with ChangeNotifier {
 
   /// 在后台初始化API服务，不阻塞启动流程
   Future<void> _initializeApiServiceInBackground() async {
-    if (_memosApiService != null) return;
+    if (_memosApiService != null) {
+      return;
+    }
 
     // 检查是否启用自动登录
     if (!_appConfig.autoLogin) {
-      if (kDebugMode) debugPrint('AppProvider: 未启用自动登录，跳过自动登录');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 未启用自动登录，跳过自动登录');
+      }
       return;
     }
 
@@ -4180,18 +3389,24 @@ class AppProvider with ChangeNotifier {
     final savedToken = _appConfig.lastToken ?? _user?.token;
 
     if (savedServerUrl == null || savedToken == null) {
-      if (kDebugMode) debugPrint('AppProvider: 缺少保存的服务器信息或token，跳过自动登录');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 缺少保存的服务器信息或token，跳过自动登录');
+      }
       return;
     }
 
     try {
-      if (kDebugMode) debugPrint('AppProvider: 开始验证保存的token并尝试自动登录');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 开始验证保存的token并尝试自动登录');
+      }
 
       // 尝试使用保存的token自动登录
       final loginResult = await loginWithToken(savedServerUrl, savedToken);
 
       if (loginResult.$1) {
-        if (kDebugMode) debugPrint('AppProvider: 自动登录成功');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 自动登录成功');
+        }
 
         // 初始化API服务
         _memosApiService = await ApiServiceFactory.createApiService(
@@ -4206,16 +3421,23 @@ class AppProvider with ChangeNotifier {
         _resourceService = MemosResourceService(
           baseUrl: savedServerUrl,
           token: savedToken,
+          serverVersion: await MemosApiServiceFixed.getServerVersion(
+            savedServerUrl,
+          ),
         );
 
         // 更新应用配置为在线模式
         if (_appConfig.isLocalMode) {
-          if (kDebugMode) debugPrint('AppProvider: 切换到在线模式');
+          if (kDebugMode) {
+            debugPrint('AppProvider: 切换到在线模式');
+          }
           _appConfig = _appConfig.copyWith(isLocalMode: false);
           await _preferencesService.saveAppConfig(_appConfig);
         }
 
-        if (kDebugMode) debugPrint('AppProvider: API服务和资源服务初始化成功');
+        if (kDebugMode) {
+          debugPrint('AppProvider: API服务和资源服务初始化成功');
+        }
 
         // 启动自动同步
         startAutoSync();
@@ -4233,8 +3455,10 @@ class AppProvider with ChangeNotifier {
         await _preferencesService.saveAppConfig(_appConfig);
         notifyListeners();
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 自动登录过程中发生异常: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 自动登录过程中发生异常: $e');
+      }
 
       // 发生异常时清除保存的登录信息
       try {
@@ -4243,8 +3467,10 @@ class AppProvider with ChangeNotifier {
         _appConfig = _appConfig.copyWith();
         await _preferencesService.saveAppConfig(_appConfig);
         notifyListeners();
-      } catch (clearError) {
-        if (kDebugMode) debugPrint('AppProvider: 清除登录信息时发生异常: $clearError');
+      } on Object catch (clearError) {
+        if (kDebugMode) {
+          debugPrint('AppProvider: 清除登录信息时发生异常: $clearError');
+        }
       }
     }
   }
@@ -4252,18 +3478,24 @@ class AppProvider with ChangeNotifier {
   /// 确保API服务已初始化
   /// 这个方法会快速检查并重新初始化API服务，避免重复的UI更新
   Future<void> _ensureApiServiceInitialized() async {
-    if (_memosApiService != null) return;
+    if (_memosApiService != null) {
+      return;
+    }
 
     // 只在真正需要初始化时才显示消息
     _syncMessage = '初始化API服务...';
     notifyListeners();
 
-    if (kDebugMode) debugPrint('AppProvider: API服务未初始化，尝试重新初始化');
+    if (kDebugMode) {
+      debugPrint('AppProvider: API服务未初始化，尝试重新初始化');
+    }
 
     try {
       // 优先使用当前用户的Token
       if (_appConfig.memosApiUrl != null && _user?.token != null) {
-        if (kDebugMode) debugPrint('AppProvider: 使用当前用户Token初始化API服务');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 使用当前用户Token初始化API服务');
+        }
         _memosApiService = await ApiServiceFactory.createApiService(
           baseUrl: _appConfig.memosApiUrl!,
           token: _user!.token,
@@ -4273,11 +3505,16 @@ class AppProvider with ChangeNotifier {
         _resourceService = MemosResourceService(
           baseUrl: _appConfig.memosApiUrl!,
           token: _user!.token,
+          serverVersion: await MemosApiServiceFixed.getServerVersion(
+            _appConfig.memosApiUrl!,
+          ),
         );
       }
       // 备用：使用上次保存的Token
       else if (_appConfig.memosApiUrl != null && _appConfig.lastToken != null) {
-        if (kDebugMode) debugPrint('AppProvider: 使用上次的Token初始化API服务');
+        if (kDebugMode) {
+          debugPrint('AppProvider: 使用上次的Token初始化API服务');
+        }
         _memosApiService = await ApiServiceFactory.createApiService(
           baseUrl: _appConfig.memosApiUrl!,
           token: _appConfig.lastToken,
@@ -4287,6 +3524,9 @@ class AppProvider with ChangeNotifier {
         _resourceService = MemosResourceService(
           baseUrl: _appConfig.memosApiUrl!,
           token: _appConfig.lastToken,
+          serverVersion: await MemosApiServiceFixed.getServerVersion(
+            _appConfig.memosApiUrl!,
+          ),
         );
       }
 
@@ -4294,9 +3534,13 @@ class AppProvider with ChangeNotifier {
         throw Exception('API服务初始化失败：缺少必要的配置信息');
       }
 
-      if (kDebugMode) debugPrint('AppProvider: API服务重新初始化成功');
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: API服务初始化失败: $e');
+      if (kDebugMode) {
+        debugPrint('AppProvider: API服务重新初始化成功');
+      }
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: API服务初始化失败: $e');
+      }
       throw Exception('API服务初始化失败，无法获取数据');
     }
   }
@@ -4307,98 +3551,21 @@ class AppProvider with ChangeNotifier {
       // 🚀 使用统一引用管理器（静默处理）
 
       // 使用统一引用管理器的智能更新功能
-      final success = await UnifiedReferenceManager()
+      await UnifiedReferenceManager()
           .updateReferencesFromContent(note.id, note.content);
-
-      // 🚀 处理完成（静默）
-    } catch (e) {}
-  }
-
-  // 解析文本中的引用内容，获取被引用的笔记ID列表
-  List<String> _parseReferencesFromText(String content) {
-    final referencedIds = <String>[];
-
-    // 匹配 [[引用内容]] 格式
-    final referenceRegex = RegExp(r'\[\[([^\]]+)\]\]');
-    final matches = referenceRegex.allMatches(content);
-
-    for (final match in matches) {
-      final referenceContent = match.group(1);
-      if (referenceContent != null && referenceContent.isNotEmpty) {
-        // 查找匹配这个内容的笔记
-        final matchingNote = _notes.firstWhere(
-          (note) => note.content.trim() == referenceContent.trim(),
-          orElse: () => Note(
-            id: '',
-            content: '',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        );
-
-        if (matchingNote.id.isNotEmpty &&
-            !referencedIds.contains(matchingNote.id)) {
-          referencedIds.add(matchingNote.id);
-        } else {}
-      }
+    } on Object catch (_) {
+      // Reference parsing should not block note persistence.
     }
-
-    return referencedIds;
-  }
-
-  // 创建单个引用关系
-
-  // 同步所有引用关系（先删除旧的，再创建新的）
-  Future<void> _syncAllReferenceRelations(
-    String currentNoteId,
-    List<String> relatedMemoIds,
-  ) async {
-    try {
-      if (!isLoggedIn ||
-          _user?.token == null ||
-          _appConfig.memosApiUrl == null) {
-        return;
-      }
-
-      // 1. 先删除服务器上所有现有的引用关系
-      final deleteSuccess = await _deleteAllReferenceRelations(currentNoteId);
-
-      // 2. 再创建新的引用关系
-      var successCount = 0;
-      var failureCount = 0;
-
-      for (final relatedMemoId in relatedMemoIds) {
-        final success = await _syncSingleReferenceToServer(currentNoteId, {
-          'relatedMemoId': relatedMemoId,
-          'type': 'REFERENCE',
-        });
-
-        if (success) {
-          successCount++;
-        } else {
-          failureCount++;
-        }
-      }
-    } catch (e) {}
   }
 
   // 删除服务器上笔记的所有引用关系
   Future<bool> _deleteAllReferenceRelations(String noteId) async {
     try {
-      // 使用v1 API: DELETE /api/v1/memo/{memoId}/relation
-      final url = '${_appConfig.memosApiUrl}/api/v1/memo/$noteId/relation';
-      final headers = {
-        'Authorization': 'Bearer ${_user!.token}',
-        'Content-Type': 'application/json',
-      };
-
-      final response = await NetworkUtils.directDelete(
-        Uri.parse(url),
-        headers: headers,
-      );
-
-      return response.statusCode == 200;
-    } catch (e) {
+      if (_memosApiService == null) {
+        return false;
+      }
+      return _memosApiService!.deleteAllMemoRelations(noteId);
+    } on Object {
       return false;
     }
   }
@@ -4439,14 +3606,21 @@ class AppProvider with ChangeNotifier {
         // 🚀 只打印汇总，不打印每条笔记（避免137行日志）
         final totalRelations =
             _notes.fold(0, (sum, n) => sum + n.relations.length);
+        debugPrint(
+          'AppProvider: 重建引用完成，处理 $totalRebuilt 条笔记，当前 $totalRelations 条引用',
+        );
       }
-    } catch (e) {}
+    } on Object catch (_) {
+      // Rebuilding references is maintenance and should not interrupt the app.
+    }
   }
 
   // 处理Token过期的情况
   Future<void> _handleTokenExpired() async {
     try {
-      if (kDebugMode) debugPrint('AppProvider: 处理Token过期，清除登录状态');
+      if (kDebugMode) {
+        debugPrint('AppProvider: 处理Token过期，清除登录状态');
+      }
 
       // 1. 停止自动同步
       stopAutoSync();
@@ -4455,9 +3629,13 @@ class AppProvider with ChangeNotifier {
       if (_memosApiService != null) {
         try {
           await _memosApiService!.logout();
-          if (kDebugMode) debugPrint('AppProvider: 过期token撤销成功');
-        } catch (e) {
-          if (kDebugMode) debugPrint('AppProvider: 过期token撤销失败: $e');
+          if (kDebugMode) {
+            debugPrint('AppProvider: 过期token撤销成功');
+          }
+        } on Object catch (e) {
+          if (kDebugMode) {
+            debugPrint('AppProvider: 过期token撤销失败: $e');
+          }
           // 继续执行，因为token已经过期
         }
       }
@@ -4484,9 +3662,13 @@ class AppProvider with ChangeNotifier {
       // 7. 通知UI更新
       notifyListeners();
 
-      if (kDebugMode) debugPrint('AppProvider: Token过期处理完成，已切换到本地模式');
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 处理Token过期时发生错误: $e');
+      if (kDebugMode) {
+        debugPrint('AppProvider: Token过期处理完成，已切换到本地模式');
+      }
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 处理Token过期时发生错误: $e');
+      }
     }
   }
 
@@ -4501,11 +3683,11 @@ class AppProvider with ChangeNotifier {
       try {
         // 使用NavigatorState获取context，但只在widget树构建完成后
         final context = NavigatorKey.currentContext;
-        if (context != null && _user != null) {
+        if (context != null && context.mounted && _user != null) {
           debugPrint('AppProvider: 开始预加载用户头像');
           await AvatarPreloader.preloadUserAvatar(context, _user!);
         }
-      } catch (e) {
+      } on Object catch (e) {
         // 预加载失败不影响正常功能
         debugPrint('AppProvider: 头像预加载失败（不影响正常使用）: $e');
       }
@@ -4525,13 +3707,6 @@ class AppProvider with ChangeNotifier {
 
       final note = _notes[noteIndex];
 
-      // 更新笔记的提醒时间
-      final updatedNote = note.copyWith(reminderTime: reminderTime);
-      _notes[noteIndex] = updatedNote;
-
-      // 保存到数据库
-      await _databaseService.updateNote(updatedNote);
-
       // 设置通知（传递原始noteId字符串）
       final success = await _notificationService.scheduleNoteReminder(
         noteId: noteId.hashCode,
@@ -4543,16 +3718,23 @@ class AppProvider with ChangeNotifier {
         reminderTime: reminderTime,
       );
 
+      if (!success) {
+        return false;
+      }
+
+      // 通知调度成功后再写入提醒时间，避免失败时 UI 显示假提醒。
+      final updatedNote = note.copyWith(reminderTime: reminderTime);
+      _notes[noteIndex] = updatedNote;
+      await _databaseService.updateNote(updatedNote);
+
       notifyListeners();
 
       if (kDebugMode) {
-        if (success) {
-          debugPrint('AppProvider: 成功设置笔记提醒，时间: $reminderTime');
-        } else {}
+        debugPrint('AppProvider: 成功设置笔记提醒，时间: $reminderTime');
       }
 
       return success;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -4575,7 +3757,9 @@ class AppProvider with ChangeNotifier {
       }
 
       if (kDebugMode && deletedCount > 0) {}
-    } catch (e) {}
+    } on Object catch (_) {
+      // Old reminder cleanup is opportunistic.
+    }
   }
 
   /// 🔥 保存提醒通知到数据库（市场主流做法：通知触发时立即保存）
@@ -4601,10 +3785,13 @@ class AppProvider with ChangeNotifier {
       // 更新未读通知数量
       await _updateUnreadCount();
       notifyListeners();
-    } catch (e) {}
+    } on Object catch (_) {
+      // Persisting triggered reminders is best-effort.
+    }
   }
 
   /// 取消笔记提醒
+  @override
   Future<void> cancelNoteReminder(String noteId) async {
     try {
       // 查找笔记
@@ -4626,7 +3813,7 @@ class AppProvider with ChangeNotifier {
       await _notificationService.cancelNoteReminder(noteId.hashCode);
 
       notifyListeners();
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -4637,7 +3824,7 @@ class AppProvider with ChangeNotifier {
     try {
       final note = _notes.firstWhere((note) => note.id == noteId);
       return note.reminderTime;
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -4663,8 +3850,10 @@ class AppProvider with ChangeNotifier {
       if (clearedCount > 0) {
         notifyListeners();
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('AppProvider: 清理过期提醒失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('AppProvider: 清理过期提醒失败: $e');
+      }
     }
   }
   // ========================================
@@ -4678,24 +3867,53 @@ class AppProvider with ChangeNotifier {
       final configJson = prefs.getString('webdav_config');
 
       if (configJson != null && configJson.isNotEmpty) {
-        _webDavConfig = WebDavConfig.fromJson(jsonDecode(configJson));
+        final storedConfig = WebDavConfig.fromJson(jsonDecode(configJson));
+        final securePassword = await _preferencesService.getWebDavPassword();
+        final legacyPassword = storedConfig.password;
+        final resolvedPassword = securePassword?.isNotEmpty ?? false
+            ? securePassword!
+            : legacyPassword;
+
+        if (legacyPassword.isNotEmpty) {
+          await _preferencesService.saveWebDavPassword(resolvedPassword);
+          await prefs.setString(
+            'webdav_config',
+            jsonEncode(storedConfig.copyWith(password: '').toJson()),
+          );
+        }
+
+        _webDavConfig = storedConfig.copyWith(password: resolvedPassword);
 
         // 如果启用了 WebDAV，初始化服务
         if (_webDavConfig.enabled && _webDavConfig.isValid) {
           await _initializeWebDavService();
         }
       }
-    } catch (e) {}
+    } on Object catch (_) {
+      // WebDAV config is optional; keep the app usable if stored config is bad.
+    }
   }
 
   /// 更新 WebDAV 配置
-  Future<void> updateWebDavConfig(WebDavConfig config, {bool skipInitialize = false}) async {
+  Future<void> updateWebDavConfig(
+    WebDavConfig config, {
+    bool skipInitialize = false,
+  }) async {
     try {
+      final oldConfig = _webDavConfig;
       _webDavConfig = config;
 
       // 保存到本地
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('webdav_config', jsonEncode(config.toJson()));
+      if (config.password.isNotEmpty) {
+        await _preferencesService.saveWebDavPassword(config.password);
+      } else {
+        await _preferencesService.deleteWebDavPassword();
+      }
+      await prefs.setString(
+        'webdav_config',
+        jsonEncode(config.copyWith(password: '').toJson()),
+      );
 
       // 🔧 改进：保存配置时不立即连接服务器，避免网络问题导致保存失败
       // 只在明确需要时才初始化（如执行备份/恢复操作）
@@ -4707,19 +3925,26 @@ class AppProvider with ChangeNotifier {
           _disposeWebDavService();
         }
       } else {
-        // 🎯 大厂标准：跳过初始化时，不清理服务，但要重新配置定时备份
-        // 避免在更新时间戳等操作时意外停止正在运行的定时备份
+        final connectionChanged = oldConfig.serverUrl != config.serverUrl ||
+            oldConfig.username != config.username ||
+            oldConfig.password != config.password ||
+            oldConfig.syncPath != config.syncPath ||
+            oldConfig.enabled != config.enabled ||
+            oldConfig.backupImages != config.backupImages;
+
+        if (connectionChanged) {
+          _disposeWebDavService();
+        }
+
         if (config.enabled && config.autoSync) {
-          // 如果启用了定时备份，重新启动定时器（使用新配置）
           _startWebDavAutoBackup();
         } else {
-          // 如果禁用了定时备份，停止定时器
           _stopWebDavAutoBackup();
         }
       }
 
       notifyListeners();
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -4729,21 +3954,26 @@ class AppProvider with ChangeNotifier {
     try {
       // 🔧 释放旧服务（但不重置启动备份标志）
       // 避免频繁初始化导致重复备份
-      _disposeWebDavService(resetStartupFlag: false);
+      _disposeWebDavService();
 
       // 创建新服务
       _webDavService = WebDavService();
       await _webDavService!.initialize(_webDavConfig);
 
       // 创建同步引擎
-      _webDavSyncEngine = WebDavSyncEngine(_webDavService!, _databaseService);
+      _webDavSyncEngine = WebDavSyncEngine(
+        _webDavService!,
+        _databaseService,
+        memosBaseUrl: _appConfig.memosApiUrl ?? _appConfig.lastServerUrl,
+        memosToken: _user?.token ?? _appConfig.lastToken,
+      );
       await _webDavSyncEngine!.initialize();
 
       // 🚀 如果启用了定时备份，启动定时备份
       if (_webDavConfig.autoSync) {
         _startWebDavAutoBackup();
       }
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -4757,7 +3987,7 @@ class AppProvider with ChangeNotifier {
       testService.dispose();
 
       return result;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -4786,13 +4016,13 @@ class AppProvider with ChangeNotifier {
       await updateWebDavConfig(updatedConfig, skipInitialize: true);
 
       return stats;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
 
   /// 执行 WebDAV 完整备份（单向上传）
-  /// 
+  ///
   /// [onProgress] 进度回调：(progress, message) => void
   Future<SyncStats?> backupWithWebDav({
     void Function(double progress, String message)? onProgress,
@@ -4817,13 +4047,13 @@ class AppProvider with ChangeNotifier {
       await updateWebDavConfig(updatedConfig, skipInitialize: true);
 
       return stats;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
 
   /// 从 WebDAV 恢复数据（单向下载）
-  /// 
+  ///
   /// [onProgress] 进度回调：(progress, message) => void
   Future<SyncStats?> restoreFromWebDav({
     void Function(double progress, String message)? onProgress,
@@ -4851,7 +4081,7 @@ class AppProvider with ChangeNotifier {
       await updateWebDavConfig(updatedConfig, skipInitialize: true);
 
       return stats;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -4899,7 +4129,7 @@ class AppProvider with ChangeNotifier {
       final duration = Duration(minutes: interval);
       final lastBackup = _webDavConfig.lastSyncTime;
       final now = DateTime.now();
-      
+
       if (kDebugMode) {
         debugPrint('AppProvider: WebDAV 启动定时备份 - 间隔 $interval 分钟');
       }
@@ -4917,14 +4147,18 @@ class AppProvider with ChangeNotifier {
         if (elapsed >= duration) {
           // 距离上次备份已超过间隔，立即执行
           if (kDebugMode) {
-            debugPrint('AppProvider: WebDAV 距上次备份已 ${elapsed.inMinutes} 分钟 - 立即执行');
+            debugPrint(
+              'AppProvider: WebDAV 距上次备份已 ${elapsed.inMinutes} 分钟 - 立即执行',
+            );
           }
           _performWebDavBackup();
         } else {
           // 距离上次备份未超过间隔，跳过立即执行
           final remaining = duration - elapsed;
           if (kDebugMode) {
-            debugPrint('AppProvider: WebDAV 距上次备份仅 ${elapsed.inMinutes} 分钟 - 跳过立即执行，${remaining.inMinutes} 分钟后执行');
+            debugPrint(
+              'AppProvider: WebDAV 距上次备份仅 ${elapsed.inMinutes} 分钟 - 跳过立即执行，${remaining.inMinutes} 分钟后执行',
+            );
           }
         }
       }
@@ -4940,13 +4174,13 @@ class AppProvider with ChangeNotifier {
   void _stopWebDavAutoBackup({bool resetStartupFlag = false}) {
     _webDavBackupTimer?.cancel();
     _webDavBackupTimer = null;
-    
+
     // ✅ 只有在明确需要重置时才重置启动备份标志
     // 避免每次启动定时器都触发一次备份
     if (resetStartupFlag) {
       _hasPerformedStartupBackup = false;
     }
-    
+
     if (kDebugMode) {
       debugPrint('AppProvider: WebDAV 自动备份已停止');
     }
@@ -4968,11 +4202,11 @@ class AppProvider with ChangeNotifier {
       if (kDebugMode) {
         debugPrint('AppProvider: WebDAV 自动备份完成 - $stats');
       }
-      
+
       // 🚀 大厂标准：更新上次备份时间，用于智能判断
       // 注意：backupWithWebDav() 内部已经更新了 lastSyncTime
       // 这里只是确保逻辑清晰
-    } catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) {
         debugPrint('AppProvider: WebDAV 自动备份失败: $e');
       }
@@ -4981,35 +4215,34 @@ class AppProvider with ChangeNotifier {
   }
 
   // 🚀 Notion 自动同步（内部方法，异步执行，不阻塞UI）
-  void _autoSyncToNotion() async {
+  Future<void> _autoSyncToNotion() async {
     try {
       // 检查是否启用自动同步
       final isEnabled = await _notionSyncService.isEnabled();
       final isAutoSync = await _notionSyncService.isAutoSyncEnabled();
-      
+
       if (!isEnabled || !isAutoSync) {
         return; // 未启用或未开启自动同步，直接返回
       }
-      
+
       // 防止重复同步
       if (_isNotionSyncing) {
         debugPrint('Notion: 同步进行中，跳过本次自动同步');
         return;
       }
-      
+
       debugPrint('Notion: 开始自动同步');
       _isNotionSyncing = true;
-      
+
       // 获取同步方向
       final direction = await _notionSyncService.getSyncDirection();
-      
+
       // 执行同步
       if (direction == 'to_notion' || direction == 'both') {
         await _notionSyncService.syncNotesToNotion(_notes);
         debugPrint('Notion: 自动同步完成');
       }
-      
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('Notion: 自动同步失败: $e');
       // 静默失败，不影响用户使用
     } finally {
@@ -5025,38 +4258,41 @@ class AppProvider with ChangeNotifier {
       if (!isEnabled) {
         throw Exception('Notion 同步未启用');
       }
-      
+
       // 防止重复同步
       if (_isNotionSyncing) {
         debugPrint('Notion: 同步进行中，跳过本次请求');
         return;
       }
-      
+
       debugPrint('Notion: 开始手动同步');
       _isNotionSyncing = true;
       notifyListeners(); // 通知UI显示加载状态
-      
+
       // 获取同步方向
       final direction = await _notionSyncService.getSyncDirection();
-      
+
       // 执行同步
       if (direction == 'to_notion') {
         await _notionSyncService.syncNotesToNotion(_notes);
       } else if (direction == 'from_notion') {
         final result = await _notionSyncService.syncNotesFromNotion();
-        debugPrint('Notion: 从 Notion 导入完成 - 成功: ${result['success']}, 失败: ${result['failed']}');
+        debugPrint(
+          'Notion: 从 Notion 导入完成 - 成功: ${result['success']}, 失败: ${result['failed']}',
+        );
         await loadNotesFromLocal();
       } else if (direction == 'both') {
         // 双向同步
         await _notionSyncService.syncNotesToNotion(_notes);
         final result = await _notionSyncService.syncNotesFromNotion();
-        debugPrint('Notion: 从 Notion 导入完成 - 成功: ${result['success']}, 失败: ${result['failed']}');
+        debugPrint(
+          'Notion: 从 Notion 导入完成 - 成功: ${result['success']}, 失败: ${result['failed']}',
+        );
         await loadNotesFromLocal();
       }
-      
+
       debugPrint('Notion: 手动同步完成');
-      
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('Notion: 手动同步失败: $e');
       rethrow; // 抛出异常供UI处理
     } finally {

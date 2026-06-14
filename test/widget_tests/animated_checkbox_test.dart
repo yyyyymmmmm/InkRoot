@@ -31,10 +31,12 @@ void main() {
     testWidgets('CB-03 点击触发 onChanged 回调', (tester) async {
       bool? received;
       await tester.pumpWidget(
-        _wrap(AnimatedCheckbox(
-          value: false,
-          onChanged: (v) => received = v,
-        )),
+        _wrap(
+          AnimatedCheckbox(
+            value: false,
+            onChanged: (v) => received = v,
+          ),
+        ),
       );
       await tester.tap(find.byType(GestureDetector));
       await tester.pumpAndSettle();
@@ -42,20 +44,16 @@ void main() {
     });
 
     testWidgets('CB-04 从 false 切换到 true 时显示图标', (tester) async {
-      bool checked = false;
-      late StateSetter setChecked;
+      var checked = false;
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: StatefulBuilder(
-              builder: (ctx, setState) {
-                setChecked = setState;
-                return AnimatedCheckbox(
-                  value: checked,
-                  onChanged: (v) => setState(() => checked = v ?? false),
-                );
-              },
+              builder: (ctx, setState) => AnimatedCheckbox(
+                value: checked,
+                onChanged: (v) => setState(() => checked = v ?? false),
+              ),
             ),
           ),
         ),
@@ -78,11 +76,13 @@ void main() {
 
     testWidgets('CB-06 自定义 size 参数被应用', (tester) async {
       await tester.pumpWidget(
-        _wrap(AnimatedCheckbox(
-          value: false,
-          onChanged: (_) {},
-          size: 36.0,
-        )),
+        _wrap(
+          AnimatedCheckbox(
+            value: false,
+            onChanged: (_) {},
+            size: 36,
+          ),
+        ),
       );
       // 能渲染不崩溃即可（size 影响内部 Container）
       expect(find.byType(AnimatedCheckbox), findsOneWidget);
@@ -98,7 +98,7 @@ void main() {
     });
 
     testWidgets('CB-08 从 true 切换到 false 后图标消失', (tester) async {
-      bool checked = true;
+      var checked = true;
 
       await tester.pumpWidget(
         MaterialApp(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:inkroot/themes/app_theme.dart';
 
@@ -51,7 +53,7 @@ class SnackBarUtils {
   /// 显示网络错误提示，会自动根据错误类型提供友好的提示信息
   static void showNetworkError(
     BuildContext context,
-    error, {
+    Object? error, {
     VoidCallback? onRetry,
   }) {
     var userFriendlyMessage = '网络出了点问题，请检查网络连接后重试';
@@ -94,7 +96,8 @@ class SnackBarUtils {
     String message,
     VoidCallback onRetry,
   ) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -120,7 +123,10 @@ class SnackBarUtils {
         ),
         backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(8),
+        margin: _floatingMargin(context, compact: false),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
         action: SnackBarAction(
           label: '重试',
           textColor: Colors.white,
@@ -133,6 +139,65 @@ class SnackBarUtils {
     );
   }
 
+  static void showAction(
+    BuildContext context,
+    String message, {
+    required String actionLabel,
+    required VoidCallback onAction,
+    IconData? icon,
+    Duration duration = const Duration(milliseconds: 2800),
+  }) {
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  height: 1.35,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF303236),
+        behavior: SnackBarBehavior.floating,
+        margin: _floatingMargin(context, compact: false),
+        duration: duration,
+        persist: false,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        action: SnackBarAction(
+          label: actionLabel,
+          textColor: AppTheme.primaryLightColor,
+          onPressed: onAction,
+        ),
+      ),
+    );
+
+    unawaited(
+      Future<void>.delayed(duration + const Duration(milliseconds: 120), () {
+        if (!context.mounted) {
+          return;
+        }
+        messenger.hideCurrentSnackBar(reason: SnackBarClosedReason.timeout);
+      }),
+    );
+  }
+
   static void _showCustomSnackBar(
     BuildContext context,
     String message, {
@@ -140,27 +205,55 @@ class SnackBarUtils {
     required IconData icon,
     Duration duration = const Duration(milliseconds: 1500),
   }) {
-    // 🎯 大厂风格：居中显示，保持彩色背景，无图标
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  height: 1.35,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-        backgroundColor: backgroundColor, // 使用传入的颜色（绿色成功/红色失败/橙色警告）
+        backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(horizontal: 80, vertical: 50),
+        margin: _floatingMargin(context),
         duration: duration,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(25),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       ),
     );
+  }
+
+  static EdgeInsets _floatingMargin(
+    BuildContext context, {
+    bool compact = true,
+  }) {
+    final mediaQuery = MediaQuery.of(context);
+    final width = mediaQuery.size.width;
+    final horizontal = width < 360
+        ? 16.0
+        : width < 600
+            ? 24.0
+            : (width - 420).clamp(24.0, double.infinity) / 2;
+    final bottom = mediaQuery.padding.bottom + (compact ? 28.0 : 18.0);
+    return EdgeInsets.fromLTRB(horizontal, 0, horizontal, bottom);
   }
 }

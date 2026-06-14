@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:inkroot/services/database_service.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _openDbAtVersion(int version) async {
   sqfliteFfiInit();
@@ -22,7 +21,7 @@ Future<Database> _openDbAtVersion(int version) async {
 
 Future<List<String>> _columns(Database db, String table) async {
   final rows = await db.rawQuery('PRAGMA table_info($table)');
-  return rows.map((r) => r['name'] as String).toList();
+  return rows.map((r) => r['name']! as String).toList();
 }
 
 void main() {
@@ -30,7 +29,7 @@ void main() {
     final db = await _openDbAtVersion(DatabaseService.schemaVersion);
     final tables = await db
         .rawQuery("SELECT name FROM sqlite_master WHERE type='table'")
-        .then((rows) => rows.map((r) => r['name'] as String).toList());
+        .then((rows) => rows.map((r) => r['name']! as String).toList());
     expect(tables, contains('notes'));
     expect(tables, contains('reminder_notifications'));
     await db.close();
@@ -66,4 +65,3 @@ void main() {
     await db.close();
   });
 }
-

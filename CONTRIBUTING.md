@@ -31,11 +31,11 @@ This project and everyone participating in it is governed by the [InkRoot Code o
 
 ### Reporting Bugs
 
-Before creating bug reports, please check the [existing issues](https://github.com/yyyyymmmmm/IntRoot/issues) as you might find that you don't need to create one.
+Before creating bug reports, please check the [existing issues](https://github.com/yyyyymmmmm/InkRoot/issues) as you might find that you don't need to create one.
 
 #### How to Submit a Good Bug Report
 
-Bugs are tracked as [GitHub issues](https://github.com/yyyyymmmmm/IntRoot/issues). When you are creating a bug report, please include as many details as possible:
+Bugs are tracked as [GitHub issues](https://github.com/yyyyymmmmm/InkRoot/issues). When you are creating a bug report, please include as many details as possible:
 
 - **Use a clear and descriptive title**
 - **Describe the exact steps which reproduce the problem**
@@ -64,7 +64,7 @@ Bugs are tracked as [GitHub issues](https://github.com/yyyyymmmmm/IntRoot/issues
 **实际行为**: 点击后无反应
 
 **环境**:
-- InkRoot 版本: 1.0.8
+- InkRoot 版本: 1.1.0
 - 设备: iPhone 14 Pro
 - iOS 版本: 17.0
 - 模式: 本地模式
@@ -74,7 +74,7 @@ Bugs are tracked as [GitHub issues](https://github.com/yyyyymmmmm/IntRoot/issues
 
 ### Suggesting Enhancements
 
-Enhancement suggestions are tracked as [GitHub issues](https://github.com/yyyyymmmmm/IntRoot/issues).
+Enhancement suggestions are tracked as [GitHub issues](https://github.com/yyyyymmmmm/InkRoot/issues).
 
 #### How to Submit a Good Enhancement Suggestion
 
@@ -111,7 +111,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/yyyyym
 
 #### Before Submitting a Pull Request
 
-1. **Check existing PRs** - Search the [pull requests](https://github.com/yyyyymmmmm/IntRoot/pulls) to see if the enhancement has already been suggested
+1. **Check existing PRs** - Search the [pull requests](https://github.com/yyyyymmmmm/InkRoot/pulls) to see if the enhancement has already been suggested
 2. **Discuss first** - For major changes, please open an issue first to discuss what you would like to change
 3. **Fork the repo** - Create your own fork of the repository
 4. **Create a branch** - Create a new branch for your feature or bugfix
@@ -176,30 +176,37 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/yyyyym
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/IntRoot.git
-cd IntRoot
+git clone https://github.com/YOUR_USERNAME/InkRoot.git
+cd InkRoot
 
 # 2. Install dependencies
-flutter pub get
+dart tool/inkroot.dart deps
 
-# 3. Run code generation (if needed)
-flutter pub run build_runner build
+# 3. Check your setup
+dart tool/inkroot.dart doctor
 
-# 4. Check your setup
-flutter doctor
+# 4. Run verification
+dart tool/inkroot.dart verify
 
 # 5. Run the app
 flutter run
 
-# 6. Run tests
-flutter test
-
-# 7. Run code analysis
-flutter analyze
-
-# 8. Format code
+# 6. Format code
 flutter format lib/
 ```
+
+For platform builds, prefer the unified maintenance CLI:
+
+```bash
+dart tool/inkroot.dart build android-debug
+dart tool/inkroot.dart build ios-sim
+dart tool/inkroot.dart build macos-debug
+dart tool/inkroot.dart build windows-debug
+dart tool/inkroot.dart build linux-debug
+dart tool/inkroot.dart build web-release
+```
+
+See [docs/MAINTENANCE.md](docs/MAINTENANCE.md) for CI, Android signing, and release workflow.
 
 ### Project Structure
 
@@ -269,7 +276,7 @@ Fixes #456
 
 ---
 
-docs: 更新 README 到 v1.0.8
+docs: 更新 README 到 v1.1.0
 
 添加待办事项和图片保存功能的介绍
 ```
@@ -398,8 +405,8 @@ class _MyWidgetState extends State<MyWidget> {
 
 ## 🌍 Community
 
-- **GitHub Issues**: [https://github.com/yyyyymmmmm/IntRoot/issues](https://github.com/yyyyymmmmm/IntRoot/issues)
-- **GitHub Discussions**: [https://github.com/yyyyymmmmm/IntRoot/discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
+- **GitHub Issues**: [https://github.com/yyyyymmmmm/InkRoot/issues](https://github.com/yyyyymmmmm/InkRoot/issues)
+- **GitHub Discussions**: [https://github.com/yyyyymmmmm/InkRoot/discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
 - **Email**: [inkroot2025@gmail.com](mailto:inkroot2025@gmail.com)
 - **Website**: [https://inkroot.cn](https://inkroot.cn)
 
@@ -418,4 +425,3 @@ Thank you for contributing to InkRoot! Every contribution, no matter how small, 
 [Back to README](README.md) · [View License](LICENSE) · [Code of Conduct](CODE_OF_CONDUCT.md)
 
 </div>
-

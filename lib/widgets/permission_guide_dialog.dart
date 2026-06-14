@@ -12,7 +12,7 @@ class PermissionGuideDialog extends StatefulWidget {
 }
 
 class _PermissionGuideDialogState extends State<PermissionGuideDialog> {
-  static final platform = MethodChannel(AppConfig.channelNativeAlarm);
+  static const platform = MethodChannel(AppConfig.channelNativeAlarm);
 
   Map<String, bool> permissionStatus = {
     'notification': false,
@@ -44,7 +44,7 @@ class _PermissionGuideDialogState extends State<PermissionGuideDialog> {
           permissionStatus['battery'] = result['battery'] == true;
         });
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('权限检查失败: $e');
     }
 
@@ -57,7 +57,7 @@ class _PermissionGuideDialogState extends State<PermissionGuideDialog> {
   Future<void> _openAppSettings() async {
     try {
       await platform.invokeMethod('openAppSettings');
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('无法打开设置: $e');
     }
   }
@@ -137,259 +137,257 @@ class _PermissionGuideDialogState extends State<PermissionGuideDialog> {
       );
 
   @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 标题栏
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: allPermissionsGranted
-                    ? Colors.green.shade50
-                    : AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+  Widget build(BuildContext context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 标题栏
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: allPermissionsGranted
+                      ? Colors.green.shade50
+                      : AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    allPermissionsGranted
-                        ? Icons.check_circle
-                        : Icons.notifications_active,
-                    color: allPermissionsGranted
-                        ? Colors.green
-                        : AppTheme.primaryColor,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          allPermissionsGranted
-                              ? (AppLocalizationsSimple.of(context)
-                                      ?.permissionsReady ??
-                                  '✅ 权限已就绪')
-                              : (AppLocalizationsSimple.of(context)
-                                      ?.permissionsRequired ??
-                                  '需要权限'),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: allPermissionsGranted
-                                ? Colors.green.shade900
-                                : AppTheme.primaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          allPermissionsGranted
-                              ? (AppLocalizationsSimple.of(context)
-                                      ?.allPermissionsGrantedMessage ??
-                                  '所有权限已开启，可以正常使用提醒功能')
-                              : (AppLocalizationsSimple.of(context)
-                                      ?.pleaseEnablePermissionsMessage ??
-                                  '为了准时收到笔记提醒，请开启以下权限'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ],
+                child: Row(
+                  children: [
+                    Icon(
+                      allPermissionsGranted
+                          ? Icons.check_circle
+                          : Icons.notifications_active,
+                      color: allPermissionsGranted
+                          ? Colors.green
+                          : AppTheme.primaryColor,
+                      size: 32,
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 权限列表
-            Container(
-              padding: const EdgeInsets.all(20),
-              constraints: const BoxConstraints(maxHeight: 400),
-              child: isChecking
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : SingleChildScrollView(
+                    const SizedBox(width: 16),
+                    Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildPermissionItem(
-                            context: context,
-                            title: AppLocalizationsSimple.of(context)
-                                    ?.notificationPermission ??
-                                '通知权限',
-                            description: AppLocalizationsSimple.of(context)
-                                    ?.allowAppNotifications ??
-                                '允许应用显示通知',
-                            isGranted:
-                                permissionStatus['notification'] ?? false,
-                            icon: Icons.notifications,
-                          ),
-                          _buildPermissionItem(
-                            context: context,
-                            title: AppLocalizationsSimple.of(context)
-                                    ?.exactAlarm ??
-                                '精确闹钟',
-                            description: AppLocalizationsSimple.of(context)
-                                    ?.allowExactAlarmDescription ??
-                                '允许在特定时间触发提醒',
-                            isGranted: permissionStatus['alarm'] ?? false,
-                            icon: Icons.alarm,
-                          ),
-                          _buildPermissionItem(
-                            context: context,
-                            title: AppLocalizationsSimple.of(context)
-                                    ?.backgroundRunning ??
-                                '后台运行',
-                            description: AppLocalizationsSimple.of(context)
-                                    ?.allowBackgroundDescription ??
-                                '允许应用在后台保持活跃',
-                            isGranted: permissionStatus['battery'] ?? false,
-                            icon: Icons.battery_charging_full,
-                          ),
-                          if (!allPermissionsGranted) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blue),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    color: Colors.blue.shade700,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      AppLocalizationsSimple.of(context)
-                                              ?.openSettingsInstructions ??
-                                          '点击下方"打开设置"按钮，在应用设置中开启权限后，点击"重新检查"',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.blue.shade900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          Text(
+                            allPermissionsGranted
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.permissionsReady ??
+                                    '✅ 权限已就绪')
+                                : (AppLocalizationsSimple.of(context)
+                                        ?.permissionsRequired ??
+                                    '需要权限'),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: allPermissionsGranted
+                                  ? Colors.green.shade900
+                                  : AppTheme.primaryColor,
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            allPermissionsGranted
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.allPermissionsGrantedMessage ??
+                                    '所有权限已开启，可以正常使用提醒功能')
+                                : (AppLocalizationsSimple.of(context)
+                                        ?.pleaseEnablePermissionsMessage ??
+                                    '为了准时收到笔记提醒，请开启以下权限'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-            ),
-
-            // 底部按钮
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (!allPermissionsGranted) ...[
-                    ElevatedButton.icon(
-                      onPressed: _openAppSettings,
-                      icon: const Icon(Icons.settings, size: 20),
-                      label: Text(
-                        AppLocalizationsSimple.of(context)?.openSettings ??
-                            '打开设置',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _checkAllPermissions,
-                      icon: const Icon(Icons.refresh, size: 20),
-                      label: Text(
-                        AppLocalizationsSimple.of(context)?.recheck ?? '重新检查',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(
-                          color: AppTheme.primaryColor,
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
                   ],
-                  Row(
-                    children: [
-                      if (!allPermissionsGranted)
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              AppLocalizationsSimple.of(context)
-                                      ?.postponeSettings ??
-                                  '稍后设置',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (allPermissionsGranted)
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                            child: Text(
-                              AppLocalizationsSimple.of(context)?.confirm ??
-                                  '确定',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              // 权限列表
+              Container(
+                padding: const EdgeInsets.all(20),
+                constraints: const BoxConstraints(maxHeight: 400),
+                child: isChecking
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildPermissionItem(
+                              context: context,
+                              title: AppLocalizationsSimple.of(context)
+                                      ?.notificationPermission ??
+                                  '通知权限',
+                              description: AppLocalizationsSimple.of(context)
+                                      ?.allowAppNotifications ??
+                                  '允许应用显示通知',
+                              isGranted:
+                                  permissionStatus['notification'] ?? false,
+                              icon: Icons.notifications,
+                            ),
+                            _buildPermissionItem(
+                              context: context,
+                              title: AppLocalizationsSimple.of(context)
+                                      ?.exactAlarm ??
+                                  '精确闹钟',
+                              description: AppLocalizationsSimple.of(context)
+                                      ?.allowExactAlarmDescription ??
+                                  '允许在特定时间触发提醒',
+                              isGranted: permissionStatus['alarm'] ?? false,
+                              icon: Icons.alarm,
+                            ),
+                            _buildPermissionItem(
+                              context: context,
+                              title: AppLocalizationsSimple.of(context)
+                                      ?.backgroundRunning ??
+                                  '后台运行',
+                              description: AppLocalizationsSimple.of(context)
+                                      ?.allowBackgroundDescription ??
+                                  '允许应用在后台保持活跃',
+                              isGranted: permissionStatus['battery'] ?? false,
+                              icon: Icons.battery_charging_full,
+                            ),
+                            if (!allPermissionsGranted) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: Colors.blue.shade700,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        AppLocalizationsSimple.of(context)
+                                                ?.openSettingsInstructions ??
+                                            '点击下方"打开设置"按钮，在应用设置中开启权限后，点击"重新检查"',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.blue.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+              ),
+
+              // 底部按钮
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!allPermissionsGranted) ...[
+                      ElevatedButton.icon(
+                        onPressed: _openAppSettings,
+                        icon: const Icon(Icons.settings, size: 20),
+                        label: Text(
+                          AppLocalizationsSimple.of(context)?.openSettings ??
+                              '打开设置',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _checkAllPermissions,
+                        icon: const Icon(Icons.refresh, size: 20),
+                        label: Text(
+                          AppLocalizationsSimple.of(context)?.recheck ?? '重新检查',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(
+                            color: AppTheme.primaryColor,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    Row(
+                      children: [
+                        if (!allPermissionsGranted)
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: TextButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: Text(
+                                AppLocalizationsSimple.of(context)
+                                        ?.postponeSettings ??
+                                    '稍后设置',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (allPermissionsGranted)
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Text(
+                                AppLocalizationsSimple.of(context)?.confirm ??
+                                    '确定',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 }

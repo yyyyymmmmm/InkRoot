@@ -20,7 +20,7 @@ class ProgressOverlay extends StatelessWidget {
         child: isVisible
             ? ColoredBox(
                 key: const ValueKey<bool>(true),
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 child: Center(
                   child: Card(
                     elevation: 4,

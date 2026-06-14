@@ -13,6 +13,7 @@ import 'package:inkroot/services/ai_insight_engine.dart';
 /// 3. ✨ AI 内容续写（革命性引擎）
 class AIEnhancedService {
   final AIInsightEngine _engine = AIInsightEngine();
+
   /// 1. 🏷️ 智能标签生成（个性化 + 上下文增强）
   ///
   /// 根据笔记内容、历史标签、相关笔记智能提取 3-5 个精准标签
@@ -35,9 +36,9 @@ class AIEnhancedService {
       final userTagStats = _analyzeUserTags(allNotes ?? []);
       final topUserTags = userTagStats.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
-      
-      final userTagsHint = topUserTags.isEmpty 
-          ? '' 
+
+      final userTagsHint = topUserTags.isEmpty
+          ? ''
           : '\n【用户常用标签】\n${topUserTags.take(10).map((e) => '${e.key} (用过${e.value}次)').join('、')}\n';
 
       final prompt = '''请为以下笔记内容生成 3-5 个精准的标签关键词。
@@ -81,8 +82,14 @@ Flutter
           .timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
-        final data = json.decode(utf8.decode(response.bodyBytes));
-        final result = data['choices']?[0]?['message']?['content'] as String?;
+        final data = json.decode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
+        final choices = data['choices'] as List<dynamic>?;
+        final choice = choices?.isNotEmpty ?? false
+            ? choices!.first as Map<String, dynamic>
+            : null;
+        final message = choice?['message'] as Map<String, dynamic>?;
+        final result = message?['content'] as String?;
 
         if (result != null) {
           final tags = _parseTags(result);
@@ -91,7 +98,7 @@ Flutter
       }
 
       return (null, 'AI 响应格式错误');
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ 生成标签失败: $e');
       return (null, '生成失败: $e');
     }
@@ -100,12 +107,12 @@ Flutter
   /// 🔥 分析用户的历史标签使用频率
   Map<String, int> _analyzeUserTags(List<Note> notes) {
     final tagFrequency = <String, int>{};
-    
+
     for (final note in notes) {
       // 提取标签（假设标签格式为 #标签）
       final tagRegex = RegExp(r'#(\S+)');
       final matches = tagRegex.allMatches(note.content);
-      
+
       for (final match in matches) {
         final tag = match.group(1);
         if (tag != null && tag.length >= 2 && tag.length <= 20) {
@@ -113,7 +120,7 @@ Flutter
         }
       }
     }
-    
+
     return tagFrequency;
   }
 
@@ -160,7 +167,7 @@ Flutter
       }
 
       return (result.content, null);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ 生成摘要失败: $e');
       return (null, '生成失败: $e');
     }
@@ -206,7 +213,7 @@ Flutter
       }
 
       return (result.content, null);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ AI点评失败: $e');
       return (null, 'AI点评失败: $e');
     }
@@ -253,7 +260,7 @@ Flutter
       }
 
       return (result.content, null);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ 续写失败: $e');
       return (null, '续写失败: $e');
     }
@@ -281,7 +288,9 @@ Flutter
 
   /// 截断文本
   String _truncateText(String text, int maxLength) {
-    if (text.length <= maxLength) return text;
+    if (text.length <= maxLength) {
+      return text;
+    }
     return text.substring(0, maxLength);
   }
 }

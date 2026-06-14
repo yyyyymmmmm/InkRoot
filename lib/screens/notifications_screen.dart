@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -99,12 +101,20 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       final combined = [...systemNotifications, ...reminders];
       combined.sort((a, b) {
         // 1. 系统通知优先（置顶）
-        if (a.isSystemAnnouncement && !b.isSystemAnnouncement) return -1;
-        if (!a.isSystemAnnouncement && b.isSystemAnnouncement) return 1;
+        if (a.isSystemAnnouncement && !b.isSystemAnnouncement) {
+          return -1;
+        }
+        if (!a.isSystemAnnouncement && b.isSystemAnnouncement) {
+          return 1;
+        }
 
         // 2. 同类型通知：未读优先
-        if (!a.isRead && b.isRead) return -1;
-        if (a.isRead && !b.isRead) return 1;
+        if (!a.isRead && b.isRead) {
+          return -1;
+        }
+        if (a.isRead && !b.isRead) {
+          return 1;
+        }
 
         // 3. 相同已读状态：按时间倒序
         return b.publishDate.compareTo(a.publishDate);
@@ -114,9 +124,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         setState(() {
           _unifiedNotifications = combined;
         });
-        _fadeController.forward(from: 0);
+        unawaited(_fadeController.forward(from: 0));
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ [NotificationsScreen] 加载通知失败: $e');
     }
   }
@@ -294,8 +304,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                   height: 120,
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.1)
-                        : AppTheme.primaryColor.withOpacity(0.08),
+                        ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                        : AppTheme.primaryColor.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -426,13 +436,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     if (notification.isReminder) {
       accentColor = AppTheme.accentColor;
       iconBgColor = isDarkMode
-          ? AppTheme.accentColor.withOpacity(0.2)
-          : AppTheme.accentColor.withOpacity(0.15);
+          ? AppTheme.accentColor.withValues(alpha: 0.2)
+          : AppTheme.accentColor.withValues(alpha: 0.15);
     } else {
       accentColor = AppTheme.primaryColor;
       iconBgColor = isDarkMode
-          ? AppTheme.primaryColor.withOpacity(0.2)
-          : AppTheme.primaryColor.withOpacity(0.15);
+          ? AppTheme.primaryColor.withValues(alpha: 0.2)
+          : AppTheme.primaryColor.withValues(alpha: 0.15);
     }
 
     final textColor =
@@ -468,18 +478,18 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       confirmDismiss: (direction) async {
         if (notification.isReminder) {
           // 触觉反馈
-          HapticFeedback.mediumImpact();
+          unawaited(HapticFeedback.mediumImpact());
           return true;
         }
         return false; // 系统公告不允许滑动删除
       },
       onDismissed: (direction) async {
         if (notification.isReminder) {
-          await _reminderService.deleteReminderNotification(notification.id);
           final appProvider = Provider.of<AppProvider>(context, listen: false);
+          await _reminderService.deleteReminderNotification(notification.id);
           await appProvider.refreshUnreadAnnouncementsCount();
-          _loadAllNotifications();
-          if (mounted) {
+          unawaited(_loadAllNotifications());
+          if (mounted && context.mounted) {
             SnackBarUtils.showSuccess(
               context,
               AppLocalizationsSimple.of(context)?.notificationDeleted ??
@@ -512,7 +522,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             boxShadow: AppTheme.neuCardShadow(isDark: isDarkMode),
             border: !notification.isRead
                 ? Border.all(
-                    color: accentColor.withOpacity(0.2),
+                    color: accentColor.withValues(alpha: 0.2),
                     width: 1.5,
                   )
                 : null,
@@ -674,173 +684,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }
   }
 
-  Widget _buildAnnouncementCard(
-    BuildContext context,
-    Announcement announcement,
-    bool isRead,
-    bool isDarkMode,
-  ) {
-    final backgroundColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.white;
-
-    const accentColor = Colors.teal;
-    final titleColor =
-        isRead ? (isDarkMode ? Colors.white : Colors.black87) : accentColor;
-
-    final contentColor =
-        isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600;
-
-    final borderRadius = ResponsiveUtils.responsive<double>(
-      context,
-      mobile: 12,
-      tablet: 16,
-      desktop: 20,
-    );
-
-    final iconSize = ResponsiveUtils.responsiveIconSize(context, 44);
-
-    return Container(
-      margin: ResponsiveUtils.responsivePadding(
-        context,
-        horizontal: 16,
-        vertical: 4,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: isRead ? null : Border.all(color: accentColor.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            blurRadius: ResponsiveUtils.responsiveSpacing(context, 8),
-            offset: Offset(0, ResponsiveUtils.responsiveSpacing(context, 2)),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: InkWell(
-          onTap: () => _showAnnouncementDetails(context, announcement),
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: Padding(
-            padding: ResponsiveUtils.responsivePadding(context, all: 16),
-            child: Row(
-              children: [
-                // 左侧图标
-                Container(
-                  width: iconSize,
-                  height: iconSize,
-                  decoration: BoxDecoration(
-                    color: isRead
-                        ? Colors.grey.shade200
-                        : accentColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(borderRadius * 0.75),
-                  ),
-                  child: Icon(
-                    _getAnnouncementIcon(announcement.type),
-                    color: isRead ? Colors.grey.shade500 : accentColor,
-                    size: ResponsiveUtils.responsiveIconSize(context, 22),
-                  ),
-                ),
-
-                SizedBox(width: ResponsiveUtils.responsiveSpacing(context, 12)),
-
-                // 中间内容
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              announcement.title,
-                              style: AppTypography.getTitleStyle(
-                                context,
-                                fontSize: 16,
-                                fontWeight:
-                                    isRead ? FontWeight.w500 : FontWeight.w600,
-                                color: titleColor,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(
-                            width: ResponsiveUtils.responsiveSpacing(
-                              context,
-                              8,
-                            ),
-                          ),
-                          Text(
-                            _formatDate(announcement.publishDate),
-                            style: AppTypography.getCaptionStyle(
-                              context,
-                              color: contentColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(
-                        height: ResponsiveUtils.responsiveSpacing(context, 4),
-                      ),
-                      Text(
-                        announcement.content,
-                        style: AppTypography.getBodyStyle(
-                          context,
-                          fontSize: 14,
-                          color: contentColor,
-                          height: 1.3,
-                        ),
-                        maxLines: ResponsiveUtils.isMobile(context) ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 右侧状态指示器
-                SizedBox(width: ResponsiveUtils.responsiveSpacing(context, 12)),
-                Column(
-                  children: [
-                    if (!isRead)
-                      Container(
-                        width: ResponsiveUtils.responsiveIconSize(context, 8),
-                        height: ResponsiveUtils.responsiveIconSize(context, 8),
-                        decoration: const BoxDecoration(
-                          color: accentColor,
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                    else
-                      SizedBox(
-                        width: ResponsiveUtils.responsiveIconSize(context, 8),
-                        height: ResponsiveUtils.responsiveIconSize(context, 8),
-                      ),
-                    SizedBox(
-                      height: ResponsiveUtils.responsiveSpacing(context, 8),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: Colors.grey.shade400,
-                      size: ResponsiveUtils.responsiveIconSize(context, 16),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 🔥 获取统一通知的图标
   IconData _getNotificationIcon(UnifiedNotification notification) {
     if (notification.isReminder) {
-      return Icons.alarm; // 提醒通知用闹钟图标
+      return Icons.alarm;
     } else {
-      // 系统公告根据类型选择图标
       switch (notification.announcementType) {
         case 'update':
           return Icons.system_update_outlined;
@@ -877,33 +725,40 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     UnifiedNotification notification,
   ) async {
     if (notification.isReminder) {
-      // 🎯 提醒通知：标记已读 + 清除笔记提醒时间 + 跳转笔记
       await _reminderService.markAsClicked(notification.id);
 
-      // 🔥 清除笔记的提醒时间（包括数据库和系统通知）
       if (notification.noteId != null) {
+        if (!mounted || !context.mounted) {
+          return;
+        }
+        final appProvider = Provider.of<AppProvider>(context, listen: false);
         try {
-          final appProvider = Provider.of<AppProvider>(context, listen: false);
           await appProvider.cancelNoteReminder(notification.noteId!);
+          if (!mounted || !context.mounted) {
+            return;
+          }
           debugPrint('✅ [NotificationsScreen] 已清除笔记提醒: ${notification.noteId}');
-        } catch (e) {
+        } on Object catch (e) {
           debugPrint('⚠️ [NotificationsScreen] 清除提醒失败: $e');
         }
       }
 
-      // 🎯 刷新未读数量和通知列表（在跳转前完成）
-      if (mounted) {
-        final appProvider = Provider.of<AppProvider>(context, listen: false);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      if (mounted && context.mounted) {
         await appProvider.refreshUnreadAnnouncementsCount();
         await _loadAllNotifications();
       }
 
-      // 跳转到对应笔记
-      if (mounted && notification.noteId != null) {
-        context.push('/note/${notification.noteId}');
+      if (mounted && context.mounted && notification.noteId != null) {
+        unawaited(context.push('/note/${notification.noteId}'));
       }
     } else {
-      // 系统公告：显示详情并标记为已读
+      if (!mounted || !context.mounted) {
+        return;
+      }
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       final announcement = appProvider.announcements.firstWhere(
         (a) => a.id == notification.id,
@@ -916,14 +771,15 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         ),
       );
       _showAnnouncementDetails(context, announcement);
-      // 重新加载通知列表
       await _loadAllNotifications();
     }
   }
 
   /// 🔥 刷新所有通知
   Future<void> _refreshAllNotifications(BuildContext context) async {
-    if (_isLoading) return;
+    if (_isLoading) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -933,8 +789,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       await appProvider.refreshAnnouncements();
       await _loadAllNotifications();
-    } catch (e) {
-      if (mounted) {
+    } on Object {
+      if (mounted && context.mounted) {
         SnackBarUtils.showError(
           context,
           AppLocalizationsSimple.of(context)?.refreshNotificationsFailed ??
@@ -955,7 +811,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   /// 🔥 标记所有通知为已读（包括系统公告和提醒通知）
   Future<void> _markAllAsRead(BuildContext context) async {
-    if (_isLoading) return;
+    if (_isLoading) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -963,20 +821,16 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
-      // 标记系统公告为已读
       await appProvider.markAllAnnouncementsAsRead();
-      // 标记提醒通知为已读
       await _reminderService.markAllAsRead();
-      // 🎯 刷新未读数量（更新侧边栏红点）
       await appProvider.refreshUnreadAnnouncementsCount();
-      // 重新加载通知列表
       await _loadAllNotifications();
 
-      if (mounted) {
+      if (mounted && context.mounted) {
         SnackBarUtils.showSuccess(context, '已全部标记为已读');
       }
-    } catch (e) {
-      if (mounted) {
+    } on Object {
+      if (mounted && context.mounted) {
         SnackBarUtils.showError(context, '操作失败');
       }
     } finally {
@@ -990,9 +844,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   /// 🔥 清除已读通知（大厂逻辑：只清除已读，保留未读）
   Future<void> _clearReadNotifications(BuildContext context) async {
-    if (_isLoading) return;
+    if (_isLoading) {
+      return;
+    }
 
-    // 🎯 统计已读通知数量
     final readCount = _unifiedNotifications.where((n) => n.isRead).length;
 
     if (readCount == 0) {
@@ -1004,7 +859,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       return;
     }
 
-    // 🎯 应用风格确认对话框
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -1072,14 +926,15 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       },
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // 🔥 清除已读的提醒通知
       final readReminders =
           _unifiedNotifications.where((n) => n.isReminder && n.isRead).toList();
 
@@ -1087,24 +942,25 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         await _reminderService.deleteReminderNotification(notification.id);
       }
 
-      // 注意：系统公告不删除，只是标记为已读
-
-      // 🎯 刷新未读数量（虽然清除的是已读，但总数变了）
+      if (!mounted || !context.mounted) {
+        return;
+      }
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       await appProvider.refreshUnreadAnnouncementsCount();
-
-      // 重新加载通知列表
       await _loadAllNotifications();
+      if (!mounted || !context.mounted) {
+        return;
+      }
 
-      if (mounted) {
+      if (mounted && context.mounted) {
         SnackBarUtils.showSuccess(
           context,
           AppLocalizationsSimple.of(context)?.notificationsCleared(readCount) ??
               '已清除 $readCount 条通知',
         );
       }
-    } catch (e) {
-      if (mounted) {
+    } on Object {
+      if (mounted && context.mounted) {
         SnackBarUtils.showError(
           context,
           AppLocalizationsSimple.of(context)?.clearFailed ?? '清除失败',

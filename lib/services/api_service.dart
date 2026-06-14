@@ -131,7 +131,7 @@ class ApiService {
       );
 
       return response.statusCode == 200;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -144,7 +144,7 @@ class ApiService {
       try {
         final syncedNote = await createNote(note);
         syncedNotes.add(syncedNote);
-      } catch (e) {
+      } on Object catch (e) {
         debugPrint('同步笔记失败: ${note.id} - $e');
       }
     }

@@ -12,7 +12,7 @@ class PreferencesService {
 
   PreferencesService._internal();
   static final PreferencesService _instance = PreferencesService._internal();
-  
+
   // 🚀 使用统一配置管理（向后兼容，值不变）
   static const String _configKey = Config.AppConfig.prefKeyAppConfig;
   static const String _userKey = Config.AppConfig.prefKeyUserInfo;
@@ -24,7 +24,9 @@ class PreferencesService {
   static const String _serverUrlKey = Config.AppConfig.prefKeyServerUrl;
   static const String _usernameKey = Config.AppConfig.prefKeyUsername;
   static const String _passwordKey = Config.AppConfig.prefKeyPassword;
-  
+  static const String _aiApiKeySecureKey = 'ai_api_key';
+  static const String _webDavPasswordSecureKey = 'webdav_password';
+
   // 🎯 大厂标准：服务器选择偏好（登录/注册页共享）
   static const String _useCustomServerKey = 'use_custom_server';
   static const String _customServerUrlKey = 'custom_server_url';
@@ -44,7 +46,8 @@ class PreferencesService {
   // 保存应用配置
   Future<void> saveAppConfig(AppConfig config) async {
     final prefs = await SharedPreferences.getInstance();
-    final configJson = jsonEncode(config.toJson());
+    await _persistSensitiveAppConfigFields(config);
+    final configJson = jsonEncode(_sanitizedAppConfigJson(config));
     await prefs.setString(_configKey, configJson);
   }
 
@@ -56,18 +59,24 @@ class PreferencesService {
     final configJson = prefs.getString(_configKey);
     if (configJson != null && configJson.isNotEmpty) {
       try {
-        return AppConfig.fromJson(jsonDecode(configJson));
-      } catch (e) {
+        final decoded = jsonDecode(configJson);
+        if (decoded is Map<String, dynamic>) {
+          final config = AppConfig.fromJson(decoded);
+          final resolvedConfig = await _withSecureAppConfigFields(config);
+          await _migrateLegacySensitiveAppConfigFields(decoded, resolvedConfig);
+          return resolvedConfig;
+        }
+      } on Object catch (e) {
         debugPrint('解析配置JSON失败: $e');
         // 如果解析失败，继续使用单独的键
       }
     }
 
     // 回退到使用单独的键
-    return AppConfig(
+    final fallbackConfig = AppConfig(
       isLocalMode: prefs.getBool('isLocalMode') ?? false,
       memosApiUrl: prefs.getString('memosApiUrl'),
-      lastToken: prefs.getString('lastToken'),
+      lastToken: await getSavedToken() ?? prefs.getString('lastToken'),
       lastServerUrl: prefs.getString('lastServerUrl'),
       rememberLogin: prefs.getBool('rememberLogin') ?? false,
       autoSyncEnabled: prefs.getBool('autoSyncEnabled') ?? false,
@@ -75,11 +84,71 @@ class PreferencesService {
       isDarkMode: prefs.getBool('isDarkMode') ?? false,
       themeMode: prefs.getString('themeMode') ?? 'default',
     );
+    await _persistSensitiveAppConfigFields(fallbackConfig);
+    return _withSecureAppConfigFields(fallbackConfig);
+  }
+
+  Map<String, dynamic> _sanitizedAppConfigJson(AppConfig config) {
+    final json = config.toJson();
+    json['lastToken'] = null;
+    json['aiApiKey'] = null;
+    return json;
+  }
+
+  Future<void> _persistSensitiveAppConfigFields(AppConfig config) async {
+    final token = config.lastToken?.trim();
+    if (token != null && token.isNotEmpty) {
+      await _storage.write(key: _authTokenKey, value: token);
+    }
+
+    final aiApiKey = config.aiApiKey?.trim();
+    if (aiApiKey != null && aiApiKey.isNotEmpty) {
+      await _storage.write(key: _aiApiKeySecureKey, value: aiApiKey);
+    } else {
+      await _storage.delete(key: _aiApiKeySecureKey);
+    }
+  }
+
+  Future<AppConfig> _withSecureAppConfigFields(AppConfig config) async {
+    final results = await Future.wait([
+      _storage.read(key: _authTokenKey),
+      _storage.read(key: _aiApiKeySecureKey),
+    ]);
+
+    final token = results[0];
+    final aiApiKey = results[1];
+    final hasToken = token?.isNotEmpty ?? false;
+    final hasAiApiKey = aiApiKey?.isNotEmpty ?? false;
+    return config.copyWith(
+      lastToken: hasToken ? token : config.lastToken,
+      aiApiKey: hasAiApiKey ? aiApiKey : config.aiApiKey,
+      updateAiApiKey: hasAiApiKey,
+    );
+  }
+
+  Future<void> _migrateLegacySensitiveAppConfigFields(
+    Map<String, dynamic> rawJson,
+    AppConfig resolvedConfig,
+  ) async {
+    if (rawJson['lastToken'] == null && rawJson['aiApiKey'] == null) {
+      return;
+    }
+
+    await _persistSensitiveAppConfigFields(resolvedConfig);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _configKey,
+      jsonEncode(_sanitizedAppConfigJson(resolvedConfig)),
+    );
   }
 
   // 保存用户信息
   Future<void> saveUser(User user) async {
     final prefs = await SharedPreferences.getInstance();
+    final token = user.token?.trim();
+    if (token != null && token.isNotEmpty) {
+      await _storage.write(key: _authTokenKey, value: token);
+    }
     final userJson = jsonEncode(user.toJson());
     await prefs.setString(_userKey, userJson);
   }
@@ -90,7 +159,23 @@ class PreferencesService {
     final userJson = prefs.getString(_userKey);
 
     if (userJson != null) {
-      return User.fromJson(jsonDecode(userJson));
+      final decoded = jsonDecode(userJson);
+      if (decoded is Map<String, dynamic>) {
+        var user = User.fromJson(decoded);
+        final legacyToken = decoded['token']?.toString();
+        final storedToken = await _storage.read(key: _authTokenKey);
+        final token = (storedToken != null && storedToken.isNotEmpty)
+            ? storedToken
+            : legacyToken;
+        if (legacyToken != null && legacyToken.isNotEmpty) {
+          await _storage.write(key: _authTokenKey, value: legacyToken);
+          await prefs.setString(_userKey, jsonEncode(user.toJson()));
+        }
+        if (token != null && token.isNotEmpty) {
+          user = user.copyWith(token: token);
+        }
+        return user;
+      }
     }
 
     return null;
@@ -150,17 +235,37 @@ class PreferencesService {
 
   // 隐私政策相关
   static const String _privacyPolicyKey = Config.AppConfig.prefKeyPrivacyPolicy;
+  static const String _legalAcceptedVersionKey =
+      Config.AppConfig.prefKeyLegalAcceptedVersion;
+  static const String _legalAcceptedAtKey =
+      Config.AppConfig.prefKeyLegalAcceptedAt;
 
   // 检查是否已同意隐私政策
   Future<bool> hasAgreedToPrivacyPolicy() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_privacyPolicyKey) ?? false;
+    final hasAgreed = prefs.getBool(_privacyPolicyKey) ?? false;
+    final acceptedVersion = prefs.getString(_legalAcceptedVersionKey);
+    return hasAgreed &&
+        acceptedVersion == Config.AppConfig.legalDocumentVersion;
   }
 
   // 设置隐私政策同意状态
   Future<void> setPrivacyPolicyAgreed(bool agreed) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_privacyPolicyKey, agreed);
+    if (agreed) {
+      await prefs.setString(
+        _legalAcceptedVersionKey,
+        Config.AppConfig.legalDocumentVersion,
+      );
+      await prefs.setString(
+        _legalAcceptedAtKey,
+        DateTime.now().toIso8601String(),
+      );
+    } else {
+      await prefs.remove(_legalAcceptedVersionKey);
+      await prefs.remove(_legalAcceptedAtKey);
+    }
   }
 
   // 保存登录信息
@@ -217,7 +322,7 @@ class PreferencesService {
     try {
       await _storage.deleteAll();
       debugPrint('🗑️ [Security] 已清除所有 Keychain 数据');
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('⚠️  [Security] 清除 Keychain 数据失败: $e');
     }
   }
@@ -241,28 +346,42 @@ class PreferencesService {
   // 获取保存的密码
   Future<String?> getSavedPassword() async => _storage.read(key: _passwordKey);
 
+  Future<void> saveWebDavPassword(String password) async {
+    if (password.trim().isEmpty) {
+      await _storage.delete(key: _webDavPasswordSecureKey);
+      return;
+    }
+    await _storage.write(key: _webDavPasswordSecureKey, value: password);
+  }
+
+  Future<String?> getWebDavPassword() async =>
+      _storage.read(key: _webDavPasswordSecureKey);
+
+  Future<void> deleteWebDavPassword() async =>
+      _storage.delete(key: _webDavPasswordSecureKey);
+
   // ========================================
   // 🎯 大厂标准：服务器选择偏好管理（登录/注册页共享）
   // ========================================
-  
+
   /// 保存是否使用自定义服务器的偏好
   Future<void> saveUseCustomServer(bool useCustom) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_useCustomServerKey, useCustom);
   }
-  
+
   /// 获取是否使用自定义服务器的偏好
   Future<bool> getUseCustomServer() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_useCustomServerKey) ?? false;
   }
-  
+
   /// 保存自定义服务器地址
   Future<void> saveCustomServerUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_customServerUrlKey, url);
   }
-  
+
   /// 获取自定义服务器地址
   Future<String?> getCustomServerUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -309,7 +428,7 @@ class PreferencesService {
       return List<Map<String, dynamic>>.from(
         decoded.map((item) => Map<String, dynamic>.from(item)),
       );
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('解析导出历史失败: $e');
       return [];
     }
@@ -355,7 +474,7 @@ class PreferencesService {
       return List<Map<String, dynamic>>.from(
         decoded.map((item) => Map<String, dynamic>.from(item)),
       );
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('解析导入历史失败: $e');
       return [];
     }
@@ -372,7 +491,7 @@ class PreferencesService {
 
     try {
       return DateTime.parse(timeStr);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('解析上次备份时间失败: $e');
       return null;
     }

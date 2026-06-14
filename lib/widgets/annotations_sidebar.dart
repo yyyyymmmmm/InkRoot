@@ -6,18 +6,18 @@ import 'package:inkroot/themes/app_theme.dart';
 import 'package:intl/intl.dart';
 
 /// 批注侧边栏 - 专业版
-/// 
+///
 /// 对标 Notion、Obsidian 的批注系统
 /// 支持响应式布局：手机、平板、桌面端
 class AnnotationsSidebar extends StatefulWidget {
   const AnnotationsSidebar({
-    super.key,
     required this.note,
     required this.onAnnotationTap,
     required this.onAddAnnotation,
     required this.onEditAnnotation,
     required this.onDeleteAnnotation,
     required this.onResolveAnnotation,
+    super.key,
   });
 
   final Note note;
@@ -39,10 +39,10 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // 📱 响应式宽度
     final sidebarWidth = _getSidebarWidth(screenWidth);
-    
+
     // 过滤批注
     var annotations = widget.note.annotations;
     if (_filterType != null) {
@@ -58,7 +58,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
         color: isDarkMode ? AppTheme.darkCardColor : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(-2, 0),
           ),
@@ -68,10 +68,10 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
         children: [
           // 头部
           _buildHeader(isDarkMode),
-          
+
           // 筛选栏
           _buildFilterBar(isDarkMode),
-          
+
           // 批注列表
           Expanded(
             child: annotations.isEmpty
@@ -102,7 +102,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
     final localizations = AppLocalizationsSimple.of(context);
     final textColor = isDarkMode ? Colors.white : Colors.black87;
     final count = widget.note.annotations.length;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -114,7 +114,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.comment_outlined,
             color: AppTheme.primaryColor,
             size: 24,
@@ -162,131 +162,128 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
   }
 
   /// 构建筛选栏
-  Widget _buildFilterBar(bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-        border: Border(
-          bottom: BorderSide(
-            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-          ),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 类型筛选
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildFilterChip(
-                  label: AppLocalizationsSimple.of(context)?.all ?? '全部',
-                  isSelected: _filterType == null,
-                  onTap: () => setState(() => _filterType = null),
-                  isDarkMode: isDarkMode,
-                ),
-                const SizedBox(width: 8),
-                ...AnnotationType.values.map((type) {
-                  final annotation = Annotation(
-                    id: '',
-                    content: '',
-                    createdAt: DateTime.now(),
-                    type: type,
-                  );
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _buildFilterChip(
-                      label: annotation.getTypeText(context),
-                      icon: annotation.typeIcon,
-                      color: annotation.typeColor,
-                      isSelected: _filterType == type,
-                      onTap: () => setState(() => _filterType = type),
-                      isDarkMode: isDarkMode,
-                    ),
-                  );
-                }),
-              ],
+  Widget _buildFilterBar(bool isDarkMode) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
+          border: Border(
+            bottom: BorderSide(
+              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
             ),
           ),
-          const SizedBox(height: 8),
-          // 显示已解决
-          Row(
-            children: [
-              Checkbox(
-                value: _showResolved,
-                onChanged: (value) => setState(() => _showResolved = value!),
-                activeColor: AppTheme.primaryColor,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 类型筛选
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip(
+                    label: AppLocalizationsSimple.of(context)?.all ?? '全部',
+                    isSelected: _filterType == null,
+                    onTap: () => setState(() => _filterType = null),
+                    isDarkMode: isDarkMode,
+                  ),
+                  const SizedBox(width: 8),
+                  ...AnnotationType.values.map((type) {
+                    final annotation = Annotation(
+                      id: '',
+                      content: '',
+                      createdAt: DateTime.now(),
+                      type: type,
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _buildFilterChip(
+                        label: annotation.getTypeText(context),
+                        icon: annotation.typeIcon,
+                        color: annotation.typeColor,
+                        isSelected: _filterType == type,
+                        onTap: () => setState(() => _filterType = type),
+                        isDarkMode: isDarkMode,
+                      ),
+                    );
+                  }),
+                ],
               ),
-              Text(
-                AppLocalizationsSimple.of(context)?.showResolved ?? '显示已解决',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+            ),
+            const SizedBox(height: 8),
+            // 显示已解决
+            Row(
+              children: [
+                Checkbox(
+                  value: _showResolved,
+                  onChanged: (value) => setState(() => _showResolved = value!),
+                  activeColor: AppTheme.primaryColor,
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+                Text(
+                  AppLocalizationsSimple.of(context)?.showResolved ?? '显示已解决',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 
   /// 构建筛选芯片
   Widget _buildFilterChip({
     required String label,
-    IconData? icon,
-    Color? color,
     required bool isSelected,
     required VoidCallback onTap,
     required bool isDarkMode,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (color ?? AppTheme.primaryColor).withOpacity(0.15)
-              : (isDarkMode ? Colors.grey[800] : Colors.white),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
+    IconData? icon,
+    Color? color,
+  }) =>
+      InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
             color: isSelected
-                ? (color ?? AppTheme.primaryColor)
-                : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
-            width: isSelected ? 2 : 1,
+                ? (color ?? AppTheme.primaryColor).withValues(alpha: 0.15)
+                : (isDarkMode ? Colors.grey[800] : Colors.white),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected
+                  ? (color ?? AppTheme.primaryColor)
+                  : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isSelected
+                      ? (color ?? AppTheme.primaryColor)
+                      : Colors.grey[600],
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? (color ?? AppTheme.primaryColor)
+                      : (isDarkMode ? Colors.grey[400] : Colors.grey[700]),
+                ),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected
-                    ? (color ?? AppTheme.primaryColor)
-                    : Colors.grey[600],
-              ),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected
-                    ? (color ?? AppTheme.primaryColor)
-                    : (isDarkMode ? Colors.grey[400] : Colors.grey[700]),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 
   /// 构建空状态
   Widget _buildEmptyState(bool isDarkMode) {
@@ -306,7 +303,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
             ),
             const SizedBox(height: 16),
             Text(
-              _filterType == null 
+              _filterType == null
                   ? (localizations?.noAnnotations ?? '还没有批注')
                   : (localizations?.noAnnotationsOfType ?? '没有此类型的批注'),
               style: TextStyle(
@@ -329,35 +326,34 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
   }
 
   /// 构建批注列表
-  Widget _buildAnnotationList(List<Annotation> annotations, bool isDarkMode) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: annotations.length + 1,  // ✅ 多加一个空白占位符
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        // ✅ 最后一项是可点击的空白占位符
-        if (index == annotations.length) {
-          return GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              height: 200,  // 足够的高度确保能点击
-              color: Colors.transparent,
-            ),
-          );
-        }
-        
-        final annotation = annotations[index];
-        return _buildAnnotationCard(annotation, isDarkMode);
-      },
-    );
-  }
+  Widget _buildAnnotationList(List<Annotation> annotations, bool isDarkMode) =>
+      ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: annotations.length + 1, // ✅ 多加一个空白占位符
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          // ✅ 最后一项是可点击的空白占位符
+          if (index == annotations.length) {
+            return GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                height: 200, // 足够的高度确保能点击
+                color: Colors.transparent,
+              ),
+            );
+          }
+
+          final annotation = annotations[index];
+          return _buildAnnotationCard(annotation, isDarkMode);
+        },
+      );
 
   /// 构建批注卡片
   Widget _buildAnnotationCard(Annotation annotation, bool isDarkMode) {
     final localizations = AppLocalizationsSimple.of(context);
     final textColor = isDarkMode ? Colors.white : Colors.black87;
-    
+
     return InkWell(
       onTap: () => widget.onAnnotationTap(annotation),
       borderRadius: BorderRadius.circular(12),
@@ -367,7 +363,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
           color: isDarkMode ? Colors.grey[850] : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: annotation.typeColor.withOpacity(0.3),
+            color: annotation.typeColor.withValues(alpha: 0.3),
             width: 2,
           ),
         ),
@@ -381,7 +377,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: annotation.typeColor.withOpacity(0.15),
+                    color: annotation.typeColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -404,15 +400,16 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                 // 已解决标记
                 if (annotation.isResolved)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.15),
+                      color: Colors.green.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.check_circle,
                           size: 12,
                           color: Colors.green,
@@ -420,7 +417,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                         const SizedBox(width: 4),
                         Text(
                           localizations?.resolved ?? '已解决',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 10,
                             color: Colors.green,
                             fontWeight: FontWeight.w600,
@@ -432,14 +429,20 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                 const SizedBox(width: 8),
                 // 更多操作
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+                  icon:
+                      Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
                   itemBuilder: (context) => [
-                    if (annotation.type == AnnotationType.question && !annotation.isResolved)
+                    if (annotation.type == AnnotationType.question &&
+                        !annotation.isResolved)
                       PopupMenuItem(
                         value: 'resolve',
                         child: Row(
                           children: [
-                            Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
+                            const Icon(
+                              Icons.check_circle_outline,
+                              size: 18,
+                              color: Colors.green,
+                            ),
                             const SizedBox(width: 8),
                             Text(localizations?.markAsResolved ?? '标记为已解决'),
                           ],
@@ -449,7 +452,11 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Colors.blue,
+                          ),
                           const SizedBox(width: 8),
                           Text(localizations?.edit ?? '编辑'),
                         ],
@@ -459,7 +466,11 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                          const Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: Colors.red,
+                          ),
                           const SizedBox(width: 8),
                           Text(localizations?.delete ?? '删除'),
                         ],
@@ -483,16 +494,17 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // 高亮文本（如果有）
-            if (annotation.highlightedText != null && annotation.highlightedText!.isNotEmpty) ...[
+            if (annotation.highlightedText != null &&
+                annotation.highlightedText!.isNotEmpty) ...[
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: annotation.typeColor.withOpacity(0.1),
+                  color: annotation.typeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: annotation.typeColor.withOpacity(0.3),
+                    color: annotation.typeColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -500,7 +512,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                   style: TextStyle(
                     fontSize: 13,
                     fontStyle: FontStyle.italic,
-                    color: textColor.withOpacity(0.8),
+                    color: textColor.withValues(alpha: 0.8),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -508,7 +520,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
               ),
               const SizedBox(height: 8),
             ],
-            
+
             // 批注内容
             Text(
               annotation.content,
@@ -518,7 +530,7 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
                 color: textColor,
               ),
             ),
-            
+
             // 底部：时间 + 回复数
             const SizedBox(height: 8),
             Row(
@@ -565,24 +577,22 @@ class _AnnotationsSidebarState extends State<AnnotationsSidebar> {
     final localizations = AppLocalizationsSimple.of(context);
     final now = DateTime.now();
     final difference = now.difference(time);
-    
+
     if (difference.inMinutes < 1) {
       return localizations?.justNow ?? '刚刚';
     } else if (difference.inHours < 1) {
       final minutes = difference.inMinutes;
-      return localizations != null 
-          ? localizations.minutesAgo(minutes) 
+      return localizations != null
+          ? localizations.minutesAgo(minutes)
           : '$minutes 分钟前';
     } else if (difference.inDays < 1) {
       final hours = difference.inHours;
-      return localizations != null 
-          ? localizations.hoursAgo(hours) 
+      return localizations != null
+          ? localizations.hoursAgo(hours)
           : '$hours 小时前';
     } else if (difference.inDays < 7) {
       final days = difference.inDays;
-      return localizations != null 
-          ? localizations.daysAgo(days) 
-          : '$days 天前';
+      return localizations != null ? localizations.daysAgo(days) : '$days 天前';
     } else {
       return DateFormat('MM-dd HH:mm').format(time);
     }

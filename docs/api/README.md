@@ -23,7 +23,7 @@ InkRoot uses the Memos v1 API for server synchronization. This documentation cov
 ### Supported Versions
 
 - **Memos API**: v1
-- **Memos Server**: v0.21.0 only
+- **Memos Server**: adapted for the main API differences from v0.21.x to v0.28.x
 - **Protocol**: HTTP/HTTPS
 - **Format**: JSON
 
@@ -657,15 +657,14 @@ void main() async {
 
 ## 🤝 Contributing
 
-Found an error in the documentation? Please [open an issue](https://github.com/yyyyymmmmm/IntRoot/issues) or submit a pull request.
+Found an error in the documentation? Please [open an issue](https://github.com/yyyyymmmmm/InkRoot/issues) or submit a pull request.
 
 ---
 
 <div align="center">
 
-**API Documentation** | [InkRoot](https://github.com/yyyyymmmmm/IntRoot)
+**API Documentation** | [InkRoot](https://github.com/yyyyymmmmm/InkRoot)
 
 [Back to Main README](../../README.md)
 
 </div>
-

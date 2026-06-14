@@ -8,13 +8,13 @@ Welcome! This guide will help you get up and running with InkRoot in just a few 
 
 ### iOS
 
-1. Download from [GitHub Releases](https://github.com/yyyyymmmmm/IntRoot/releases)
+1. Download from [GitHub Releases](https://github.com/yyyyymmmmm/InkRoot/releases)
 2. Install via TestFlight or sideload IPA
 3. Launch InkRoot
 
 ### Android
 
-1. Download APK from [GitHub Releases](https://github.com/yyyyymmmmm/IntRoot/releases)
+1. Download APK from [GitHub Releases](https://github.com/yyyyymmmmm/InkRoot/releases)
 2. Enable "Install from Unknown Sources" if prompted
 3. Install and open InkRoot
 
@@ -202,7 +202,7 @@ docker run -d \
   --name memos \
   --publish 5230:5230 \
   --volume ~/.memos/:/var/opt/memos \
-  neosmemo/memos:0.21.0
+  neosmemo/memos:latest
 ```
 
 **Option B: Use Demo Server**
@@ -301,7 +301,7 @@ Now that you're set up, explore these features:
 - Check internet connection
 - Verify server address
 - Check Memos server status
-- Ensure using Memos v0.21.0
+- Use a supported Memos server; InkRoot detects v0.21.x to v0.28.x API differences
 
 **Images not loading?**
 - Check storage space
@@ -312,7 +312,7 @@ Now that you're set up, explore these features:
 - 📖 Read [FAQ](faq.md)
 - 🔧 Check [Troubleshooting](troubleshooting.md)
 - 📧 Email: inkroot2025@gmail.com
-- 💬 GitHub: [Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
+- 💬 GitHub: [Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
 
 ---
 

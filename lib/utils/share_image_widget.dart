@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/providers/app_provider.dart';
+import 'package:inkroot/services/memos_resource_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/image_cache_manager.dart';
 import 'package:inkroot/utils/memos_markdown_converter.dart';
@@ -64,8 +65,9 @@ class ShareImageWidget extends StatelessWidget {
   /// 🎨 简约风格（默认）
   Widget _buildSimpleStyle() {
     final bgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final secondaryTextColor =
-        isDarkMode ? Colors.white.withOpacity(0.7) : const Color(0xFF666666);
+    final secondaryTextColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.7)
+        : const Color(0xFF666666);
 
     return Container(
       width: 600,
@@ -121,7 +123,7 @@ class ShareImageWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -156,9 +158,9 @@ class ShareImageWidget extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.primaryColor.withOpacity(0.8),
-              AppTheme.primaryColor.withOpacity(0.5),
-              Colors.purple.withOpacity(0.6),
+              AppTheme.primaryColor.withValues(alpha: 0.8),
+              AppTheme.primaryColor.withValues(alpha: 0.5),
+              Colors.purple.withValues(alpha: 0.6),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
@@ -167,7 +169,7 @@ class ShareImageWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min, // 🔧 自适应内容高度
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(Colors.white.withOpacity(0.9)),
+            _buildHeader(Colors.white.withValues(alpha: 0.9)),
             const SizedBox(height: 24),
             CustomizableMemoContent(
               content: content,
@@ -176,7 +178,7 @@ class ShareImageWidget extends StatelessWidget {
               isDarkMode: true, // 渐变风格使用深色文字
             ),
             const SizedBox(height: 32),
-            _buildFooter(Colors.white.withOpacity(0.8)),
+            _buildFooter(Colors.white.withValues(alpha: 0.8)),
           ],
         ),
       );
@@ -432,11 +434,15 @@ class CustomizableMemoContent extends StatelessWidget {
     final imagePath = uri.toString();
 
     // 🔥 不使用 Provider，直接使用传入的参数（解决 Overlay 上下文问题）
-    if (kDebugMode) debugPrint('🖼️ ShareImage: 处理图片路径: $imagePath');
+    if (kDebugMode) {
+      debugPrint('🖼️ ShareImage: 处理图片路径: $imagePath');
+    }
 
     // 处理HTTP/HTTPS图片
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      if (kDebugMode) debugPrint('🌐 ShareImage: HTTP/HTTPS 图片 $imagePath');
+      if (kDebugMode) {
+        debugPrint('🌐 ShareImage: HTTP/HTTPS 图片 $imagePath');
+      }
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: ClipRRect(
@@ -481,12 +487,12 @@ class CustomizableMemoContent extends StatelessWidget {
     }
 
     // 处理Memos服务器资源路径
-    if (imagePath.startsWith('/o/r/') ||
-        imagePath.startsWith('/file/') ||
-        imagePath.startsWith('/resource/')) {
+    if (MemosResourceService.isServerResourcePath(imagePath)) {
       // 🔥 直接使用传入的 baseUrl 和 token（不依赖 Provider）
       final baseUrl = serverUrl ?? '';
-      final fullUrl = baseUrl.isNotEmpty ? '$baseUrl$imagePath' : imagePath;
+      final fullUrl = baseUrl.isNotEmpty
+          ? MemosResourceService(baseUrl: baseUrl).buildImageUrl(imagePath)
+          : imagePath;
 
       if (kDebugMode) {
         debugPrint('📦 ShareImage: Memos 资源图片 $imagePath -> $fullUrl');
@@ -500,7 +506,7 @@ class CustomizableMemoContent extends StatelessWidget {
         if (kDebugMode) {
           debugPrint('🔑 ShareImage: 获取到 token: ${token != null}');
         }
-      } catch (e) {
+      } on Object catch (e) {
         if (kDebugMode) {
           debugPrint('⚠️ ShareImage: 无法获取 AppProvider，可能在 Overlay 中: $e');
         }
@@ -520,7 +526,9 @@ class CustomizableMemoContent extends StatelessWidget {
             fit: BoxFit.contain,
             fadeInDuration: const Duration(milliseconds: 200),
             placeholder: (context, url) {
-              if (kDebugMode) debugPrint('🖼️ ShareImage: 正在加载图片 $url');
+              if (kDebugMode) {
+                debugPrint('🖼️ ShareImage: 正在加载图片 $url');
+              }
               return Container(
                 height: 200,
                 color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
@@ -534,7 +542,9 @@ class CustomizableMemoContent extends StatelessWidget {
               );
             },
             imageBuilder: (context, imageProvider) {
-              if (kDebugMode) debugPrint('✅ ShareImage: 图片加载成功 $fullUrl');
+              if (kDebugMode) {
+                debugPrint('✅ ShareImage: 图片加载成功 $fullUrl');
+              }
               return Image(image: imageProvider, fit: BoxFit.contain);
             },
             errorWidget: (context, url, error) {

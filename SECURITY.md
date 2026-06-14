@@ -125,12 +125,36 @@ We follow these practices to ensure InkRoot's security:
 
 - ✅ Regular dependency updates
 - ✅ Code review for all changes
-- ✅ Static code analysis (`flutter analyze`)
+- ✅ Static code analysis (`dart tool/inkroot.dart verify`)
+- ✅ GitHub Actions secret scanning
 - ✅ Secure storage for sensitive data
 - ✅ Input validation and sanitization
 - ✅ HTTPS for all network communications
 - ✅ No hardcoded secrets or credentials
 - ✅ Minimal permission requests
+
+### Credential Handling
+
+Never commit or paste production credentials into issues, pull requests, chat,
+or documentation examples. This includes:
+
+- GitHub personal access tokens
+- Android keystores and `android/key.properties`
+- Apple certificates, provisioning profiles, and export options with secrets
+- API keys, service account JSON files, and private keys
+
+If a token or signing credential is exposed, revoke it immediately, rotate the
+credential, and update GitHub Secrets or local signing files with the new value.
+
+Android release signing is configured locally through ignored files:
+
+```text
+android/key.properties
+android/inkroot-new-release.keystore
+```
+
+CI release signing uses GitHub Secrets as documented in
+[`docs/MAINTENANCE.md`](docs/MAINTENANCE.md).
 
 ---
 
@@ -186,10 +210,9 @@ For security-related inquiries:
 - **Subject**: `[SECURITY] Your concern here`
 
 For general inquiries:
-- **GitHub Issues**: [https://github.com/yyyyymmmmm/IntRoot/issues](https://github.com/yyyyymmmmm/IntRoot/issues)
+- **GitHub Issues**: [https://github.com/yyyyymmmmm/InkRoot/issues](https://github.com/yyyyymmmmm/InkRoot/issues)
 - **Website**: [https://inkroot.cn](https://inkroot.cn)
 
 ---
 
 Last updated: 2025-10-25
-

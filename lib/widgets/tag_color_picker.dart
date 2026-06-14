@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/tag_color_model.dart';
 import 'package:inkroot/themes/app_theme.dart';
 
 /// 标签颜色选择器 - 简洁优雅设计
 class TagColorPicker extends StatefulWidget {
+  const TagColorPicker({
+    required this.tagName,
+    required this.onColorSelected,
+    this.currentColor,
+    super.key,
+  });
   final String tagName;
   final TagColor? currentColor;
   final Function(TagColor) onColorSelected;
-
-  const TagColorPicker({
-    required this.tagName,
-    this.currentColor,
-    required this.onColorSelected,
-    super.key,
-  });
 
   @override
   State<TagColorPicker> createState() => _TagColorPickerState();
@@ -43,8 +43,10 @@ class _TagColorPickerState extends State<TagColorPicker> {
     if (!_initialized && widget.currentColor != null) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final index = TagColor.presetColors.indexWhere((preset) {
-        final bgColor = isDark ? preset['darkBg'] as Color : preset['bg'] as Color;
-        return bgColor.value == widget.currentColor!.backgroundColor.value;
+        final bgColor =
+            isDark ? preset['darkBg'] as Color : preset['bg'] as Color;
+        return bgColor.toARGB32() ==
+            widget.currentColor!.backgroundColor.toARGB32();
       });
       if (index != -1) {
         _selectedPresetIndex = index;
@@ -58,15 +60,20 @@ class _TagColorPickerState extends State<TagColorPicker> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizationsSimple.of(context);
     final selectedPreset = TagColor.presetColors[_selectedPresetIndex];
     final previewBg = _isCustomMode
         ? (_customBackgroundColor ?? TagColor.defaultBackgroundColor(context))
-        : (isDark ? selectedPreset['darkBg'] as Color : selectedPreset['bg'] as Color);
+        : (isDark
+            ? selectedPreset['darkBg'] as Color
+            : selectedPreset['bg'] as Color);
     final previewText = _isCustomMode
         ? (_customTextColor ?? TagColor.defaultTextColor(context))
-        : (isDark ? selectedPreset['darkText'] as Color : selectedPreset['text'] as Color);
+        : (isDark
+            ? selectedPreset['darkText'] as Color
+            : selectedPreset['text'] as Color);
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkCardColor : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -90,7 +97,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.palette_outlined,
                   color: AppTheme.primaryColor,
                   size: 24,
@@ -98,7 +105,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    AppLocalizationsSimple.of(context)?.tagColorScheme ?? '标签配色',
+                    l10n?.tagColorTitle ?? '标签配色',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -134,7 +141,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizationsSimple.of(context)?.previewEffect ?? '预览效果',
+                  l10n?.previewEffect ?? '预览效果',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.grey[500] : Colors.grey[600],
@@ -143,7 +150,8 @@ class _TagColorPickerState extends State<TagColorPicker> {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: previewBg,
                     borderRadius: BorderRadius.circular(8),
@@ -169,7 +177,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
             child: Row(
               children: [
                 Text(
-                  AppLocalizationsSimple.of(context)?.presetColors ?? '预设配色',
+                  l10n?.presetColors ?? '预设配色',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -189,8 +197,8 @@ class _TagColorPickerState extends State<TagColorPicker> {
                   ),
                   label: Text(
                     _isCustomMode
-                        ? (AppLocalizationsSimple.of(context)?.selectPreset ?? '选择预设')
-                        : (AppLocalizationsSimple.of(context)?.customColor ?? '自定义'),
+                        ? (l10n?.selectPreset ?? '选择预设')
+                        : (l10n?.customColor ?? '自定义'),
                   ),
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.primaryColor,
@@ -213,7 +221,6 @@ class _TagColorPickerState extends State<TagColorPicker> {
                   crossAxisCount: 4,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 1,
                 ),
                 itemCount: TagColor.presetColors.length,
                 itemBuilder: (context, index) {
@@ -233,7 +240,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
                         _isCustomMode = false;
                       });
                     },
-                    child: Container(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: bgColor,
                         borderRadius: BorderRadius.circular(12),
@@ -246,9 +253,9 @@ class _TagColorPickerState extends State<TagColorPicker> {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryColor.withOpacity(0.3),
+                                  color: AppTheme.primaryColor
+                                      .withValues(alpha: 0.3),
                                   blurRadius: 8,
-                                  spreadRadius: 0,
                                 ),
                               ]
                             : null,
@@ -276,8 +283,9 @@ class _TagColorPickerState extends State<TagColorPicker> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildColorRow(
-                    AppLocalizationsSimple.of(context)?.backgroundColor ?? '背景色',
-                    _customBackgroundColor ?? TagColor.defaultBackgroundColor(context),
+                    l10n?.backgroundColor ?? '背景色',
+                    _customBackgroundColor ??
+                        TagColor.defaultBackgroundColor(context),
                     (color) {
                       setState(() {
                         _customBackgroundColor = color;
@@ -286,7 +294,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
                   ),
                   const SizedBox(height: 16),
                   _buildColorRow(
-                    AppLocalizationsSimple.of(context)?.textColor ?? '文字色',
+                    l10n?.textColor ?? '文字色',
                     _customTextColor ?? TagColor.defaultTextColor(context),
                     (color) {
                       setState(() {
@@ -316,12 +324,12 @@ class _TagColorPickerState extends State<TagColorPicker> {
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
-                    child: Text(AppLocalizationsSimple.of(context)?.reset ?? '重置'),
+                    child: Text(l10n?.reset ?? '重置'),
                   ),
                 const Spacer(),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
+                  child: Text(l10n?.cancel ?? '取消'),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
@@ -352,12 +360,15 @@ class _TagColorPickerState extends State<TagColorPicker> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(AppLocalizationsSimple.of(context)?.confirm ?? '确定'),
+                  child: Text(l10n?.confirm ?? '确定'),
                 ),
               ],
             ),
@@ -367,7 +378,11 @@ class _TagColorPickerState extends State<TagColorPicker> {
     );
   }
 
-  Widget _buildColorRow(String label, Color color, Function(Color) onColorChanged) {
+  Widget _buildColorRow(
+    String label,
+    Color color,
+    Function(Color) onColorChanged,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // 简化的颜色选择器：提供6个常用颜色
@@ -395,7 +410,7 @@ class _TagColorPickerState extends State<TagColorPicker> {
           child: Wrap(
             spacing: 8,
             children: basicColors.map((c) {
-              final isSelected = c.value == color.value;
+              final isSelected = c.toARGB32() == color.toARGB32();
               return GestureDetector(
                 onTap: () => onColorChanged(c),
                 child: Container(
@@ -420,4 +435,3 @@ class _TagColorPickerState extends State<TagColorPicker> {
     );
   }
 }
-

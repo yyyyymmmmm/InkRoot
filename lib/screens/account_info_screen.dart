@@ -1,15 +1,13 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data'; // Added for Uint8List
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/user_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
+import 'package:inkroot/services/memos_resource_service.dart';
 import 'package:inkroot/services/preferences_service.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:inkroot/widgets/cached_avatar.dart';
@@ -29,9 +27,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   late TextEditingController _nicknameController;
   late TextEditingController _emailController;
   late TextEditingController _bioController;
-  final bool _isEditingNickname = false;
-  final bool _isEditingEmail = false;
-  final bool _isEditingBio = false;
   bool _isUpdatingAvatar = false;
   File? _selectedImage;
 
@@ -52,7 +47,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
               DateTime.now().difference(user.lastSyncTime!).inMinutes > 15 ||
               user.avatarUrl == null ||
               user.avatarUrl!.isEmpty)) {
-        _syncUserInfo(context, showSuccessMessage: false);
+        _syncUserInfo(showSuccessMessage: false);
       }
     });
   }
@@ -74,13 +69,13 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   }
 
   // 从服务器同步用户信息
-  Future<void> _syncUserInfo(BuildContext context, {bool showSuccessMessage = true}) async {
+  Future<void> _syncUserInfo({bool showSuccessMessage = true}) async {
+    final l10n = AppLocalizationsSimple.of(context);
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     if (!appProvider.isLoggedIn || appProvider.memosApiService == null) {
       SnackBarUtils.showError(
         context,
-        AppLocalizationsSimple.of(context)?.notLoggedInOrAPINotInitialized ??
-            '未登录或API服务未初始化',
+        l10n?.notLoggedInOrAPINotInitialized ?? '未登录或API服务未初始化',
       );
       return;
     }
@@ -90,50 +85,54 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
         _isUpdatingAvatar = true; // 使用同一个loading状态
       });
 
-      // 先尝试v1 API，失败后尝试v2 API
-      final userData = await _fetchUserInfoWithFallback(appProvider);
+      final apiUser = await appProvider.memosApiService!.getUserInfo();
 
       // 更新本地用户信息
       final currentUser = appProvider.user;
       if (currentUser == null) {
-        throw Exception(
-          AppLocalizationsSimple.of(context)?.currentUserInfoEmpty ??
-              '当前用户信息为空',
-        );
+        throw Exception(l10n?.currentUserInfoEmpty ?? '当前用户信息为空');
       }
 
       final updatedUser = User(
-        id: userData['id'].toString(),
-        username: userData['username'] ?? currentUser.username,
-        nickname: userData['nickname'] ?? currentUser.nickname,
-        email: userData['email'] ?? currentUser.email,
-        description: userData['description'],
-        role: userData['role'] ?? currentUser.role,
-        avatarUrl: userData['avatarUrl'],
+        id: apiUser.id,
+        username: apiUser.username.isNotEmpty
+            ? apiUser.username
+            : currentUser.username,
+        nickname: apiUser.nickname ?? currentUser.nickname,
+        email: apiUser.email ?? currentUser.email,
+        description: apiUser.description ?? currentUser.description,
+        role: apiUser.role,
+        avatarUrl: apiUser.avatarUrl ?? currentUser.avatarUrl,
         token: currentUser.token, // 保留原token
         lastSyncTime: DateTime.now(),
+        serverUrl: currentUser.serverUrl,
       );
 
       await _preferencesService.saveUser(updatedUser);
       await appProvider.setUser(updatedUser);
+      if (!mounted) {
+        return;
+      }
 
       // 重新加载控制器的值
       setState(() {
-        _nicknameController.text =
-            updatedUser.nickname ?? updatedUser.username ?? '';
+        _nicknameController.text = updatedUser.nickname ?? updatedUser.username;
         _emailController.text = updatedUser.email ?? '';
         _bioController.text = updatedUser.description ?? '';
       });
 
-      if (mounted && showSuccessMessage) {
+      if (showSuccessMessage) {
         SnackBarUtils.showSuccess(
           context,
-          AppLocalizationsSimple.of(context)?.userInfoSyncSuccess ?? '用户信息同步成功',
+          l10n?.userInfoSyncSuccess ?? '用户信息同步成功',
         );
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '同步失败: $e');
+        SnackBarUtils.showError(
+          context,
+          '${l10n?.userInfoSyncFailed ?? '同步失败'}: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -144,317 +143,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
     }
   }
 
-  // API版本兼容性处理 - 支持v1和v2
-  Future<Map<String, dynamic>> _fetchUserInfoWithFallback(
-    AppProvider appProvider,
-  ) async {
-    // 先尝试v1 API
-    try {
-      final v1Response = await http.get(
-        Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v1/user/me'),
-        headers: {
-          'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-        },
-      );
-
-      if (v1Response.statusCode == 200) {
-        return jsonDecode(v1Response.body);
-      }
-    } catch (e) {
-      // 继续尝试v2 API
-    }
-
-    // 尝试v2 API
-    try {
-      final v2Response = await http.get(
-        Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v2/user/me'),
-        headers: {
-          'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-        },
-      );
-
-      if (v2Response.statusCode == 200) {
-        final v2Data = jsonDecode(v2Response.body);
-        // 转换v2格式到v1格式
-        return {
-          'id': v2Data['id'],
-          'username': v2Data['username'],
-          'nickname': v2Data['nickname'],
-          'email': v2Data['email'],
-          'description': v2Data['description'],
-          'role': v2Data['role'],
-          'avatarUrl': v2Data['avatarUrl'],
-        };
-      }
-    } catch (e) {
-      // 忽略错误，抛出异常
-    }
-
-    throw Exception(
-      AppLocalizationsSimple.of(context)?.allAPIVersionsFailed ??
-          '所有API版本都无法获取用户信息',
-    );
-  }
-
-  // 更新用户信息到服务器（支持v1和v2 API）
-  Future<void> _updateUserInfoToServer({
-    String? nickname,
-    String? email,
-    String? description,
-    String? avatarUrl,
-  }) async {
-    final appProvider = Provider.of<AppProvider>(context, listen: false);
-
-    // 先尝试v1 API
-    try {
-      await _updateUserInfoV1(
-        appProvider,
-        nickname: nickname,
-        email: email,
-        description: description,
-        avatarUrl: avatarUrl,
-      );
-    } catch (e) {
-      try {
-        await _updateUserInfoV2(
-          appProvider,
-          nickname: nickname,
-          email: email,
-          description: description,
-          avatarUrl: avatarUrl,
-        );
-      } catch (e2) {
-        throw Exception(
-          AppLocalizationsSimple.of(context)
-                  ?.allAPIVersionsUpdateFailed(e.toString(), e2.toString()) ??
-              '所有API版本更新失败: v1($e), v2($e2)',
-        );
-      }
-    }
-  }
-
-  // v1 API更新用户信息
-  Future<void> _updateUserInfoV1(
-    AppProvider appProvider, {
-    String? nickname,
-    String? email,
-    String? description,
-    String? avatarUrl,
-  }) async {
-    final user = appProvider.user;
-    if (user == null) {
-      throw Exception('用户信息为空');
-    }
-
-    final apiUrl =
-        '${appProvider.appConfig.memosApiUrl}/api/v1/user/${user.id}';
-    final requestBody = <String, dynamic>{};
-
-    if (nickname != null) requestBody['nickname'] = nickname;
-    if (email != null) requestBody['email'] = email;
-    if (description != null) requestBody['description'] = description;
-    if (avatarUrl != null) requestBody['avatarUrl'] = avatarUrl;
-
-    final response = await http.patch(
-      Uri.parse(apiUrl),
-      headers: {
-        'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('v1更新失败: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  // v2 API更新用户信息
-  Future<void> _updateUserInfoV2(
-    AppProvider appProvider, {
-    String? nickname,
-    String? email,
-    String? description,
-    String? avatarUrl,
-  }) async {
-    // v2 API使用用户名而不是ID，格式为 /api/v2/users/{username}
-    final username = appProvider.user?.username;
-    if (username == null) {
-      throw Exception(
-        AppLocalizationsSimple.of(context)?.cannotGetUsername ?? '无法获取用户名',
-      );
-    }
-
-    final response = await http.patch(
-      Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v2/users/$username'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-      },
-      body: jsonEncode({
-        'user': {
-          'name': 'users/$username',
-          if (nickname != null) 'nickname': nickname,
-          if (email != null) 'email': email,
-          if (description != null) 'description': description,
-          if (avatarUrl != null) 'avatarUrl': avatarUrl,
-        },
-        'updateMask': {
-          'paths': [
-            if (nickname != null) 'nickname',
-            if (email != null) 'email',
-            if (description != null) 'description',
-            if (avatarUrl != null) 'avatar_url', // v2使用下划线格式
-          ],
-        },
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('v2更新失败: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  // 更新密码到服务器（支持v1和v2 API）
-  Future<bool> _updatePasswordToServer(
-    AppProvider appProvider,
-    String currentPassword,
-    String newPassword,
-  ) async {
-    // 先尝试v1 API
-    try {
-      await _updatePasswordV1(appProvider, currentPassword, newPassword);
-      return true;
-    } catch (e) {
-      try {
-        await _updatePasswordV2(appProvider, currentPassword, newPassword);
-        return true;
-      } catch (e2) {
-        throw Exception(
-          AppLocalizationsSimple.of(context)
-                  ?.allPasswordUpdateFailed(e.toString(), e2.toString()) ??
-              '所有API版本密码更新失败: v1($e), v2($e2)',
-        );
-      }
-    }
-  }
-
-  // v1 API更新密码
-  Future<bool> _updatePasswordV1(
-    AppProvider appProvider,
-    String currentPassword,
-    String newPassword,
-  ) async {
-    final user = appProvider.user;
-    if (user == null) {
-      throw Exception('用户信息为空');
-    }
-
-    // 首先验证当前密码是否正确（通过重新登录验证）
-    try {
-      final loginApiUrl =
-          '${appProvider.appConfig.memosApiUrl}/api/v1/auth/signin';
-      final loginResponse = await http.post(
-        Uri.parse(loginApiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': user.username,
-          'password': currentPassword,
-        }),
-      );
-
-      if (loginResponse.statusCode != 200) {
-        throw Exception('当前密码验证失败');
-      }
-    } catch (e) {
-      throw Exception('当前密码不正确');
-    }
-
-    final apiUrl =
-        '${appProvider.appConfig.memosApiUrl}/api/v1/user/${user.id}';
-    final requestBody = {
-      'password': newPassword,
-    };
-
-    final response = await http.patch(
-      Uri.parse(apiUrl),
-      headers: {
-        'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      return true;
-    } else {
-      throw Exception('v1密码更新失败: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  // v2 API更新密码
-  Future<bool> _updatePasswordV2(
-    AppProvider appProvider,
-    String currentPassword,
-    String newPassword,
-  ) async {
-    final user = appProvider.user;
-    if (user == null) {
-      throw Exception('用户信息为空');
-    }
-
-    // 首先验证当前密码是否正确（通过重新登录验证）
-    try {
-      final loginApiUrl =
-          '${appProvider.appConfig.memosApiUrl}/api/v2/auth/signin';
-      final loginResponse = await http.post(
-        Uri.parse(loginApiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': user.username,
-          'password': currentPassword,
-        }),
-      );
-
-      if (loginResponse.statusCode != 200) {
-        throw Exception('当前密码验证失败');
-      }
-    } catch (e) {
-      throw Exception('当前密码不正确');
-    }
-
-    final username = user.username;
-    final apiUrl =
-        '${appProvider.appConfig.memosApiUrl}/api/v2/users/$username';
-
-    final requestBody = {
-      'user': {
-        'name': 'users/$username',
-        'password': newPassword,
-      },
-      'updateMask': {
-        'paths': ['password'],
-      },
-    };
-
-    final response = await http.patch(
-      Uri.parse(apiUrl),
-      headers: {
-        'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      return true;
-    } else {
-      throw Exception('v2密码更新失败: ${response.statusCode} - ${response.body}');
-    }
-  }
-
   // 选择头像
   Future<void> _pickImage(User user) async {
+    final l10n = AppLocalizationsSimple.of(context);
     try {
       setState(() {
         _isUpdatingAvatar = true;
@@ -466,6 +157,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
         maxHeight: 800,
         imageQuality: 95,
       );
+      if (!mounted) {
+        return;
+      }
 
       if (image == null) {
         setState(() {
@@ -481,32 +175,28 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       if (appProvider.memosApiService != null && appProvider.isLoggedIn) {
         try {
-          // 上传图片到服务器
-          final bytes = await _selectedImage!.readAsBytes();
-          final base64Image = base64Encode(bytes);
-
-          // 使用Memos API上传图片 - 支持v1和v2版本
-          var imageUrl = '';
-
-          try {
-            // 先尝试v1 API上传
-            imageUrl = await _uploadAvatarV1(appProvider, bytes);
-          } catch (e) {
-            try {
-              // v1失败后尝试v2 API
-              imageUrl = await _uploadAvatarV2(appProvider, bytes);
-            } catch (e2) {
-              throw Exception('所有API版本头像上传失败: v1($e), v2($e2)');
-            }
+          final resourceService = appProvider.resourceService;
+          if (resourceService == null) {
+            throw Exception(
+              l10n?.resourceServiceNotInitialized ?? '资源服务未初始化',
+            );
           }
 
-          if (imageUrl.isNotEmpty) {
-            // 使用兼容的用户信息更新方法
-            await _updateUserInfoToServer(avatarUrl: imageUrl);
+          final uploadResult =
+              await resourceService.uploadImage(_selectedImage!);
+          final serverPath = uploadResult['serverPath']?.toString() ??
+              MemosResourceService.buildResourcePath(
+                uploadResult['data'] as Map<String, dynamic>,
+              );
+          final imageUrl = resourceService.buildImageUrl(serverPath);
 
+          if (imageUrl.isNotEmpty) {
             // 使用AppProvider的updateUserInfo方法确保全局状态同步
             final success =
                 await appProvider.updateUserInfo(avatarUrl: imageUrl);
+            if (!mounted) {
+              return;
+            }
 
             if (!success) {
               // 如果AppProvider更新失败，手动更新本地状态
@@ -518,7 +208,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
             if (mounted) {
               SnackBarUtils.showSuccess(
                 context,
-                AppLocalizationsSimple.of(context)?.avatarUpdated ?? '头像已更新',
+                l10n?.avatarUpdated ?? '头像已更新',
               );
 
               // 清除网络图片缓存，确保新头像能立即显示
@@ -526,14 +216,21 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
               PaintingBinding.instance.imageCache.clearLiveImages();
             }
 
-            // 强制刷新用户信息（从服务器获取最新数据）
-            await _syncUserInfo(context, showSuccessMessage: false);
+            await _syncUserInfo(showSuccessMessage: false);
+            if (!mounted) {
+              return;
+            }
           } else {
-            throw Exception('无法获取上传的头像URL');
+            final uploadedAvatarUrlMissingText =
+                l10n?.uploadedAvatarUrlMissing ?? '无法获取上传的头像URL';
+            throw Exception(uploadedAvatarUrlMissingText);
           }
-        } catch (e) {
+        } on Object catch (e) {
           if (mounted) {
-            SnackBarUtils.showError(context, '上传头像失败: $e');
+            SnackBarUtils.showError(
+              context,
+              '${l10n?.uploadAvatarFailed ?? '上传头像失败'}: $e',
+            );
           }
         }
       }
@@ -543,98 +240,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
           _isUpdatingAvatar = false;
         });
       }
-    }
-  }
-
-  // v1 API上传头像
-  Future<String> _uploadAvatarV1(
-    AppProvider appProvider,
-    Uint8List bytes,
-  ) async {
-    final apiUrl = '${appProvider.appConfig.memosApiUrl}/api/v1/resource/blob';
-
-    // 构建multipart请求
-    final request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-    request.headers['Authorization'] =
-        'Bearer ${appProvider.appConfig.lastToken}';
-
-    // 添加文件部分
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        contentType: MediaType('image', 'jpeg'),
-      ),
-    );
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-
-      // 提取资源URL - 必须使用uid字段，而不是id
-      if (data['uid'] != null) {
-        // v1 API直接返回资源对象，使用uid字段
-        return '${appProvider.appConfig.memosApiUrl}/o/r/${data['uid']}';
-      } else if (data['data'] != null && data['data']['uid'] != null) {
-        // 嵌套格式
-        final uid = data['data']['uid'];
-        return '${appProvider.appConfig.memosApiUrl}/o/r/$uid';
-      } else if (data['resource'] != null && data['resource']['uid'] != null) {
-        // 另一种格式
-        final uid = data['resource']['uid'];
-        return '${appProvider.appConfig.memosApiUrl}/o/r/$uid';
-      }
-
-      throw Exception('v1响应中无法提取资源UID');
-    } else {
-      throw Exception('v1上传失败: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  // v2 API上传头像
-  Future<String> _uploadAvatarV2(
-    AppProvider appProvider,
-    Uint8List bytes,
-  ) async {
-    final apiUrl = '${appProvider.appConfig.memosApiUrl}/api/v2/resource/blob';
-
-    // 构建multipart请求
-    final request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-    request.headers['Authorization'] =
-        'Bearer ${appProvider.appConfig.lastToken}';
-
-    // 添加文件部分
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        contentType: MediaType('image', 'jpeg'),
-      ),
-    );
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-
-      // v2 API响应格式 - 必须使用uid字段，而不是id
-      if (data.containsKey('resource')) {
-        final resource = data['resource'];
-        if (resource['uid'] != null) {
-          return '${appProvider.appConfig.memosApiUrl}/o/r/${resource['uid']}';
-        }
-      } else if (data['uid'] != null) {
-        return '${appProvider.appConfig.memosApiUrl}/o/r/${data['uid']}';
-      }
-
-      throw Exception('v2响应中无法提取资源UID');
-    } else {
-      throw Exception('v2上传失败: ${response.statusCode} - ${response.body}');
     }
   }
 
@@ -697,60 +302,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   }
 
   // 显示修改简介对话框
-  void _showBioDialog(BuildContext context, User user) {
-    final controller = TextEditingController(text: user.description);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('修改简介'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '简介',
-            hintText: '请输入新的简介',
-          ),
-          maxLines: 3,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newBio = controller.text.trim();
-              final appProvider =
-                  Provider.of<AppProvider>(context, listen: false);
-              final result =
-                  await appProvider.updateUserInfo(description: newBio);
-
-              if (context.mounted) {
-                Navigator.pop(context);
-
-                if (result) {
-                  SnackBarUtils.showSuccess(
-                    context,
-                    AppLocalizationsSimple.of(context)?.bioUpdateSuccess ??
-                        '简介更新成功',
-                  );
-                } else {
-                  SnackBarUtils.showError(
-                    context,
-                    AppLocalizationsSimple.of(context)?.bioUpdateFailed ??
-                        '简介更新失败',
-                  );
-                }
-              }
-            },
-            child: Text(AppLocalizationsSimple.of(context)?.save ?? '保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // 显示修改邮箱对话框
   void _showEmailDialog(BuildContext context, User user) {
     final controller = TextEditingController(text: user.email);
@@ -763,7 +314,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
           controller: controller,
           decoration: InputDecoration(
             labelText: AppLocalizationsSimple.of(context)?.email ?? '邮箱',
-            hintText: '请输入新的邮箱地址',
+            hintText: AppLocalizationsSimple.of(context)?.pleaseEnterNewEmail ??
+                '请输入新的邮箱地址',
           ),
           keyboardType: TextInputType.emailAddress,
           autofocus: true,
@@ -786,9 +338,17 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   Navigator.pop(context);
 
                   if (result) {
-                    SnackBarUtils.showSuccess(context, '邮箱更新成功');
+                    SnackBarUtils.showSuccess(
+                      context,
+                      AppLocalizationsSimple.of(context)?.emailUpdateSuccess ??
+                          '邮箱更新成功',
+                    );
                   } else {
-                    SnackBarUtils.showError(context, '邮箱更新失败');
+                    SnackBarUtils.showError(
+                      context,
+                      AppLocalizationsSimple.of(context)?.emailUpdateFailed ??
+                          '邮箱更新失败',
+                    );
                   }
                 }
               }
@@ -823,7 +383,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isDarkMode
-                      ? Colors.red.shade900.withOpacity(0.2)
+                      ? Colors.red.shade900.withValues(alpha: 0.2)
                       : Colors.red.shade50,
                   shape: BoxShape.circle,
                 ),
@@ -930,6 +490,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   }) {
     // 先检查是否有未同步的笔记
     appProvider.logout(keepLocalData: keepLocalData).then((result) {
+      if (!context.mounted) {
+        return;
+      }
       final (success, message) = result;
 
       if (!success && message != null) {
@@ -937,7 +500,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
         showDialog(
           context: context,
           builder: (context) => Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1016,7 +580,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                               keepLocalData: keepLocalData,
                             )
                                 .then((_) {
-                              context.go('/login');
+                              if (mounted && this.context.mounted) {
+                                this.context.go('/login');
+                              }
                             });
                           },
                           child: Text(
@@ -1071,8 +637,12 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
               TextField(
                 controller: currentPasswordController,
                 decoration: InputDecoration(
-                  labelText: '当前密码',
-                  hintText: '请输入当前密码',
+                  labelText: AppLocalizationsSimple.of(context)
+                          ?.currentPasswordLabel ??
+                      '当前密码',
+                  hintText: AppLocalizationsSimple.of(context)
+                          ?.enterCurrentPassword ??
+                      '请输入当前密码',
                   suffixIcon: IconButton(
                     icon: Icon(
                       isCurrentPasswordVisible
@@ -1093,8 +663,11 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
               TextField(
                 controller: newPasswordController,
                 decoration: InputDecoration(
-                  labelText: '新密码',
-                  hintText: '请输入新密码（至少3位）',
+                  labelText:
+                      AppLocalizationsSimple.of(context)?.newPassword ?? '新密码',
+                  hintText: AppLocalizationsSimple.of(context)
+                          ?.enterNewPasswordWithMin ??
+                      '请输入新密码（至少3位）',
                   suffixIcon: IconButton(
                     icon: Icon(
                       isNewPasswordVisible
@@ -1114,8 +687,12 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
               TextField(
                 controller: confirmPasswordController,
                 decoration: InputDecoration(
-                  labelText: '确认新密码',
-                  hintText: '请再次输入新密码',
+                  labelText:
+                      AppLocalizationsSimple.of(context)?.confirmNewPassword ??
+                          '确认新密码',
+                  hintText: AppLocalizationsSimple.of(context)
+                          ?.enterNewPasswordAgain ??
+                      '请再次输入新密码',
                   suffixIcon: IconButton(
                     icon: Icon(
                       isConfirmPasswordVisible
@@ -1146,60 +723,95 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
 
                 // 验证输入
                 if (currentPassword.isEmpty) {
-                  SnackBarUtils.showError(context, '请输入当前密码');
+                  SnackBarUtils.showError(
+                    context,
+                    AppLocalizationsSimple.of(context)?.enterCurrentPassword ??
+                        '请输入当前密码',
+                  );
                   return;
                 }
 
                 if (newPassword.isEmpty) {
-                  SnackBarUtils.showError(context, '请输入新密码');
+                  SnackBarUtils.showError(
+                    context,
+                    AppLocalizationsSimple.of(context)?.enterNewPassword ??
+                        '请输入新密码',
+                  );
                   return;
                 }
 
                 if (newPassword.length < 3) {
-                  SnackBarUtils.showError(context, '新密码至少需要3位');
+                  SnackBarUtils.showError(
+                    context,
+                    AppLocalizationsSimple.of(context)?.newPasswordTooShort ??
+                        '新密码至少需要3位',
+                  );
                   return;
                 }
 
                 if (newPassword != confirmPassword) {
-                  SnackBarUtils.showError(context, '两次输入的新密码不一致');
+                  SnackBarUtils.showError(
+                    context,
+                    AppLocalizationsSimple.of(context)?.newPasswordMismatch ??
+                        '两次输入的新密码不一致',
+                  );
                   return;
                 }
 
                 if (currentPassword == newPassword) {
-                  SnackBarUtils.showError(context, '新密码不能与当前密码相同');
+                  SnackBarUtils.showError(
+                    context,
+                    AppLocalizationsSimple.of(context)
+                            ?.newPasswordSameAsCurrent ??
+                        '新密码不能与当前密码相同',
+                  );
                   return;
                 }
 
                 try {
                   final appProvider =
                       Provider.of<AppProvider>(context, listen: false);
-                  final result = await _updatePasswordToServer(
-                    appProvider,
-                    currentPassword,
-                    newPassword,
+                  final result = await appProvider.updatePassword(
+                    currentPassword: currentPassword,
+                    newPassword: newPassword,
                   );
 
-                  if (context.mounted) {
+                  if (context.mounted && mounted) {
                     Navigator.pop(context);
 
                     if (result) {
-                      SnackBarUtils.showSuccess(context, '密码修改成功，请重新登录');
+                      SnackBarUtils.showSuccess(
+                        this.context,
+                        AppLocalizationsSimple.of(this.context)
+                                ?.passwordUpdateSuccessRelogin ??
+                            '密码修改成功，请重新登录',
+                      );
                       // 密码修改成功后，清除登录状态，要求用户重新登录
                       await appProvider.logout();
-                      if (context.mounted) {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                          '/login',
-                          (route) => false,
+                      if (mounted) {
+                        unawaited(
+                          Navigator.of(this.context).pushNamedAndRemoveUntil(
+                            '/login',
+                            (route) => false,
+                          ),
                         );
                       }
                     } else {
-                      SnackBarUtils.showError(context, '密码修改失败，请检查当前密码是否正确');
+                      SnackBarUtils.showError(
+                        context,
+                        AppLocalizationsSimple.of(context)
+                                ?.passwordUpdateFailedCheckCurrent ??
+                            '密码修改失败，请检查当前密码是否正确',
+                      );
                     }
                   }
-                } catch (e) {
-                  if (context.mounted) {
+                } on Object catch (e) {
+                  if (context.mounted && mounted) {
                     Navigator.pop(context);
-                    SnackBarUtils.showError(context, '密码修改失败: $e');
+                    SnackBarUtils.showError(
+                      this.context,
+                      '${AppLocalizationsSimple.of(this.context)?.passwordUpdateFailed ?? '密码修改失败'}: $e',
+                    );
                   }
                 }
               },
@@ -1217,8 +829,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
   Widget _buildLoginPromptUI(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
-    
-    return Container(
+
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -1240,7 +852,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
           child: Column(
             children: [
               const SizedBox(height: 40),
-              
+
               // 占位头像 + 点击登录提示
               GestureDetector(
                 onTap: () => _navigateToLogin(context),
@@ -1253,47 +865,50 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        theme.primaryColor.withOpacity(0.3),
-                        theme.primaryColor.withOpacity(0.1),
+                        theme.primaryColor.withValues(alpha: 0.3),
+                        theme.primaryColor.withValues(alpha: 0.1),
                       ],
                     ),
                     border: Border.all(
-                      color: theme.primaryColor.withOpacity(0.3),
+                      color: theme.primaryColor.withValues(alpha: 0.3),
                       width: 2,
                     ),
                   ),
                   child: Icon(
                     Icons.person_outline,
                     size: 50,
-                    color: theme.primaryColor.withOpacity(0.7),
+                    color: theme.primaryColor.withValues(alpha: 0.7),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // 欢迎信息
               Text(
-                AppLocalizationsSimple.of(context)?.welcomeToInkRootShort ?? '欢迎使用 InkRoot',
+                AppLocalizationsSimple.of(context)?.welcomeToInkRootShort ??
+                    '欢迎使用 InkRoot',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: theme.textTheme.bodyLarge?.color,
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               Text(
-                AppLocalizationsSimple.of(context)?.loginToUnlockFeatures ?? '登录后解锁更多精彩功能',
+                AppLocalizationsSimple.of(context)?.loginToUnlockFeatures ??
+                    '登录后解锁更多精彩功能',
                 style: TextStyle(
                   fontSize: 15,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                  color:
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                 ),
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // 功能预览卡片
               Container(
                 padding: const EdgeInsets.all(24),
@@ -1302,7 +917,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -1313,32 +928,44 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                     _buildFeatureItem(
                       context,
                       icon: Icons.cloud_sync,
-                      title: AppLocalizationsSimple.of(context)?.cloudSyncFeature ?? '云端同步',
-                      description: AppLocalizationsSimple.of(context)?.cloudSyncDesc ?? '笔记实时同步，随时随地访问',
+                      title: AppLocalizationsSimple.of(context)
+                              ?.cloudSyncFeature ??
+                          '云端同步',
+                      description:
+                          AppLocalizationsSimple.of(context)?.cloudSyncDesc ??
+                              '笔记实时同步，随时随地访问',
                       color: const Color(0xFF3E9BFF),
                     ),
                     const SizedBox(height: 16),
                     _buildFeatureItem(
                       context,
                       icon: Icons.psychology,
-                      title: AppLocalizationsSimple.of(context)?.aiAssistantFeature ?? 'AI 助手',
-                      description: AppLocalizationsSimple.of(context)?.aiAssistantDesc ?? '智能总结、扩展、改进笔记内容',
+                      title: AppLocalizationsSimple.of(context)
+                              ?.aiAssistantFeature ??
+                          'AI 助手',
+                      description:
+                          AppLocalizationsSimple.of(context)?.aiAssistantDesc ??
+                              '智能总结、扩展、改进笔记内容',
                       color: const Color(0xFF46B696),
                     ),
                     const SizedBox(height: 16),
                     _buildFeatureItem(
                       context,
                       icon: Icons.notifications_active,
-                      title: AppLocalizationsSimple.of(context)?.remindersFeature ?? '定时提醒',
-                      description: AppLocalizationsSimple.of(context)?.remindersDesc ?? '重要事项不错过，高效管理时间',
+                      title: AppLocalizationsSimple.of(context)
+                              ?.remindersFeature ??
+                          '定时提醒',
+                      description:
+                          AppLocalizationsSimple.of(context)?.remindersDesc ??
+                              '重要事项不错过，高效管理时间',
                       color: const Color(0xFFFF6B6B),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // 登录按钮（主按钮）
               SizedBox(
                 width: double.infinity,
@@ -1369,9 +996,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // 注册按钮（次按钮）
               SizedBox(
                 width: double.infinity,
@@ -1401,15 +1028,17 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // 提示文案
               Text(
-                AppLocalizationsSimple.of(context)?.agreeToTermsAndPrivacy ?? '注册即表示同意用户协议和隐私政策',
+                AppLocalizationsSimple.of(context)?.agreeToTermsAndPrivacy ??
+                    '注册即表示同意用户协议和隐私政策',
                 style: TextStyle(
                   fontSize: 12,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  color:
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -1426,45 +1055,48 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
     required String title,
     required String description,
     required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+  }) =>
+      Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
           ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.6),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
+        ],
+      );
 
   // 跳转到登录页（使用GoRouter）
   void _navigateToLogin(BuildContext context) {
@@ -1508,7 +1140,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -1527,7 +1159,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -1551,7 +1183,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                             child: Container(
                               height: 28,
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.5),
+                                color: Colors.black.withValues(alpha: 0.5),
                                 borderRadius: const BorderRadius.only(
                                   bottomLeft: Radius.circular(40),
                                   bottomRight: Radius.circular(40),
@@ -1570,10 +1202,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      user.nickname ??
-                          user.username ??
-                          (AppLocalizationsSimple.of(context)?.nicknameNotSet ??
-                              '未设置昵称'),
+                      user.nickname ?? user.username,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -1586,8 +1215,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                               '未设置邮箱'),
                       style: TextStyle(
                         fontSize: 14,
-                        color:
-                            theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                        color: theme.textTheme.bodyMedium?.color
+                            ?.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1595,8 +1224,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                       '${AppLocalizationsSimple.of(context)?.createdTimeLabel ?? '创建时间：'}${_formatCreationTime(user)}',
                       style: TextStyle(
                         fontSize: 14,
-                        color:
-                            theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                        color: theme.textTheme.bodyMedium?.color
+                            ?.withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -1612,7 +1241,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -1637,7 +1266,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF46B696).withOpacity(0.1),
+                          color: const Color(0xFF46B696).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1657,7 +1286,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3E9BFF).withOpacity(0.1),
+                          color: const Color(0xFF3E9BFF).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1677,7 +1306,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1705,7 +1334,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -1718,7 +1347,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3E9BFF).withOpacity(0.1),
+                          color: const Color(0xFF3E9BFF).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1731,14 +1360,17 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                             '同步个人信息',
                       ),
                       subtitle: Text(
-                        AppLocalizationsSimple.of(context)?.syncPersonalInfoDesc ?? '从服务器同步最新的个人资料',
+                        AppLocalizationsSimple.of(context)
+                                ?.syncPersonalInfoDesc ??
+                            '从服务器同步最新的个人资料',
                         style: TextStyle(
                           fontSize: 12,
-                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                          color: theme.textTheme.bodyMedium?.color
+                              ?.withValues(alpha: 0.6),
                         ),
                       ),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _syncUserInfo(context),
+                      onTap: _syncUserInfo,
                     ),
                     const Divider(height: 1, indent: 56, endIndent: 16),
                     ListTile(
@@ -1746,7 +1378,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1761,10 +1393,12 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        AppLocalizationsSimple.of(context)?.logoutDesc ?? '退出当前账号并返回登录页',
+                        AppLocalizationsSimple.of(context)?.logoutDesc ??
+                            '退出当前账号并返回登录页',
                         style: TextStyle(
                           fontSize: 12,
-                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                          color: theme.textTheme.bodyMedium?.color
+                              ?.withValues(alpha: 0.6),
                         ),
                       ),
                       trailing: const Icon(

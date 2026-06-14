@@ -7,15 +7,16 @@ class CloudAppConfigResponse {
     this.msg,
   });
 
-  factory CloudAppConfigResponse.fromJson(Map<String, dynamic> json) =>
-      CloudAppConfigResponse(
-        code: json['code'] ?? 0,
-        msg: json['msg'] != null
-            ? CloudAppConfigData.fromJson(json['msg'])
-            : null,
-        time: json['time'] ?? 0,
-        check: json['check'] ?? '',
-      );
+  factory CloudAppConfigResponse.fromJson(Map<String, dynamic> json) {
+    final msg = json['msg'];
+    return CloudAppConfigResponse(
+      code: json['code'] ?? 0,
+      msg:
+          msg is Map<String, dynamic> ? CloudAppConfigData.fromJson(msg) : null,
+      time: json['time'] ?? 0,
+      check: json['check'] ?? '',
+    );
+  }
   final int code;
   final CloudAppConfigData? msg;
   final int time;
@@ -65,13 +66,15 @@ class CloudNoticeResponse {
     this.msg,
   });
 
-  factory CloudNoticeResponse.fromJson(Map<String, dynamic> json) =>
-      CloudNoticeResponse(
-        code: json['code'] ?? 0,
-        msg: json['msg'] != null ? CloudNoticeData.fromJson(json['msg']) : null,
-        time: json['time'] ?? 0,
-        check: json['check'] ?? '',
-      );
+  factory CloudNoticeResponse.fromJson(Map<String, dynamic> json) {
+    final msg = json['msg'];
+    return CloudNoticeResponse(
+      code: json['code'] ?? 0,
+      msg: msg is Map<String, dynamic> ? CloudNoticeData.fromJson(msg) : null,
+      time: json['time'] ?? 0,
+      check: json['check'] ?? '',
+    );
+  }
   final int code;
   final CloudNoticeData? msg;
   final int time;

@@ -6,7 +6,6 @@
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:inkroot/services/umeng_analytics_service.dart';
 
 /// 日志级别
 enum LogLevel {
@@ -19,20 +18,20 @@ enum LogLevel {
 
 /// 结构化日志
 class StructuredLogger {
-  static final StructuredLogger _instance = StructuredLogger._internal();
   factory StructuredLogger() => _instance;
   StructuredLogger._internal();
+  static final StructuredLogger _instance = StructuredLogger._internal();
 
   // 当前日志级别
-  LogLevel _minLevel = kDebugMode ? LogLevel.debug : LogLevel.info;
-  
+  final LogLevel _minLevel = kDebugMode ? LogLevel.debug : LogLevel.info;
+
   // 日志缓存（用于上报）
   final List<Map<String, dynamic>> _logBuffer = [];
-  
+
   // 上下文信息
   String? _userId;
   String? _sessionId;
-  Map<String, dynamic> _globalContext = {};
+  final Map<String, dynamic> _globalContext = {};
 
   /// 设置全局上下文
   void setContext({
@@ -48,7 +47,8 @@ class StructuredLogger {
   }
 
   /// Debug日志
-  void debug(String message, {
+  void debug(
+    String message, {
     Map<String, dynamic>? context,
     String? category,
   }) {
@@ -56,7 +56,8 @@ class StructuredLogger {
   }
 
   /// Info日志
-  void info(String message, {
+  void info(
+    String message, {
     Map<String, dynamic>? context,
     String? category,
   }) {
@@ -64,7 +65,8 @@ class StructuredLogger {
   }
 
   /// Warning日志
-  void warning(String message, {
+  void warning(
+    String message, {
     Map<String, dynamic>? context,
     String? category,
     Object? error,
@@ -81,7 +83,8 @@ class StructuredLogger {
   }
 
   /// Error日志
-  void error(String message, {
+  void error(
+    String message, {
     Map<String, dynamic>? context,
     String? category,
     Object? error,
@@ -98,7 +101,8 @@ class StructuredLogger {
   }
 
   /// Fatal日志
-  void fatal(String message, {
+  void fatal(
+    String message, {
     Map<String, dynamic>? context,
     String? category,
     Object? error,
@@ -123,7 +127,9 @@ class StructuredLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    if (level.index < _minLevel.index) return;
+    if (level.index < _minLevel.index) {
+      return;
+    }
 
     final logEntry = {
       'timestamp': DateTime.now().toIso8601String(),
@@ -162,15 +168,16 @@ class StructuredLogger {
     final level = logEntry['level'];
     final message = logEntry['message'];
     final category = logEntry['category'];
-    
+
     // 彩色输出（在支持的终端）
     final emoji = _getLevelEmoji(level);
     final output = '$emoji [$level] [$category] $message';
-    
+
     debugPrint(output);
-    
+
     // 如果有额外上下文，也打印出来
-    if (logEntry['context'] != null && (logEntry['context'] as Map).isNotEmpty) {
+    if (logEntry['context'] != null &&
+        (logEntry['context'] as Map).isNotEmpty) {
       debugPrint('  Context: ${jsonEncode(logEntry['context'])}');
     }
   }
@@ -203,9 +210,7 @@ class StructuredLogger {
   }
 
   /// 获取所有日志
-  List<Map<String, dynamic>> getLogs() {
-    return List.from(_logBuffer);
-  }
+  List<Map<String, dynamic>> getLogs() => List.from(_logBuffer);
 
   /// 清空日志
   void clearLogs() {
@@ -215,18 +220,19 @@ class StructuredLogger {
 
 /// 链路追踪（Distributed Tracing）
 class TracingService {
-  static final TracingService _instance = TracingService._internal();
   factory TracingService() => _instance;
   TracingService._internal();
+  static final TracingService _instance = TracingService._internal();
 
   // Span栈（用于嵌套追踪）
   final List<Span> _spanStack = [];
-  
+
   // 完成的Spans
   final List<Span> _completedSpans = [];
 
   /// 开始一个Span
-  Span startSpan(String operationName, {
+  Span startSpan(
+    String operationName, {
     Map<String, dynamic>? tags,
     Span? parent,
   }) {
@@ -238,7 +244,7 @@ class TracingService {
     );
 
     _spanStack.add(span);
-    
+
     StructuredLogger().debug(
       'Trace started: $operationName',
       category: 'tracing',
@@ -251,7 +257,7 @@ class TracingService {
   /// 结束一个Span
   void endSpan(Span span, {Map<String, dynamic>? tags}) {
     span.endTime = DateTime.now();
-    
+
     if (tags != null) {
       span.tags.addAll(tags);
     }
@@ -260,7 +266,7 @@ class TracingService {
     _completedSpans.add(span);
 
     final duration = span.endTime!.difference(span.startTime);
-    
+
     StructuredLogger().debug(
       'Trace completed: ${span.operationName} (${duration.inMilliseconds}ms)',
       category: 'tracing',
@@ -283,12 +289,12 @@ class TracingService {
     Map<String, dynamic>? tags,
   }) async {
     final span = startSpan(operationName, tags: tags);
-    
+
     try {
       final result = await operation();
       span.setTag('success', true);
       return result;
-    } catch (e, stackTrace) {
+    } on Object catch (e, stackTrace) {
       span.setTag('success', false);
       span.setTag('error', e.toString());
       span.setTag('stack_trace', stackTrace.toString());
@@ -305,12 +311,12 @@ class TracingService {
     Map<String, dynamic>? tags,
   }) {
     final span = startSpan(operationName, tags: tags);
-    
+
     try {
       final result = operation();
       span.setTag('success', true);
       return result;
-    } catch (e) {
+    } on Object catch (e) {
       span.setTag('success', false);
       span.setTag('error', e.toString());
       rethrow;
@@ -320,19 +326,24 @@ class TracingService {
   }
 
   /// 获取所有完成的Spans
-  List<Span> getCompletedSpans() {
-    return List.from(_completedSpans);
-  }
+  List<Span> getCompletedSpans() => List.from(_completedSpans);
 
   /// 生成火焰图数据
   Map<String, dynamic> generateFlameGraph() {
-    // TODO: 实现火焰图数据生成
+    // 火焰图数据生成暂未接入，当前返回空数据供调用方兼容处理。
     return {};
   }
 }
 
 /// Span（跨度/追踪段）
 class Span {
+  Span({
+    required this.operationName,
+    required this.startTime,
+    required this.tags,
+    this.parent,
+  })  : traceId = parent?.traceId ?? _generateId(),
+        spanId = _generateId();
   final String traceId;
   final String spanId;
   final String operationName;
@@ -341,40 +352,29 @@ class Span {
   final Map<String, dynamic> tags;
   final Span? parent;
 
-  Span({
-    required this.operationName,
-    required this.startTime,
-    required this.tags,
-    this.parent,
-  })  : traceId = parent?.traceId ?? _generateId(),
-        spanId = _generateId();
-
   Duration? get duration => endTime?.difference(startTime);
 
-  void setTag(String key, dynamic value) {
+  void setTag(String key, Object? value) {
     tags[key] = value;
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'trace_id': traceId,
-      'span_id': spanId,
-      'parent_span_id': parent?.spanId,
-      'operation_name': operationName,
-      'start_time': startTime.toIso8601String(),
-      'end_time': endTime?.toIso8601String(),
-      'duration_ms': duration?.inMilliseconds,
-      'tags': tags,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'trace_id': traceId,
+        'span_id': spanId,
+        'parent_span_id': parent?.spanId,
+        'operation_name': operationName,
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime?.toIso8601String(),
+        'duration_ms': duration?.inMilliseconds,
+        'tags': tags,
+      };
 
-  static String _generateId() {
-    return DateTime.now().microsecondsSinceEpoch.toString();
-  }
+  static String _generateId() =>
+      DateTime.now().microsecondsSinceEpoch.toString();
 }
 
 /// 使用示例
-/// 
+///
 /// ```dart
 /// // 1. 设置日志上下文
 /// StructuredLogger().setContext(
@@ -385,7 +385,7 @@ class Span {
 ///     'platform': Platform.operatingSystem,
 ///   },
 /// );
-/// 
+///
 /// // 2. 记录结构化日志
 /// StructuredLogger().info(
 ///   'User logged in',
@@ -395,31 +395,31 @@ class Span {
 ///     'login_method': 'password',
 ///   },
 /// );
-/// 
+///
 /// // 3. 链路追踪
 /// await TracingService().trace('fetch_notes', () async {
 ///   // 1. API调用
 ///   await TracingService().trace('api_call', () async {
 ///     return await apiService.fetchNotes();
 ///   });
-///   
+///
 ///   // 2. 数据库存储
 ///   await TracingService().trace('db_save', () async {
 ///     return await dbService.saveNotes(notes);
 ///   });
-///   
+///
 ///   // 3. UI更新
 ///   TracingService().traceSync('ui_update', () {
 ///     notifyListeners();
 ///   });
 /// });
-/// 
+///
 /// // 4. 查看追踪结果
 /// final spans = TracingService().getCompletedSpans();
 /// for (final span in spans) {
 ///   print('${span.operationName}: ${span.duration?.inMilliseconds}ms');
 /// }
-/// 
+///
 /// // 5. 错误日志
 /// try {
 ///   await riskyOperation();
@@ -436,4 +436,3 @@ class Span {
 ///   );
 /// }
 /// ```
-

@@ -1,21 +1,23 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
-import 'package:inkroot/themes/app_theme.dart';
-import 'package:inkroot/utils/responsive_utils.dart';
+import 'package:inkroot/screens/about_screen.dart';
 import 'package:inkroot/screens/account_info_screen.dart';
-import 'package:inkroot/screens/server_info_screen.dart';
-import 'package:inkroot/screens/preferences_screen.dart';
 import 'package:inkroot/screens/ai_settings_screen.dart';
-import 'package:inkroot/screens/webdav_settings_screen.dart';
-import 'package:inkroot/screens/import_export_main_screen.dart';
 import 'package:inkroot/screens/data_cleanup_screen.dart';
-import 'package:inkroot/screens/laboratory_screen.dart';
 import 'package:inkroot/screens/feedback_screen.dart';
 import 'package:inkroot/screens/help_screen.dart';
-import 'package:inkroot/screens/about_screen.dart';
+import 'package:inkroot/screens/import_export_main_screen.dart';
+import 'package:inkroot/screens/laboratory_screen.dart';
+import 'package:inkroot/screens/legal_document_screen.dart';
+import 'package:inkroot/screens/preferences_screen.dart';
+import 'package:inkroot/screens/server_info_screen.dart';
+import 'package:inkroot/screens/webdav_settings_screen.dart';
+import 'package:inkroot/themes/app_theme.dart';
+import 'package:inkroot/utils/responsive_utils.dart';
 
 enum SettingsPage {
   none,
@@ -28,6 +30,7 @@ enum SettingsPage {
   dataCleanup,
   laboratory,
   feedback,
+  legal,
   help,
   about,
 }
@@ -51,9 +54,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final textColor =
         isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
     final l10n = AppLocalizationsSimple.of(context);
-    
+
     // 桌面端（macOS和Windows）使用Master-Detail布局
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
 
     if (isDesktop) {
       // macOS: Master-Detail布局
@@ -65,7 +68,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               width: _menuWidth,
               decoration: BoxDecoration(
-                color: isDarkMode ? AppTheme.darkCardColor : const Color(0xFFF5F5F5),
+                color: isDarkMode
+                    ? AppTheme.darkCardColor
+                    : const Color(0xFFF5F5F5),
               ),
               child: Column(
                 children: [
@@ -104,56 +109,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.account_circle,
                           title: l10n?.accountInfo ?? '账户信息',
                           isSelected: _selectedPage == SettingsPage.accountInfo,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.accountInfo),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.accountInfo,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.cloud,
                           title: l10n?.serverUrl ?? '服务器连接',
                           isSelected: _selectedPage == SettingsPage.serverInfo,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.serverInfo),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.serverInfo,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.settings,
                           title: l10n?.preferences ?? '偏好设置',
                           isSelected: _selectedPage == SettingsPage.preferences,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.preferences),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.preferences,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.psychology,
                           title: l10n?.aiSettings ?? 'AI 助手',
                           isSelected: _selectedPage == SettingsPage.aiSettings,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.aiSettings),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.aiSettings,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.cloud_sync,
                           title: l10n?.webdavSync ?? 'WebDAV 同步',
                           isSelected: _selectedPage == SettingsPage.webdavSync,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.webdavSync),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.webdavSync,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.import_export,
                           title: l10n?.importExport ?? '导入导出',
-                          isSelected: _selectedPage == SettingsPage.importExport,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.importExport),
+                          isSelected:
+                              _selectedPage == SettingsPage.importExport,
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.importExport,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.cleaning_services,
                           title: l10n?.dataCleanup ?? '数据清理',
                           isSelected: _selectedPage == SettingsPage.dataCleanup,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.dataCleanup),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.dataCleanup,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.science,
                           title: l10n?.laboratory ?? '实验室',
                           isSelected: _selectedPage == SettingsPage.laboratory,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.laboratory),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.laboratory,
+                          ),
                         ),
                         const Divider(height: 16),
                         _buildMasterMenuItem(
@@ -161,21 +183,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.feedback_rounded,
                           title: l10n?.feedback ?? '意见反馈',
                           isSelected: _selectedPage == SettingsPage.feedback,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.feedback),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.feedback,
+                          ),
+                        ),
+                        _buildMasterMenuItem(
+                          context,
+                          icon: Icons.privacy_tip_outlined,
+                          title: l10n?.userAgreementAndPrivacy ?? '用户协议与隐私政策',
+                          isSelected: _selectedPage == SettingsPage.legal,
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.legal,
+                          ),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.help,
                           title: l10n?.help ?? '帮助',
                           isSelected: _selectedPage == SettingsPage.help,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.help),
+                          onTap: () =>
+                              setState(() => _selectedPage = SettingsPage.help),
                         ),
                         _buildMasterMenuItem(
                           context,
                           icon: Icons.info,
                           title: l10n?.about ?? '关于',
                           isSelected: _selectedPage == SettingsPage.about,
-                          onTap: () => setState(() => _selectedPage = SettingsPage.about),
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.about,
+                          ),
                         ),
                       ],
                     ),
@@ -189,12 +225,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: GestureDetector(
                 onHorizontalDragUpdate: (details) {
                   setState(() {
-                    _menuWidth = (_menuWidth + details.delta.dx).clamp(180.0, 320.0);
+                    _menuWidth =
+                        (_menuWidth + details.delta.dx).clamp(180.0, 320.0);
                   });
                 },
                 child: Container(
                   width: 1,
-                  color: isDarkMode ? AppTheme.darkDividerColor : const Color(0xFFE0E0E0),
+                  color: isDarkMode
+                      ? AppTheme.darkDividerColor
+                      : const Color(0xFFE0E0E0),
                 ),
               ),
             ),
@@ -208,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     // 移动端: 原有的列表布局
-    final double maxWidth = ResponsiveUtils.getMaxContentWidth(context);
+    final maxWidth = ResponsiveUtils.getMaxContentWidth(context);
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -299,7 +338,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 账户与连接
-              _buildSectionHeader(context, '账户与连接', isDarkMode, textColor),
+              _buildSectionHeader(
+                context,
+                l10n?.settingsAccountAndConnection ?? '账户与连接',
+                isDarkMode,
+                textColor,
+              ),
               _buildSettingsItem(
                 context,
                 icon: Icons.account_circle,
@@ -314,7 +358,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 通用设置
-              _buildSectionHeader(context, '通用', isDarkMode, textColor),
+              _buildSectionHeader(
+                context,
+                l10n?.settingsGeneral ?? '通用',
+                isDarkMode,
+                textColor,
+              ),
               _buildSettingsItem(
                 context,
                 icon: Icons.settings,
@@ -329,7 +378,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 数据管理
-              _buildSectionHeader(context, '数据管理', isDarkMode, textColor),
+              _buildSectionHeader(
+                context,
+                l10n?.settingsDataManagement ?? '数据管理',
+                isDarkMode,
+                textColor,
+              ),
               _buildSettingsItem(
                 context,
                 icon: Icons.import_export,
@@ -339,7 +393,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSettingsItem(
                 context,
                 icon: Icons.cloud_sync,
-                title: AppLocalizationsSimple.of(context)?.webdavSync ?? 'WebDAV 同步',
+                title: AppLocalizationsSimple.of(context)?.webdavSync ??
+                    'WebDAV 同步',
                 onTap: () => context.push('/webdav-settings'),
               ),
               _buildSettingsItem(
@@ -350,7 +405,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 高级
-              _buildSectionHeader(context, '高级', isDarkMode, textColor),
+              _buildSectionHeader(
+                context,
+                l10n?.advancedSettings ?? '高级',
+                isDarkMode,
+                textColor,
+              ),
               _buildSettingsItem(
                 context,
                 icon: Icons.science,
@@ -359,12 +419,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 支持
-              _buildSectionHeader(context, '支持', isDarkMode, textColor),
+              _buildSectionHeader(
+                context,
+                l10n?.settingsSupport ?? '支持',
+                isDarkMode,
+                textColor,
+              ),
               _buildSettingsItem(
                 context,
                 icon: Icons.feedback_rounded,
                 title: l10n?.feedback ?? '意见反馈',
                 onTap: () => context.push('/feedback'),
+              ),
+              _buildSettingsItem(
+                context,
+                icon: Icons.privacy_tip_outlined,
+                title: l10n?.userAgreementAndPrivacy ?? '用户协议与隐私政策',
+                onTap: () => context.push('/legal-documents'),
               ),
               _buildSettingsItem(
                 context,
@@ -388,7 +459,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // 构建右侧详情内容
   Widget _buildDetailContent(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     if (_selectedPage == SettingsPage.none) {
       return Container(
         padding: const EdgeInsets.all(40),
@@ -414,18 +485,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
-    
+
     // 根据选中的页面，直接显示对应的设置页面内容
     // 使用Navigator包装，这样子页面可以有自己的导航
     return Navigator(
-      onGenerateRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => _getPageContent(),
-        );
-      },
+      onGenerateRoute: (settings) => MaterialPageRoute(
+        builder: (context) => _getPageContent(),
+      ),
     );
   }
-  
+
   // 获取对应页面的内容
   Widget _getPageContent() {
     // 直接返回对应的设置页面Widget
@@ -448,6 +517,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return const LaboratoryScreen();
       case SettingsPage.feedback:
         return const FeedbackScreen();
+      case SettingsPage.legal:
+        return const LegalDocumentsHubScreen();
       case SettingsPage.help:
         return const HelpScreen();
       case SettingsPage.about:
@@ -456,13 +527,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return _buildPlaceholderContent();
     }
   }
-  
+
   // 占位内容
   Widget _buildPlaceholderContent() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    String pageTitle = '';
-    String route = '';
-    
+    var pageTitle = '';
+    var route = '';
+
     switch (_selectedPage) {
       case SettingsPage.importExport:
         pageTitle = '导入导出';
@@ -480,6 +551,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         pageTitle = '意见反馈';
         route = '/feedback';
         break;
+      case SettingsPage.legal:
+        pageTitle = '用户协议与隐私政策';
+        route = '/legal-documents';
+        break;
       case SettingsPage.help:
         pageTitle = '帮助';
         route = '/settings/help';
@@ -492,7 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         pageTitle = '未知页面';
         break;
     }
-    
+
     return Scaffold(
       backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
       body: Container(
@@ -512,7 +587,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor,
+                  color: isDarkMode
+                      ? AppTheme.darkTextPrimaryColor
+                      : AppTheme.textPrimaryColor,
                 ),
               ),
               if (route.isNotEmpty) ...<Widget>[
@@ -520,7 +597,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ElevatedButton.icon(
                   onPressed: () => context.push(route),
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('在新窗口打开'),
+                  label: Text(
+                    AppLocalizationsSimple.of(context)?.openInNewWindow ??
+                        '在新窗口打开',
+                  ),
                 ),
               ],
             ],
@@ -539,16 +619,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTap,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDarkMode ? AppTheme.darkTextPrimaryColor : Colors.black87;
-    final selectedColor = isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
+    final textColor =
+        isDarkMode ? AppTheme.darkTextPrimaryColor : Colors.black87;
+    final selectedColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
 
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? (isDarkMode ? selectedColor.withOpacity(0.15) : selectedColor.withOpacity(0.1))
+          color: isSelected
+              ? (isDarkMode
+                  ? selectedColor.withValues(alpha: 0.15)
+                  : selectedColor.withValues(alpha: 0.1))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
@@ -558,7 +642,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icon(
               icon,
               size: 20,
-              color: isSelected ? selectedColor : textColor.withOpacity(0.7),
+              color:
+                  isSelected ? selectedColor : textColor.withValues(alpha: 0.7),
             ),
             const SizedBox(width: 12),
             Text(
@@ -575,34 +660,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, bool isDarkMode, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          letterSpacing: 0.5,
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    bool isDarkMode,
+    Color textColor,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 4),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            letterSpacing: 0.5,
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _buildSettingsItem(
     BuildContext context, {
     required IconData icon,
     required String title,
-    String? subtitle,
     required VoidCallback onTap,
+    String? subtitle,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final iconColor =
         isDarkMode ? AppTheme.darkTextPrimaryColor : Colors.black87;
     final textColor = isDarkMode ? AppTheme.darkTextPrimaryColor : null;
     final arrowColor = isDarkMode ? Colors.grey[400] : Colors.grey;
-    final bool isMacOS = !kIsWeb && Platform.isMacOS;
+    final isMacOS = !kIsWeb && Platform.isMacOS;
 
     final content = Row(
       children: [
@@ -653,7 +742,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

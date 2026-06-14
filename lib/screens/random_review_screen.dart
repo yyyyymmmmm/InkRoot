@@ -1,28 +1,22 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:markdown/markdown.dart' as md;
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
+import 'package:inkroot/services/intelligent_related_notes_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
-import 'package:inkroot/utils/image_cache_manager.dart'; // 🔥 添加长期缓存
+import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
 import 'package:inkroot/utils/todo_parser.dart';
-import 'package:inkroot/services/intelligent_related_notes_service.dart';
-import 'package:inkroot/utils/snackbar_utils.dart';
-import 'package:inkroot/widgets/animated_checkbox.dart';
 import 'package:inkroot/widgets/intelligent_related_notes_sheet.dart';
+import 'package:inkroot/widgets/memos_markdown_renderer.dart';
 import 'package:inkroot/widgets/note_editor.dart';
 import 'package:inkroot/widgets/note_more_options_menu.dart';
-import 'package:inkroot/widgets/saveable_image.dart';
 import 'package:inkroot/widgets/sidebar.dart';
-import 'package:inkroot/widgets/simple_memo_content.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -43,13 +37,13 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
   int _currentIndex = 0;
 
   // 回顾设置
-  int _reviewDays = 30; // 默认回顾最近30天的笔记
-  int _reviewCount = 10; // 默认回顾10条笔记
+  int _reviewDays = 999999; // 默认回顾全部笔记
+  int _reviewCount = 1; // 默认回顾1条笔记
   Set<String> _selectedTags = {}; // 选中的标签集合
 
   // 🧠 智能相关笔记
   bool _isLoadingRelatedNotes = false;
-  final IntelligentRelatedNotesService _intelligentRelatedNotesService = 
+  final IntelligentRelatedNotesService _intelligentRelatedNotesService =
       IntelligentRelatedNotesService();
 
   @override
@@ -81,10 +75,10 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
       return;
     }
 
-    // 根据时间范围筛选笔记
+    // 根据时间范围筛选笔记（按最近更新更符合“回顾”直觉）
     final cutoffDate = DateTime.now().subtract(Duration(days: _reviewDays));
     var filteredNotes =
-        allNotes.where((note) => note.createdAt.isAfter(cutoffDate)).toList();
+        allNotes.where((note) => note.updatedAt.isAfter(cutoffDate)).toList();
 
     // 🔥 根据选中的标签筛选笔记（AND关系 - 必须包含所有选中的标签）
     if (_selectedTags.isNotEmpty) {
@@ -99,28 +93,21 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     // 如果筛选后的笔记不足，则使用全部笔记
     final availableNotes = filteredNotes.isEmpty ? allNotes : filteredNotes;
 
-    // 随机选择指定数量的笔记
-    var selectedNotes = <Note>[];
-    if (availableNotes.length <= _reviewCount) {
-      // 如果可用笔记少于请求的数量，全部使用
-      selectedNotes = List.from(availableNotes);
-    } else {
-      // 随机选择笔记
-      availableNotes.shuffle(_random);
-      selectedNotes = availableNotes.take(_reviewCount).toList();
-    }
-
-    // 保持当前笔记的位置
-    final currentNoteId = _currentIndex < _reviewNotes.length
-        ? _reviewNotes[_currentIndex].id
-        : '';
-    final newIndex =
-        selectedNotes.indexWhere((note) => note.id == currentNoteId);
+    // 每次进入/调用都随机一批：
+    // - 即使候选数量 <= _reviewCount，也要 shuffle，避免“看起来不随机”
+    // - 不保留旧的 currentIndex（否则会有“怎么还是那条”的错觉）
+    final shuffled = List<Note>.from(availableNotes)..shuffle(_random);
+    final selectedNotes = shuffled.take(_reviewCount).toList();
 
     setState(() {
       _reviewNotes = selectedNotes;
-      _currentIndex = newIndex != -1 ? newIndex : 0;
+      _currentIndex = 0;
     });
+
+    // 重置翻页位置（防止上一次停留页影响“新的一批”体验）
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
   }
 
   // 🎯 切换笔记中指定索引的待办事项
@@ -134,9 +121,12 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     }
 
     final todo = todos[todoIndex];
-    final newContent = TodoParser.toggleTodoAtLine(note.content, todo.lineNumber);
+    final newContent =
+        TodoParser.toggleTodoAtLine(note.content, todo.lineNumber);
     if (kDebugMode) {
-      debugPrint('RandomReviewScreen: 切换待办事项 #$todoIndex 行${todo.lineNumber}: "${todo.text}"');
+      debugPrint(
+        'RandomReviewScreen: 切换待办事项 #$todoIndex 行${todo.lineNumber}: "${todo.text}"',
+      );
     }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
@@ -148,6 +138,9 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     }).catchError((error) {
       if (kDebugMode) {
         debugPrint('RandomReviewScreen: 更新待办事项失败: $error');
+      }
+      if (!mounted) {
+        return;
       }
       SnackBarUtils.showError(context, '更新失败');
     });
@@ -182,9 +175,12 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
               final appProvider =
                   Provider.of<AppProvider>(context, listen: false);
               await appProvider.updateNote(note, content);
+              if (!mounted || !context.mounted) {
+                return;
+              }
               _loadReviewNotes(); // 重新加载笔记
-            } catch (e) {
-              if (mounted) {
+            } on Object catch (e) {
+              if (mounted && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
@@ -213,7 +209,6 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     final cardColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black87;
     final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
-    final dividerColor = isDarkMode ? Colors.grey[800] : Colors.grey[300];
 
     showModalBottomSheet(
       context: context,
@@ -637,43 +632,55 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
         ),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                AppLocalizationsSimple.of(context)?.reviewTimeRange ?? '选择时间范围',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-            ...options.map((days) {
-              final isSelected = days == currentValue;
-              return ListTile(
-                title: Text(
-                  days == 999999
-                      ? (AppLocalizationsSimple.of(context)?.all ?? '全部')
-                      : '$days ${AppLocalizationsSimple.of(context)?.dayUnit ?? '天'}',
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  AppLocalizationsSimple.of(context)?.reviewTimeRange ??
+                      '选择时间范围',
                   style: TextStyle(
-                    color: isSelected ? AppTheme.primaryColor : null,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
-                trailing: isSelected
-                    ? const Icon(Icons.check, color: AppTheme.primaryColor)
-                    : null,
-                onTap: () {
-                  onSelect(days);
-                  Navigator.pop(context);
-                },
-              );
-            }),
-          ],
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final days = options[index];
+                    final isSelected = days == currentValue;
+                    return ListTile(
+                      title: Text(
+                        days == 999999
+                            ? (AppLocalizationsSimple.of(context)?.all ?? '全部')
+                            : '$days ${AppLocalizationsSimple.of(context)?.dayUnit ?? '天'}',
+                        style: TextStyle(
+                          color: isSelected ? AppTheme.primaryColor : null,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              color: AppTheme.primaryColor,
+                            )
+                          : null,
+                      onTap: () {
+                        onSelect(days);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -686,7 +693,7 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     Function(int) onSelect,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final options = [5, 10, 20, 30, 50, 100];
+    final options = [1, 5, 10, 20, 30, 50, 100];
 
     showModalBottomSheet(
       context: context,
@@ -698,42 +705,53 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
         ),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                AppLocalizationsSimple.of(context)?.reviewNotesCount ??
-                    '选择笔记数量',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-            ...options.map((count) {
-              final isSelected = count == currentValue;
-              return ListTile(
-                title: Text(
-                  '$count ${AppLocalizationsSimple.of(context)?.noteUnit ?? '条'}',
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  AppLocalizationsSimple.of(context)?.reviewNotesCount ??
+                      '选择笔记数量',
                   style: TextStyle(
-                    color: isSelected ? AppTheme.primaryColor : null,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
-                trailing: isSelected
-                    ? const Icon(Icons.check, color: AppTheme.primaryColor)
-                    : null,
-                onTap: () {
-                  onSelect(count);
-                  Navigator.pop(context);
-                },
-              );
-            }),
-          ],
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final count = options[index];
+                    final isSelected = count == currentValue;
+                    return ListTile(
+                      title: Text(
+                        '$count ${AppLocalizationsSimple.of(context)?.noteUnit ?? '条'}',
+                        style: TextStyle(
+                          color: isSelected ? AppTheme.primaryColor : null,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              color: AppTheme.primaryColor,
+                            )
+                          : null,
+                      onTap: () {
+                        onSelect(count);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -753,14 +771,16 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
 
   // 🔥 处理链接点击
   Future<void> _handleLinkTap(String? href) async {
-    if (href == null || href.isEmpty) return;
+    if (href == null || href.isEmpty) {
+      return;
+    }
 
     try {
       // 处理笔记内部引用 [[noteId]]
       if (href.startsWith('[[') && href.endsWith(']]')) {
         final noteId = href.substring(2, href.length - 2);
         if (mounted) {
-          Navigator.of(context).pushNamed('/note/$noteId');
+          unawaited(Navigator.of(context).pushNamed('/note/$noteId'));
         }
         return;
       }
@@ -796,7 +816,7 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
           );
         }
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -821,234 +841,6 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     }
   }
 
-  // 🔥 复制笔记内容
-  Future<void> _copyNoteContent(Note note) async {
-    await Clipboard.setData(ClipboardData(text: note.content));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              Text(
-                AppLocalizationsSimple.of(context)?.copiedToClipboard ??
-                    '已复制到剪贴板',
-              ),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
-  }
-
-  // 处理标签和Markdown内容
-  Widget _buildContent(Note note) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : const Color(0xFF333333);
-    final secondaryTextColor =
-        isDarkMode ? Colors.grey[400] : const Color(0xFF666666);
-    final codeBgColor =
-        isDarkMode ? const Color(0xFF2C2C2C) : const Color(0xFFF5F5F5);
-
-    final content = note.content;
-
-    // 🔥 从resourceList中提取图片
-    final imagePaths = <String>[];
-    for (final resource in note.resourceList) {
-      final uid = resource['uid'] as String?;
-      if (uid != null) {
-        imagePaths.add('/o/r/$uid');
-      }
-    }
-
-    // 从content中提取Markdown格式的图片
-    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)');
-    final imageMatches = imageRegex.allMatches(content);
-    for (final match in imageMatches) {
-      final path = match.group(1) ?? '';
-      if (path.isNotEmpty && !imagePaths.contains(path)) {
-        imagePaths.add(path);
-      }
-    }
-
-    // 将图片从内容中移除
-    var contentWithoutImages = content;
-    for (final match in imageMatches) {
-      contentWithoutImages =
-          contentWithoutImages.replaceAll(match.group(0) ?? '', '');
-    }
-    contentWithoutImages = contentWithoutImages.trim();
-
-    // 首先处理标签
-    // 🎯 改进的标签识别规则（参考Obsidian/Notion/Logseq，排除URL中的#）
-    final tagRegex = tag_utils.getTagRegex();
-    final parts = contentWithoutImages.split(tagRegex);
-    final matches = tagRegex.allMatches(contentWithoutImages);
-
-    final contentWidgets = <Widget>[];
-    var matchIndex = 0;
-
-    for (var i = 0; i < parts.length; i++) {
-      if (parts[i].isNotEmpty) {
-        // 非标签部分用Markdown渲染
-        contentWidgets.add(
-          MarkdownBody(
-            data: parts[i],
-            selectable: true,
-            extensionSet: md.ExtensionSet.gitHubFlavored, // 🎯 启用GitHub风格Markdown（支持待办事项）
-            checkboxBuilder: (value) {
-              // 🎯 优雅的动画复选框（只读模式）
-              return AnimatedCheckbox(
-                value: value ?? false,
-                onChanged: null, // 只读模式
-                size: 20,
-                borderRadius: 6,
-              );
-            },
-            onTapLink: (text, href, title) => _handleLinkTap(href),
-            imageBuilder: (uri, title, alt) {
-              // 处理图片URL
-              final imagePath = uri.toString();
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: _buildImageWidget(imagePath),
-                ),
-              );
-            },
-            styleSheet: MarkdownStyleSheet(
-              p: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                letterSpacing: 0.2,
-                color: textColor,
-              ),
-              h1: TextStyle(
-                fontSize: 20,
-                height: 1.5,
-                letterSpacing: 0.2,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-              h2: TextStyle(
-                fontSize: 18,
-                height: 1.5,
-                letterSpacing: 0.2,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-              h3: TextStyle(
-                fontSize: 16,
-                height: 1.5,
-                letterSpacing: 0.2,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-              code: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                letterSpacing: 0.2,
-                color: textColor,
-                backgroundColor: codeBgColor,
-                fontFamily: 'monospace',
-              ),
-              blockquote: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                letterSpacing: 0.2,
-                color: secondaryTextColor,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        );
-      }
-
-      // 添加标签 - 更新为与主页一致的样式
-      if (matchIndex < matches.length && i < parts.length - 1) {
-        final tag = matches.elementAt(matchIndex).group(1)!;
-        contentWidgets.add(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '#$tag',
-              style: const TextStyle(
-                color: AppTheme.primaryColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        );
-        matchIndex++;
-      }
-    }
-
-    // 构建最终内容，包括文本和图片
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (contentWidgets.isNotEmpty)
-          Wrap(
-            spacing: 2,
-            runSpacing: 4,
-            children: contentWidgets,
-          ),
-        // 🔥 显示图片网格
-        if (imagePaths.isNotEmpty) ...[
-          if (contentWidgets.isNotEmpty) const SizedBox(height: 12),
-          _buildImageGrid(imagePaths),
-        ],
-      ],
-    );
-  }
-
-  // 🔥 构建图片网格
-  Widget _buildImageGrid(List<String> imagePaths) => LayoutBuilder(
-        builder: (context, constraints) {
-          const spacing = 4.0;
-          final imageWidth = (constraints.maxWidth - spacing * 2) / 3;
-          final imageCount = imagePaths.length > 9 ? 9 : imagePaths.length;
-
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: List.generate(imageCount, (index) {
-              final imagePath = imagePaths[index];
-              return _buildImageItem(imagePath, imageWidth);
-            }),
-          );
-        },
-      );
-
-  // 🔥 构建单个图片项
-  Widget _buildImageItem(String imagePath, double size) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          color: Colors.grey[200],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: _buildImageWidget(imagePath),
-        ),
-      );
-
-
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -1060,56 +852,56 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
     final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
-    final dividerColor = isDarkMode ? Colors.grey[800] : Colors.grey[300];
-    final bottomInfoBgColor =
-        isDarkMode ? Colors.grey[850] : Colors.grey.shade100;
 
     // 侧边栏由DesktopLayout处理
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-    
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: backgroundColor,
       drawer: isDesktop ? null : const Sidebar(),
-      drawerEdgeDragWidth: isDesktop ? null : MediaQuery.of(context).size.width * 0.2,
+      drawerEdgeDragWidth:
+          isDesktop ? null : MediaQuery.of(context).size.width * 0.2,
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 16,
-                  height: 2,
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: iconColor,
-                    borderRadius: BorderRadius.circular(1),
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 2,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 10,
+                        height: 2,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 10,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: iconColor,
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          onPressed: _openDrawer,
-        ),
+                onPressed: _openDrawer,
+              ),
         centerTitle: true,
         title: Text(
           AppLocalizationsSimple.of(context)?.randomReviewTitle ?? '随机回顾',
@@ -1120,6 +912,23 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
           ),
         ),
         actions: [
+          // 🔀 换一批：重新随机抽样
+          IconButton(
+            tooltip: '换一批',
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.shuffle_rounded,
+                size: 20,
+                color: iconColor,
+              ),
+            ),
+            onPressed: _loadReviewNotes,
+          ),
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
@@ -1239,36 +1048,15 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
                                     listen: false,
                                   ).appConfig.memosApiUrl;
 
-                                  // 从resourceList提取图片并添加到content
-                                  var contentWithImages = note.content;
-                                  final hasImagesInContent =
-                                      RegExp(r'!\[.*?\]\((.*?)\)')
-                                          .hasMatch(contentWithImages);
-
-                                  if (!hasImagesInContent &&
-                                      note.resourceList.isNotEmpty) {
-                                    final imagePaths = <String>[];
-                                    for (final resource in note.resourceList) {
-                                      final uid = resource['uid'] as String?;
-                                      if (uid != null) {
-                                        imagePaths.add('/o/r/$uid');
-                                      }
-                                    }
-
-                                    if (imagePaths.isNotEmpty) {
-                                      contentWithImages += '\n\n';
-                                      for (final path in imagePaths) {
-                                        contentWithImages += '![]($path)\n';
-                                      }
-                                    }
-                                  }
-
-                                  return SimpleMemoContent(
-                                    content: contentWithImages,
+                                  return MemosMarkdownRenderer.fromNote(
+                                    note: note,
                                     serverUrl: serverUrl,
-                                    note: note, // 🎯 传入note对象
-                                    onCheckboxTap: (index) => _toggleTodoInNote(note, index), // 🎯 复选框点击回调（传递索引）
+                                    onCheckboxTap: (index) => _toggleTodoInNote(
+                                      note,
+                                      index,
+                                    ), // 🎯 复选框点击回调（传递索引）
                                     onLinkTap: _handleLinkTap,
+                                    mode: MemosMarkdownMode.review,
                                   );
                                 },
                               ),
@@ -1303,224 +1091,9 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
         },
       ),
       // 🧠 智能相关笔记按钮（与详情页样式一致）
-      floatingActionButton: _reviewNotes.isNotEmpty
-          ? _buildAIRelatedNotesFAB(isDarkMode)
-          : null,
+      floatingActionButton:
+          _reviewNotes.isNotEmpty ? _buildAIRelatedNotesFAB(isDarkMode) : null,
     );
-  }
-
-  // 构建图片组件，支持不同类型的图片源
-  Widget _buildImageWidget(String imagePath) {
-    try {
-      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        // 🚀 网络图片 - 90天缓存，支持长按保存
-        return SaveableImage(
-          imageUrl: imagePath,
-          child: CachedNetworkImage(
-            imageUrl: imagePath,
-            cacheManager: ImageCacheManager.authImageCache, // 🔥 90天缓存
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              color: Colors.grey[300],
-              child: const SizedBox(),
-            ),
-            errorWidget: (context, url, error) {
-              // 🔥 离线模式：尝试从缓存加载
-              return FutureBuilder<File?>(
-                future: ImageCacheManager.authImageCache
-                    .getFileFromCache(url)
-                    .then((info) => info?.file),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    return Image.file(snapshot.data!, fit: BoxFit.cover);
-                  }
-                  return Center(
-                    child: Icon(Icons.broken_image, color: Colors.grey[600]),
-                  );
-                },
-              );
-            },
-          ),
-        );
-      } else if (imagePath.startsWith('/o/r/') ||
-          imagePath.startsWith('/file/') ||
-          imagePath.startsWith('/resource/')) {
-        // Memos服务器资源路径
-        final appProvider = Provider.of<AppProvider>(context, listen: false);
-        if (appProvider.resourceService != null) {
-          final fullUrl = appProvider.resourceService!.buildImageUrl(imagePath);
-          final token = appProvider.user?.token;
-          if (kDebugMode) {
-            debugPrint(
-              'RandomReview: 构建图片 - 原路径: $imagePath, URL: $fullUrl, 有Token: ${token != null}',
-            );
-          }
-
-          final headers = <String, String>{};
-          if (token != null) {
-            headers['Authorization'] = 'Bearer $token';
-          }
-
-          // 🚀 使用90天缓存，支持长按保存
-          return SaveableImage(
-            imageUrl: fullUrl,
-            headers: headers,
-            child: SizedBox(
-              width: double.infinity,
-              child: CachedNetworkImage(
-                imageUrl: fullUrl,
-                cacheManager: ImageCacheManager.authImageCache, // 🔥 90天缓存
-                httpHeaders: headers,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
-                  child: const SizedBox(),
-                ),
-                errorWidget: (context, url, error) {
-                  if (kDebugMode) {
-                    debugPrint(
-                      'RandomReview: 图片加载失败 - URL: $fullUrl, 错误: $error',
-                    );
-                  }
-                  // 🔥 离线模式：尝试从缓存加载
-                  return FutureBuilder<File?>(
-                    future: ImageCacheManager.authImageCache
-                        .getFileFromCache(fullUrl)
-                        .then((info) => info?.file),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return Image.file(snapshot.data!, fit: BoxFit.cover);
-                      }
-                      return Container(
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.broken_image, color: Colors.grey),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          );
-        } else {
-          // 如果没有资源服务，尝试使用基础URL（🔥 即使退出登录也能加载缓存）
-          final baseUrl = appProvider.user?.serverUrl ??
-              appProvider.appConfig.lastServerUrl ??
-              appProvider.appConfig.memosApiUrl ??
-              '';
-          if (baseUrl.isNotEmpty) {
-            final token = appProvider.user?.token;
-            final fullUrl = '$baseUrl$imagePath';
-            if (kDebugMode) {
-              debugPrint(
-                'RandomReview: 加载图片(fallback) - URL: $fullUrl, 有Token: ${token != null}',
-              );
-            }
-            final headers = <String, String>{};
-            if (token != null) {
-              headers['Authorization'] = 'Bearer $token';
-            }
-            return SaveableImage(
-              imageUrl: fullUrl,
-              headers: headers,
-              child: CachedNetworkImage(
-                imageUrl: fullUrl,
-                cacheManager: ImageCacheManager.authImageCache, // 🔥 90天缓存
-                httpHeaders: headers,
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) {
-                  // 🔥 离线模式
-                  return FutureBuilder<File?>(
-                    future: ImageCacheManager.authImageCache
-                        .getFileFromCache(fullUrl)
-                        .then((info) => info?.file),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return Image.file(snapshot.data!, fit: BoxFit.cover);
-                      }
-                      return Container(
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.broken_image, color: Colors.grey),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            );
-          }
-        }
-        return Container(
-          height: 100,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Center(
-            child: Icon(Icons.broken_image, color: Colors.grey),
-          ),
-        );
-      } else if (imagePath.startsWith('file://')) {
-        // 本地文件
-        final filePath = imagePath.replaceFirst('file://', '');
-        return Image.file(
-          File(filePath),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Icon(Icons.broken_image, color: Colors.grey),
-            ),
-          ),
-        );
-      } else {
-        // 其他情况，尝试作为资源或本地文件处理
-        return Image.file(
-          File(imagePath),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Icon(Icons.broken_image, color: Colors.grey),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-          'RandomReview Error in _buildImageWidget: $e for $imagePath',
-        );
-      }
-      return Container(
-        height: 100,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Center(
-          child: Icon(Icons.broken_image, color: Colors.grey),
-        ),
-      );
-    }
   }
 
   /// 🧠 构建智能相关笔记FAB（与详情页样式一致 - 炫酷脉冲动画）
@@ -1549,7 +1122,7 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
                   color: (isDark
                           ? AppTheme.primaryLightColor
                           : AppTheme.primaryColor)
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                   blurRadius: 12,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),
@@ -1587,8 +1160,10 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
 
   /// 🧠 查找并显示当前笔记的智能相关笔记
   Future<void> _findRelatedNotes() async {
-    if (_reviewNotes.isEmpty || _currentIndex >= _reviewNotes.length) return;
-    
+    if (_reviewNotes.isEmpty || _currentIndex >= _reviewNotes.length) {
+      return;
+    }
+
     final currentNote = _reviewNotes[_currentIndex];
 
     setState(() {
@@ -1599,7 +1174,8 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
 
       // 🧠 使用智能相关笔记服务进行分析
-      final result = await _intelligentRelatedNotesService.findIntelligentRelatedNotes(
+      final result =
+          await _intelligentRelatedNotesService.findIntelligentRelatedNotes(
         currentNote: currentNote,
         allNotes: appProvider.notes,
         apiKey: appProvider.appConfig.aiApiKey,
@@ -1612,27 +1188,30 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
       });
 
       // 显示智能相关笔记结果
-      if (!mounted) return;
-      
+      if (!mounted) {
+        return;
+      }
+
       if (result.isEmpty) {
         SnackBarUtils.showInfo(
           context,
-          AppLocalizationsSimple.of(context)?.aiRelatedNotesEmpty ??
-              '未找到相关笔记',
+          AppLocalizationsSimple.of(context)?.aiRelatedNotesEmpty ?? '未找到相关笔记',
         );
       } else {
         // 🎨 显示现代化的智能相关笔记抽屉
         await IntelligentRelatedNotesSheet.show(context, result);
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ 查找相关笔记失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ 查找相关笔记失败: $e');
+      }
       setState(() {
         _isLoadingRelatedNotes = false;
       });
       if (mounted) {
         SnackBarUtils.showError(
           context,
-          '查找相关笔记失败：${e.toString()}',
+          '查找相关笔记失败：$e',
         );
       }
     }

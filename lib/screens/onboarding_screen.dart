@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inkroot/config/app_config.dart';
@@ -105,20 +107,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _navigateToLogin() {
-    _markOnboardingComplete();
+    unawaited(_markOnboardingComplete());
     context.go('/login');
   }
 
   Future<void> _continueToLocalMode() async {
-    if (_isLoading) return;
+    if (_isLoading) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
-    _markOnboardingComplete();
+    unawaited(_markOnboardingComplete());
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     await appProvider.setLocalMode(true);
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _isLoading = false;
@@ -152,7 +159,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Container(
               padding: ResponsiveUtils.responsivePadding(context, all: 8),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -211,8 +218,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final l10n = AppLocalizationsSimple.of(context);
-    final pages = _getPages(context);
 
     return Scaffold(
       backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
@@ -387,7 +392,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: page.gradient[0].withOpacity(0.3),
+                      color: page.gradient[0].withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -770,10 +775,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     colors: [
                       _getPages(context)[_currentPage]
                           .gradient[0]
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       _getPages(context)[_currentPage]
                           .gradient[1]
-                          .withOpacity(0.05),
+                          .withValues(alpha: 0.05),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -843,7 +848,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   style: TextButton.styleFrom(
-                    foregroundColor: isDarkMode ? Colors.white70 : Colors.black54,
+                    foregroundColor:
+                        isDarkMode ? Colors.white70 : Colors.black54,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
@@ -861,7 +867,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   style: TextButton.styleFrom(
-                    foregroundColor: isDarkMode ? Colors.white70 : Colors.black54,
+                    foregroundColor:
+                        isDarkMode ? Colors.white70 : Colors.black54,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,

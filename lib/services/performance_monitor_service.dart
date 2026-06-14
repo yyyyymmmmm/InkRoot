@@ -11,29 +11,20 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:inkroot/config/app_config.dart';
-import 'package:inkroot/services/umeng_analytics_service.dart';
 
 /// 性能指标类型
 enum MetricType {
-  appLaunch,      // 应用启动
-  pageLoad,       // 页面加载
+  appLaunch, // 应用启动
+  pageLoad, // 页面加载
   networkRequest, // 网络请求
-  databaseQuery,  // 数据库查询
-  imageLoad,      // 图片加载
-  memoryUsage,    // 内存占用
-  fps,            // 帧率
+  databaseQuery, // 数据库查询
+  imageLoad, // 图片加载
+  memoryUsage, // 内存占用
+  fps, // 帧率
 }
 
 /// 性能指标数据
 class PerformanceMetric {
-  final MetricType type;
-  final String name;
-  final Duration duration;
-  final int? memoryBytes;
-  final double? fps;
-  final Map<String, dynamic>? extras;
-  final DateTime timestamp;
-
   PerformanceMetric({
     required this.type,
     required this.name,
@@ -43,49 +34,54 @@ class PerformanceMetric {
     this.extras,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
+  final MetricType type;
+  final String name;
+  final Duration duration;
+  final int? memoryBytes;
+  final double? fps;
+  final Map<String, dynamic>? extras;
+  final DateTime timestamp;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'type': type.toString(),
-      'name': name,
-      'duration_ms': duration.inMilliseconds,
-      'memory_bytes': memoryBytes,
-      'fps': fps,
-      'extras': extras,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'type': type.toString(),
+        'name': name,
+        'duration_ms': duration.inMilliseconds,
+        'memory_bytes': memoryBytes,
+        'fps': fps,
+        'extras': extras,
+        'timestamp': timestamp.toIso8601String(),
+      };
 }
 
 /// 性能监控服务
 class PerformanceMonitorService {
-  static final PerformanceMonitorService _instance =
-      PerformanceMonitorService._internal();
   factory PerformanceMonitorService() => _instance;
   PerformanceMonitorService._internal();
+  static final PerformanceMonitorService _instance =
+      PerformanceMonitorService._internal();
 
   // 是否启用监控
   bool _isEnabled = false;
-  
+
   // 性能指标缓存
   final List<PerformanceMetric> _metrics = [];
-  
+
   // 计时器缓存
   final Map<String, Stopwatch> _stopwatches = {};
-  
+
   // 应用启动时间
   DateTime? _appLaunchTime;
-  
+
   // FPS监控
   Timer? _fpsTimer;
   int _frameCount = 0;
-  double _currentFps = 60.0;
+  double _currentFps = 60;
 
   /// 初始化
   void init({bool enabled = true}) {
     _isEnabled = enabled;
     _appLaunchTime = DateTime.now();
-    
+
     if (_isEnabled) {
       _startFpsMonitoring();
       _startMemoryMonitoring();
@@ -94,10 +90,12 @@ class PerformanceMonitorService {
 
   /// 🚀 启动时间监控
   void trackAppLaunch(String phase) {
-    if (!_isEnabled) return;
+    if (!_isEnabled) {
+      return;
+    }
 
     final launchTime = DateTime.now().difference(_appLaunchTime!);
-    
+
     final metric = PerformanceMetric(
       type: MetricType.appLaunch,
       name: 'app_launch_$phase',
@@ -109,7 +107,7 @@ class PerformanceMonitorService {
     );
 
     _recordMetric(metric);
-    
+
     // 上报友盟（如果需要，可以在这里添加实际的上报逻辑）
     // UmengAnalyticsService().trackEvent('performance_app_launch', {
     //   'phase': phase,
@@ -124,18 +122,22 @@ class PerformanceMonitorService {
 
   /// 🚀 页面加载时间监控
   void startPageLoad(String pageName) {
-    if (!_isEnabled) return;
+    if (!_isEnabled) {
+      return;
+    }
 
     final stopwatch = Stopwatch()..start();
     _stopwatches['page_$pageName'] = stopwatch;
   }
 
   void endPageLoad(String pageName, {Map<String, dynamic>? extras}) {
-    if (!_isEnabled) return;
+    if (!_isEnabled) {
+      return;
+    }
 
     final key = 'page_$pageName';
     final stopwatch = _stopwatches[key];
-    
+
     if (stopwatch == null) {
       debugPrint('⚠️ Page load not started: $pageName');
       return;
@@ -152,7 +154,7 @@ class PerformanceMonitorService {
     );
 
     _recordMetric(metric);
-    
+
     // 上报友盟（如果需要，可以在这里添加实际的上报逻辑）
     // UmengAnalyticsService().trackEvent('performance_page_load', {
     //   'page': pageName,
@@ -171,7 +173,7 @@ class PerformanceMonitorService {
     Future<T> Function() request,
   ) async {
     if (!_isEnabled) {
-      return await request();
+      return request();
     }
 
     final stopwatch = Stopwatch()..start();
@@ -180,7 +182,7 @@ class PerformanceMonitorService {
     try {
       final result = await request();
       return result;
-    } catch (e) {
+    } on Object catch (e) {
       error = e;
       rethrow;
     } finally {
@@ -197,7 +199,7 @@ class PerformanceMonitorService {
       );
 
       _recordMetric(metric);
-      
+
       // 上报友盟（如果需要，可以在这里添加实际的上报逻辑）
       // UmengAnalyticsService().trackEvent('performance_network', {
       //   'api': apiName,
@@ -218,11 +220,11 @@ class PerformanceMonitorService {
     Future<T> Function() query,
   ) async {
     if (!_isEnabled) {
-      return await query();
+      return query();
     }
 
     final stopwatch = Stopwatch()..start();
-    
+
     try {
       return await query();
     } finally {
@@ -238,14 +240,22 @@ class PerformanceMonitorService {
 
       // 慢查询告警（超过100ms）
       if (stopwatch.elapsedMilliseconds > 100) {
-        debugPrint('⚠️ Slow DB Query: $queryName took ${stopwatch.elapsedMilliseconds}ms');
+        debugPrint(
+          '⚠️ Slow DB Query: $queryName took ${stopwatch.elapsedMilliseconds}ms',
+        );
       }
     }
   }
 
   /// 🚀 图片加载监控
-  void trackImageLoad(String imageUrl, Duration loadTime, {bool success = true}) {
-    if (!_isEnabled) return;
+  void trackImageLoad(
+    String imageUrl,
+    Duration loadTime, {
+    bool success = true,
+  }) {
+    if (!_isEnabled) {
+      return;
+    }
 
     final metric = PerformanceMetric(
       type: MetricType.imageLoad,
@@ -263,10 +273,10 @@ class PerformanceMonitorService {
     if (!AppConfig.enablePerformanceLogging) {
       return;
     }
-    
+
     // 监听每一帧
     SchedulerBinding.instance.addPostFrameCallback(_onFrame);
-    
+
     // 使用配置中心的间隔（5-10秒），降低监控频率
     final interval = Duration(seconds: AppConfig.fpsMonitorIntervalSeconds);
     _fpsTimer = Timer.periodic(interval, (_) {
@@ -302,9 +312,10 @@ class PerformanceMonitorService {
     if (!AppConfig.enablePerformanceLogging) {
       return;
     }
-    
+
     // 使用配置中心的性能上报间隔
-    final interval = Duration(minutes: AppConfig.performanceReportIntervalMinutes);
+    final interval =
+        Duration(minutes: AppConfig.performanceReportIntervalMinutes);
     Timer.periodic(interval, (_) async {
       final memoryUsage = await _getMemoryUsage();
 
@@ -321,7 +332,7 @@ class PerformanceMonitorService {
       final memoryMB = memoryUsage / 1024 / 1024;
       if (memoryMB > 200) {
         debugPrint('⚠️ High memory usage: ${memoryMB.toStringAsFixed(2)} MB');
-        
+
         // UmengAnalyticsService().trackEvent('performance_high_memory', {
         //   'memory_mb': memoryMB.round(),
         // });
@@ -350,15 +361,19 @@ class PerformanceMonitorService {
     }
 
     // ⚠️ 仅在启用性能日志且非 FPS 指标时打印，避免日志刷屏导致崩溃
-    if (AppConfig.enablePerformanceLogging && metric.type != MetricType.fps && kDebugMode) {
-      debugPrint('📊 Performance: ${metric.name} - ${metric.duration.inMilliseconds}ms');
+    if (AppConfig.enablePerformanceLogging &&
+        metric.type != MetricType.fps &&
+        kDebugMode) {
+      debugPrint(
+        '📊 Performance: ${metric.name} - ${metric.duration.inMilliseconds}ms',
+      );
     }
   }
 
   /// 发送慢启动告警
   void _sendSlowStartupAlert(String phase, Duration duration) {
     debugPrint('🐌 Slow startup detected: $phase took ${duration.inSeconds}s');
-    
+
     // UmengAnalyticsService().trackEvent('performance_slow_startup', {
     //   'phase': phase,
     //   'duration_s': duration.inSeconds,
@@ -367,7 +382,9 @@ class PerformanceMonitorService {
 
   /// 发送慢页面告警
   void _sendSlowPageAlert(String pageName, Duration duration) {
-    debugPrint('🐌 Slow page load: $pageName took ${duration.inMilliseconds}ms');
+    debugPrint(
+      '🐌 Slow page load: $pageName took ${duration.inMilliseconds}ms',
+    );
   }
 
   /// 发送慢API告警
@@ -381,15 +398,19 @@ class PerformanceMonitorService {
 
     for (final type in MetricType.values) {
       final typeMetrics = _metrics.where((m) => m.type == type).toList();
-      
-      if (typeMetrics.isEmpty) continue;
+
+      if (typeMetrics.isEmpty) {
+        continue;
+      }
 
       final durations = typeMetrics
           .map((m) => m.duration.inMilliseconds)
           .where((d) => d > 0)
           .toList();
 
-      if (durations.isEmpty) continue;
+      if (durations.isEmpty) {
+        continue;
+      }
 
       report[type.toString()] = {
         'count': durations.length,
@@ -414,15 +435,15 @@ class PerformanceMonitorService {
 }
 
 /// 使用示例
-/// 
+///
 /// ```dart
 /// // 1. 初始化
 /// PerformanceMonitorService().init(enabled: true);
-/// 
+///
 /// // 2. 监控启动时间
 /// PerformanceMonitorService().trackAppLaunch('splash_screen_ready');
 /// PerformanceMonitorService().trackAppLaunch('main_screen_ready');
-/// 
+///
 /// // 3. 监控页面加载
 /// class HomeScreen extends StatefulWidget {
 ///   @override
@@ -430,7 +451,7 @@ class PerformanceMonitorService {
 ///     super.initState();
 ///     PerformanceMonitorService().startPageLoad('home');
 ///   }
-///   
+///
 ///   @override
 ///   void didChangeDependencies() {
 ///     super.didChangeDependencies();
@@ -438,21 +459,20 @@ class PerformanceMonitorService {
 ///     PerformanceMonitorService().endPageLoad('home');
 ///   }
 /// }
-/// 
+///
 /// // 4. 监控网络请求
 /// final notes = await PerformanceMonitorService().trackNetworkRequest(
 ///   'fetch_notes',
 ///   () => apiService.fetchNotes(),
 /// );
-/// 
+///
 /// // 5. 监控数据库查询
 /// final localNotes = await PerformanceMonitorService().trackDatabaseQuery(
 ///   'load_notes',
 ///   () => databaseService.getNotes(),
 /// );
-/// 
+///
 /// // 6. 查看性能报告
 /// final report = PerformanceMonitorService().getPerformanceReport();
 /// print(report);
 /// ```
-

@@ -61,7 +61,7 @@ class CachedAvatar extends StatelessWidget {
     final defaultBgColor = backgroundColor ??
         (isDarkMode
             ? AppTheme.darkCardColor
-            : AppTheme.primaryColor.withOpacity(0.1));
+            : AppTheme.primaryColor.withValues(alpha: 0.1));
     final defaultTextColor = textColor ??
         (isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.primaryColor);
 
@@ -138,7 +138,7 @@ class CachedAvatar extends StatelessWidget {
               _buildDefaultAvatar(bgColor, textColor),
         ),
       );
-    } catch (e) {
+    } on Object {
       return _buildDefaultAvatar(bgColor, textColor);
     }
   }
@@ -184,7 +184,7 @@ class CachedAvatar extends StatelessWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 color: textColor,
-                backgroundColor: textColor.withOpacity(0.1),
+                backgroundColor: textColor.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -251,10 +251,14 @@ class AvatarPreloader {
 
   /// 预加载用户头像
   static Future<void> preloadUserAvatar(BuildContext context, User user) async {
-    if (user.avatarUrl == null || user.avatarUrl!.trim().isEmpty) return;
+    if (user.avatarUrl == null || user.avatarUrl!.trim().isEmpty) {
+      return;
+    }
 
     final url = user.avatarUrl!.trim();
-    if (_preloadedUrls[url] ?? false) return;
+    if (_preloadedUrls[url] ?? false) {
+      return;
+    }
 
     if (url.startsWith('http://') ||
         url.startsWith('https://') ||
@@ -267,7 +271,7 @@ class AvatarPreloader {
       try {
         await precacheImage(CachedNetworkImageProvider(fullUrl), context);
         _preloadedUrls[url] = true;
-      } catch (e) {
+      } on Object catch (e) {
         // 预加载失败不影响正常使用
         debugPrint('头像预加载失败: $e');
       }

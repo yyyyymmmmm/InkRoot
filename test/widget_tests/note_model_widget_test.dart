@@ -15,20 +15,18 @@ class _NotePreviewCard extends StatelessWidget {
   final Note note;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        title: Text(note.content, key: const Key('noteContent')),
-        subtitle: Text(
-          note.tags.isEmpty ? '无标签' : note.tags.join(' · '),
-          key: const Key('noteTags'),
+  Widget build(BuildContext context) => Card(
+        child: ListTile(
+          title: Text(note.content, key: const Key('noteContent')),
+          subtitle: Text(
+            note.tags.isEmpty ? '无标签' : note.tags.join(' · '),
+            key: const Key('noteTags'),
+          ),
+          trailing: note.isPinned
+              ? const Icon(Icons.push_pin, key: Key('pinIcon'))
+              : null,
         ),
-        trailing: note.isPinned
-            ? const Icon(Icons.push_pin, key: Key('pinIcon'))
-            : null,
-      ),
-    );
-  }
+      );
 }
 
 // ─── 帮助函数 ────────────────────────────────────────────────────────────────
@@ -47,8 +45,8 @@ Note _makeNote({
     Note(
       id: id,
       content: content,
-      createdAt: DateTime(2024, 1, 1),
-      updatedAt: DateTime(2024, 1, 1),
+      createdAt: DateTime(2024),
+      updatedAt: DateTime(2024),
       isPinned: isPinned,
       tags: tags,
       rowStatus: rowStatus,
@@ -67,9 +65,11 @@ void main() {
 
     testWidgets('WN-02 有标签时展示标签', (tester) async {
       await tester.pumpWidget(
-        _wrap(_NotePreviewCard(
-          note: _makeNote(tags: ['flutter', 'dart']),
-        )),
+        _wrap(
+          _NotePreviewCard(
+            note: _makeNote(tags: ['flutter', 'dart']),
+          ),
+        ),
       );
       expect(find.byKey(const Key('noteTags')), findsOneWidget);
       final text =
@@ -93,7 +93,7 @@ void main() {
 
     testWidgets('WN-05 未置顶笔记不显示图钉图标', (tester) async {
       await tester.pumpWidget(
-        _wrap(_NotePreviewCard(note: _makeNote(isPinned: false))),
+        _wrap(_NotePreviewCard(note: _makeNote())),
       );
       expect(find.byKey(const Key('pinIcon')), findsNothing);
     });
@@ -127,7 +127,7 @@ void main() {
     });
 
     testWidgets('WN-07 正常笔记不显示归档徽章', (tester) async {
-      final normalNote = _makeNote(rowStatus: 'NORMAL');
+      final normalNote = _makeNote();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -165,8 +165,7 @@ void main() {
                 }
                 return ListView.builder(
                   itemCount: notes.length,
-                  itemBuilder: (_, i) =>
-                      _NotePreviewCard(note: notes[i]),
+                  itemBuilder: (_, i) => _NotePreviewCard(note: notes[i]),
                 );
               },
             ),
@@ -210,13 +209,12 @@ void main() {
 
   group('TodoParser 在 Widget 中的使用', () {
     testWidgets('WN-11 待办计数正确展示', (tester) async {
-      const content = '- [x] 完成任务一\n- [ ] 待完成任务二';
-      final todoText = '1/2 已完成';
+      const todoText = '1/2 已完成';
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
-            body: Text(todoText, key: const Key('todoCount')),
+            body: Text(todoText, key: Key('todoCount')),
           ),
         ),
       );

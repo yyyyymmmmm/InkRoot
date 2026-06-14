@@ -1,13 +1,16 @@
+import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
-import 'dart:io' show Platform;
-
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
+import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/screens/note_detail_screen.dart';
 import 'package:inkroot/services/graph_data_service.dart';
+import 'package:inkroot/services/graph_isolate_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/widgets/sidebar.dart';
 import 'package:provider/provider.dart';
@@ -38,53 +41,119 @@ class _KnowledgeGraphScreenCustomState
   int _lastNoteCount = 0;
   int _lastRelationCount = 0;
 
+  // 缓存图谱数据，避免在 build() 里做重计算
+  List<GraphNode> _graphNodes = const [];
+  List<GraphEdge> _graphEdges = const [];
+  bool _isBuildingGraph = false;
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _calculateNodePositions();
+      _rebuildGraphAndLayout();
     });
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _transformationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  /// 计算所有节点的位置（圆形布局 + 力导向微调）
-  void _calculateNodePositions() {
+  /// 构建图谱数据 + 计算节点位置（从 build() 挪出去，避免切换路由时掉帧）
+  void _scheduleRebuildGraphAndLayout() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 220), () {
+      if (mounted) {
+        _rebuildGraphAndLayout();
+      }
+    });
+  }
+
+  Future<void> _rebuildGraphAndLayout() async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final notes = appProvider.notes;
 
-    if (notes.isEmpty) return;
-
-    // 获取图谱数据
-    Map<String, dynamic> graphData;
-    if (_searchQuery.isNotEmpty) {
-      final filteredNotes = notes
-          .where(
-            (note) =>
-                note.content.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )
-          .toList();
-      graphData = GraphDataService.buildGraphData(filteredNotes);
-    } else if (_selectedTag != null) {
-      graphData = GraphDataService.buildGraphByTag(_selectedTag!, notes);
-    } else {
-      graphData = GraphDataService.buildGraphData(notes);
+    if (notes.isEmpty) {
+      setState(() {
+        _graphNodes = const [];
+        _graphEdges = const [];
+        _nodePositions.clear();
+      });
+      return;
     }
 
-    final List<GraphNode> graphNodes = graphData['nodes'];
-    final List<GraphEdge> graphEdges = graphData['edges'];
+    // 过滤候选 notes（搜索/标签）
+    final List<Note> inputNotes;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      inputNotes =
+          notes.where((n) => n.content.toLowerCase().contains(q)).toList();
+    } else if (_selectedTag != null) {
+      inputNotes = notes.where((n) => n.tags.contains(_selectedTag)).toList();
+    } else {
+      inputNotes = notes;
+    }
 
-    if (graphNodes.isEmpty) return;
+    setState(() {
+      _isBuildingGraph = true;
+    });
+
+    // 在 isolate 里构建 nodes/edges（避免主线程掉帧）
+    final payload = await compute(
+      buildGraphPayload,
+      {
+        'notes': inputNotes.map((n) => n.toJson()).toList(growable: false),
+      },
+    );
+
+    final rawNodes = (payload['nodes'] as List?) ?? const [];
+    final rawEdges = (payload['edges'] as List?) ?? const [];
+
+    final graphNodes = rawNodes
+        .whereType<Map>()
+        .map(
+          (m) => GraphNode(
+            id: m['id']?.toString() ?? '',
+            title: m['title']?.toString() ?? '',
+            content: m['content']?.toString() ?? '',
+            tags:
+                (m['tags'] as List?)?.whereType<String>().toList() ?? const [],
+            outgoingCount: (m['outgoingCount'] as int?) ?? 0,
+            incomingCount: (m['incomingCount'] as int?) ?? 0,
+            isPinned: m['isPinned'] == true,
+          ),
+        )
+        .where((n) => n.id.isNotEmpty)
+        .toList();
+
+    final graphEdges = rawEdges
+        .whereType<Map>()
+        .map(
+          (m) => GraphEdge(
+            from: m['from']?.toString() ?? '',
+            to: m['to']?.toString() ?? '',
+          ),
+        )
+        .where((e) => e.from.isNotEmpty && e.to.isNotEmpty)
+        .toList();
+
+    if (graphNodes.isEmpty) {
+      setState(() {
+        _graphNodes = const [];
+        _graphEdges = const [];
+        _nodePositions.clear();
+        _isBuildingGraph = false;
+      });
+      return;
+    }
 
     // 画布中心
     const double centerX = 1500;
     const double centerY = 1500;
-    const double canvasSize = 3000;
 
     // 分离有连接的节点和孤立节点
     final connectedNodeIds = <String>{};
@@ -141,11 +210,15 @@ class _KnowledgeGraphScreenCustomState
           initialScale = 0.25;
         }
         _transformationController.value = Matrix4.identity()
-          ..scale(initialScale);
+          ..scaleByDouble(initialScale, initialScale, initialScale, 1);
       });
     }
 
-    setState(() {});
+    setState(() {
+      _graphNodes = graphNodes;
+      _graphEdges = graphEdges;
+      _isBuildingGraph = false;
+    });
   }
 
   @override
@@ -163,49 +236,30 @@ class _KnowledgeGraphScreenCustomState
     if (dataChanged) {
       _lastNoteCount = notes.length;
       _lastRelationCount = currentRelationCount;
-      // 使用单次回调避免重复触发
-      if (mounted) {
-        Future.microtask(() {
-          if (mounted) {
-            _calculateNodePositions();
-          }
-        });
-      }
+      // 使用 post-frame 触发一次重建，避免在 build 内做大量计算
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scheduleRebuildGraphAndLayout();
+        }
+      });
     }
 
-    // 获取图谱数据
-    Map<String, dynamic> graphData;
-    if (_searchQuery.isNotEmpty) {
-      final filteredNotes = notes
-          .where(
-            (note) =>
-                note.content.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )
-          .toList();
-      graphData = GraphDataService.buildGraphData(filteredNotes);
-    } else if (_selectedTag != null) {
-      graphData = GraphDataService.buildGraphByTag(_selectedTag!, notes);
-    } else {
-      graphData = GraphDataService.buildGraphData(notes);
-    }
-
-    final List<GraphNode> graphNodes = graphData['nodes'];
-    final List<GraphEdge> graphEdges = graphData['edges'];
     final allTags = _getAllTags();
 
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-    
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: isDesktop ? null : const Sidebar(),
-      drawerEdgeDragWidth: isDesktop ? null : MediaQuery.of(context).size.width * 0.2,
+      drawerEdgeDragWidth:
+          isDesktop ? null : MediaQuery.of(context).size.width * 0.2,
       appBar: AppBar(
         title: _buildSearchBar(),
         backgroundColor: isDarkMode ? AppTheme.darkCardColor : Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
-        leading: isDesktop 
-            ? null 
+        leading: isDesktop
+            ? null
             : IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -255,12 +309,14 @@ class _KnowledgeGraphScreenCustomState
               onSelected: (tag) {
                 setState(() {
                   _selectedTag = tag;
-                  _calculateNodePositions();
                 });
+                _scheduleRebuildGraphAndLayout();
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  child: Text('显示全部'),
+                PopupMenuItem(
+                  child: Text(
+                    AppLocalizationsSimple.of(context)?.showAll ?? '显示全部',
+                  ),
                 ),
                 ...allTags.map(
                   (tag) => PopupMenuItem(
@@ -278,7 +334,7 @@ class _KnowledgeGraphScreenCustomState
                   ? AppTheme.primaryLightColor
                   : AppTheme.primaryColor,
             ),
-            onPressed: _calculateNodePositions,
+            onPressed: _rebuildGraphAndLayout,
           ),
           // 重置缩放
           IconButton(
@@ -294,37 +350,40 @@ class _KnowledgeGraphScreenCustomState
           ),
         ],
       ),
-      body: graphNodes.isEmpty
-          ? _buildEmptyState()
-          : InteractiveViewer(
-              transformationController: _transformationController,
-              boundaryMargin: const EdgeInsets.all(double.infinity),
-              minScale: 0.1,
-              maxScale: 4,
-              constrained: false,
-              child: SizedBox(
-                width: 3000,
-                height: 3000,
-                child: CustomPaint(
-                  painter: GraphPainter(
-                    nodes: graphNodes,
-                    edges: graphEdges,
-                    nodePositions: _nodePositions,
-                    isDarkMode: isDarkMode,
-                  ),
-                  child: Stack(
-                    children: graphNodes.map((node) {
-                      final pos = _nodePositions[node.id] ?? const Offset(0, 0);
-                      return Positioned(
-                        left: pos.dx - 50,
-                        top: pos.dy - 50,
-                        child: _buildNodeWidget(node, isDarkMode),
-                      );
-                    }).toList(),
+      body: _isBuildingGraph
+          ? const Center(child: CircularProgressIndicator())
+          : _graphNodes.isEmpty
+              ? _buildEmptyState()
+              : InteractiveViewer(
+                  transformationController: _transformationController,
+                  boundaryMargin: const EdgeInsets.all(double.infinity),
+                  minScale: 0.1,
+                  maxScale: 4,
+                  constrained: false,
+                  child: SizedBox(
+                    width: 3000,
+                    height: 3000,
+                    child: CustomPaint(
+                      painter: GraphPainter(
+                        nodes: _graphNodes,
+                        edges: _graphEdges,
+                        nodePositions: _nodePositions,
+                        isDarkMode: isDarkMode,
+                      ),
+                      child: Stack(
+                        children: _graphNodes.map((node) {
+                          final pos =
+                              _nodePositions[node.id] ?? const Offset(0, 0);
+                          return Positioned(
+                            left: pos.dx - 50,
+                            top: pos.dy - 50,
+                            child: _buildNodeWidget(node, isDarkMode),
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
     );
   }
 
@@ -350,12 +409,12 @@ class _KnowledgeGraphScreenCustomState
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             border: Border.all(color: color, width: node.isPinned ? 3 : 2),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.4),
+                color: color.withValues(alpha: 0.4),
                 blurRadius: 12,
                 spreadRadius: 2,
               ),
@@ -404,7 +463,7 @@ class _KnowledgeGraphScreenCustomState
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.6),
+                    color: Colors.grey.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
@@ -480,8 +539,8 @@ class _KnowledgeGraphScreenCustomState
                     _searchController.clear();
                     setState(() {
                       _searchQuery = '';
-                      _calculateNodePositions();
                     });
+                    _scheduleRebuildGraphAndLayout();
                   },
                 )
               : null,
@@ -492,8 +551,8 @@ class _KnowledgeGraphScreenCustomState
         onChanged: (value) {
           setState(() {
             _searchQuery = value;
-            _calculateNodePositions();
           });
+          _scheduleRebuildGraphAndLayout();
         },
       ),
     );
@@ -549,8 +608,8 @@ class GraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color =
-          (isDarkMode ? Colors.grey[700]! : Colors.grey[400]!).withOpacity(0.5)
+      ..color = (isDarkMode ? Colors.grey[700]! : Colors.grey[400]!)
+          .withValues(alpha: 0.5)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 

@@ -12,13 +12,18 @@ enum LoadMoreState {
 
 extension LoadMoreStateExtension on LoadMoreState {
   /// 是否正在加载中
-  bool get isLoading => this == LoadMoreState.loading || this == LoadMoreState.loadingMore;
+  bool get isLoading =>
+      this == LoadMoreState.loading || this == LoadMoreState.loadingMore;
 
   /// 是否可以加载更多
-  bool get canLoadMore => this == LoadMoreState.idle || this == LoadMoreState.success || this == LoadMoreState.failed;
+  bool get canLoadMore =>
+      this == LoadMoreState.idle ||
+      this == LoadMoreState.success ||
+      this == LoadMoreState.failed;
 
   /// 是否有错误
-  bool get hasError => this == LoadMoreState.failed || this == LoadMoreState.error;
+  bool get hasError =>
+      this == LoadMoreState.failed || this == LoadMoreState.error;
 
   /// 状态描述（用于日志和调试）
   String get description {

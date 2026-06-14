@@ -62,7 +62,7 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
           _imagesCount = imagesCount;
         });
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('加载数据信息失败: $e');
     } finally {
       if (mounted) {
@@ -89,7 +89,7 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       }
 
       return totalSize / (1024 * 1024); // 转换为MB
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('计算缓存大小失败: $e');
       return 0;
     }
@@ -113,7 +113,7 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       }
 
       return count;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('获取图片数量失败: $e');
       return 0;
     }
@@ -126,8 +126,13 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       AppLocalizationsSimple.of(context)?.cleanupAllDataMessage ??
           '此操作将删除所有本地笔记数据，且不可恢复。是否继续？',
     );
+    if (!mounted) {
+      return;
+    }
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -135,24 +140,35 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
 
     try {
       await _databaseService.clearAllNotes();
+      if (!mounted) {
+        return;
+      }
 
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       await appProvider.loadNotesFromLocal(); // 刷新应用中的笔记列表
+      if (!mounted) {
+        return;
+      }
 
       // 重新加载数据信息
       await _loadDataInfo();
+      if (!mounted) {
+        return;
+      }
 
       _showSuccessToast(
         AppLocalizationsSimple.of(context)?.allNotesCleanedSuccess ?? '所有笔记已清理',
       );
-    } catch (e) {
+    } on Object catch (e) {
       _showErrorToast(
         '${AppLocalizationsSimple.of(context)?.cleanupFailed ?? '清理失败'}: $e',
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -163,8 +179,13 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       AppLocalizationsSimple.of(context)?.cleanCacheConfirm ??
           '此操作将清除应用缓存，可能会影响短期使用体验。是否继续？',
     );
+    if (!mounted) {
+      return;
+    }
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -172,12 +193,15 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
 
     try {
       final cacheDir = await getTemporaryDirectory();
+      if (!mounted) {
+        return;
+      }
 
       if (await cacheDir.exists()) {
         await for (final entity in cacheDir.list()) {
           try {
             await entity.delete(recursive: true);
-          } catch (e) {
+          } on Object catch (e) {
             debugPrint('删除缓存文件失败: $e');
           }
         }
@@ -185,18 +209,23 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
 
       // 重新加载数据信息
       await _loadDataInfo();
+      if (!mounted) {
+        return;
+      }
 
       _showSuccessToast(
         AppLocalizationsSimple.of(context)?.cacheCleanedSuccess ?? '缓存已清理',
       );
-    } catch (e) {
+    } on Object catch (e) {
       _showErrorToast(
         '${AppLocalizationsSimple.of(context)?.cleanCacheFailed ?? '清理缓存失败'}: $e',
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -207,8 +236,13 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       AppLocalizationsSimple.of(context)?.cleanupImagesMessage ??
           '此操作将删除所有未使用的图片文件。是否继续？',
     );
+    if (!mounted) {
+      return;
+    }
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -216,30 +250,96 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
 
     try {
       final appDocDir = await getApplicationDocumentsDirectory();
+      if (!mounted) {
+        return;
+      }
       final imagesDir = Directory('${appDocDir.path}/images');
 
       if (await imagesDir.exists()) {
-        // 这里应该有实际的逻辑来检测哪些图片是未使用的
-        // 简单实现是删除全部图片，但实际应用中应该更加精确
-        await imagesDir.delete(recursive: true);
-        await imagesDir.create();
+        final referencedPaths = await _collectReferencedImagePaths();
+        await for (final entity in imagesDir.list(recursive: true)) {
+          if (entity is! File) {
+            continue;
+          }
+          final normalizedPath = entity.absolute.path;
+          if (referencedPaths.contains(normalizedPath)) {
+            continue;
+          }
+          try {
+            await entity.delete();
+          } on Object catch (e) {
+            debugPrint('删除未使用图片失败: $e');
+          }
+        }
       }
 
       // 重新加载数据信息
       await _loadDataInfo();
+      if (!mounted) {
+        return;
+      }
 
       _showSuccessToast(
         AppLocalizationsSimple.of(context)?.imagesCleanedSuccess ?? '图片已清理',
       );
-    } catch (e) {
+    } on Object catch (e) {
       _showErrorToast(
         '${AppLocalizationsSimple.of(context)?.cleanImagesFailed ?? '清理图片失败'}: $e',
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  Future<Set<String>> _collectReferencedImagePaths() async {
+    final appDocDir = await getApplicationDocumentsDirectory();
+    final appDocPath = appDocDir.path;
+    final notes = await _databaseService.getNotes();
+    final referencedPaths = <String>{};
+    final markdownImageRegex = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
+
+    void addPath(String? rawPath) {
+      if (rawPath == null || rawPath.trim().isEmpty) {
+        return;
+      }
+      final value = rawPath.trim();
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        return;
+      }
+
+      final withoutFileScheme = value.startsWith('file://')
+          ? value.replaceFirst('file://', '')
+          : value;
+      final pathWithoutQuery =
+          withoutFileScheme.split('?').first.split('#').first;
+      if (pathWithoutQuery.isEmpty) {
+        return;
+      }
+
+      final normalizedPath = pathWithoutQuery.startsWith('/')
+          ? File(pathWithoutQuery).absolute.path
+          : File('$appDocPath/$pathWithoutQuery').absolute.path;
+      referencedPaths.add(normalizedPath);
+    }
+
+    for (final note in notes) {
+      for (final match in markdownImageRegex.allMatches(note.content)) {
+        addPath(match.group(1));
+      }
+
+      for (final resource in note.resourceList) {
+        addPath(resource['externalLink']?.toString());
+        addPath(resource['path']?.toString());
+        addPath(resource['filePath']?.toString());
+        addPath(resource['url']?.toString());
+      }
+    }
+
+    return referencedPaths;
   }
 
   // 重置应用设置
@@ -249,8 +349,13 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       AppLocalizationsSimple.of(context)?.resetSettingsConfirm ??
           '此操作将重置所有应用设置到默认状态，但不会删除笔记数据。是否继续？',
     );
+    if (!mounted) {
+      return;
+    }
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -259,6 +364,9 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
     try {
       // 重置导入导出历史
       await _preferencesService.clearImportExportHistory();
+      if (!mounted) {
+        return;
+      }
 
       // 重置应用配置（但保留登录信息）
       final appProvider = Provider.of<AppProvider>(context, listen: false);
@@ -280,18 +388,23 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       // 更新配置
       await _preferencesService.saveAppConfig(newConfig);
       await appProvider.updateConfig(newConfig);
+      if (!mounted) {
+        return;
+      }
 
       _showSuccessToast(
         AppLocalizationsSimple.of(context)?.settingsResetSuccess ?? '应用设置已重置',
       );
-    } catch (e) {
+    } on Object catch (e) {
       _showErrorToast(
         '${AppLocalizationsSimple.of(context)?.resetSettingsFailed ?? '重置设置失败'}: $e',
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -302,8 +415,13 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
       AppLocalizationsSimple.of(context)?.cleanupHistoryMessage ??
           '此操作将删除所有导入导出历史记录。是否继续？',
     );
+    if (!mounted) {
+      return;
+    }
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -311,18 +429,23 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
 
     try {
       await _preferencesService.clearImportExportHistory();
+      if (!mounted) {
+        return;
+      }
       _showSuccessToast(
         AppLocalizationsSimple.of(context)?.historyCleanedSuccess ??
             '导入导出历史已清理',
       );
-    } catch (e) {
+    } on Object catch (e) {
       _showErrorToast(
         '${AppLocalizationsSimple.of(context)?.cleanHistoryFailed ?? '清理历史失败'}: $e',
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -608,7 +731,7 @@ class _DataCleanupScreenState extends State<DataCleanupScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: iconColor.withOpacity(0.1),
+                backgroundColor: iconColor.withValues(alpha: 0.1),
                 child: Icon(icon, color: iconColor),
               ),
               const SizedBox(width: 16),

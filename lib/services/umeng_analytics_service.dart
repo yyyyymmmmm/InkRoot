@@ -7,8 +7,7 @@ import 'package:inkroot/config/app_config.dart';
 /// 友盟统计服务
 /// ⚠️ 注意：仅在Android平台启用，iOS平台已禁用（符合App Store审核要求）
 class UmengAnalyticsService {
-  static final MethodChannel _channel =
-      MethodChannel(AppConfig.channelUmeng);
+  static const MethodChannel _channel = MethodChannel(AppConfig.channelUmeng);
 
   static bool _initialized = false;
 
@@ -23,7 +22,7 @@ class UmengAnalyticsService {
       debugPrint('⚠️ [UmengAnalytics] iOS平台已禁用友盟统计（符合App Store审核要求）');
       return false;
     }
-    
+
     if (_initialized) {
       debugPrint('⚠️ 友盟统计已初始化，跳过重复初始化');
       return true;
@@ -51,7 +50,7 @@ class UmengAnalyticsService {
       debugPrint('   ⚠️  请检查：');
       debugPrint('   1. Android: build.gradle 中是否添加了友盟依赖');
       return false;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ [UmengAnalytics] 友盟统计初始化失败（未知错误）: $e');
       return false;
     }
@@ -66,7 +65,7 @@ class UmengAnalyticsService {
     if (Platform.isIOS) {
       return;
     }
-    
+
     if (!_initialized) {
       debugPrint('⚠️ [UmengAnalytics] 友盟统计未初始化，跳过事件记录: $eventId');
       debugPrint('   请先调用 UmengAnalyticsService.init() 初始化友盟统计');
@@ -80,7 +79,7 @@ class UmengAnalyticsService {
       debugPrint('❌ [UmengAnalytics] 友盟事件记录失败（平台异常）: $eventId');
       debugPrint('   错误代码: ${e.code}');
       debugPrint('   错误信息: ${e.message}');
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ [UmengAnalytics] 友盟事件记录失败: $eventId - $e');
     }
   }
@@ -98,7 +97,7 @@ class UmengAnalyticsService {
     if (Platform.isIOS) {
       return;
     }
-    
+
     if (!_initialized) {
       debugPrint('⚠️ 友盟统计未初始化，跳过事件记录: $eventId');
       return;
@@ -110,7 +109,7 @@ class UmengAnalyticsService {
         'params': params,
       });
       debugPrint('📊 友盟事件已记录: $eventId, 参数: $params');
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('❌ 友盟事件记录失败: $e');
     }
   }

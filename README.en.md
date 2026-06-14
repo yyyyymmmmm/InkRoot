@@ -13,66 +13,66 @@
   
   Whether it's quickly capturing inspiration or systematically organizing thoughts, InkRoot helps you accumulate and develop steadily.
 
-  [![GitHub release](https://img.shields.io/badge/version-1.0.9-blue.svg)](https://github.com/yyyyymmmmm/IntRoot/releases)
+  [![GitHub release](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/yyyyymmmmm/InkRoot/releases)
   [![Flutter](https://img.shields.io/badge/Flutter-3.35.5-02569B?logo=flutter)](https://flutter.dev)
-  [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/yyyyymmmmm/IntRoot/blob/master/LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/yyyyymmmmm/IntRoot)
-  [![Downloads](https://img.shields.io/github/downloads/yyyyymmmmm/IntRoot/total.svg)](https://github.com/yyyyymmmmm/IntRoot/releases)
+  [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/yyyyymmmmm/InkRoot/blob/master/LICENSE)
+  [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/yyyyymmmmm/InkRoot)
+  [![Downloads](https://img.shields.io/github/downloads/yyyyymmmmm/InkRoot/total.svg)](https://github.com/yyyyymmmmm/InkRoot/releases)
 
-  [Official Website](https://inkroot.cn) · [Download](https://github.com/yyyyymmmmm/IntRoot/releases) · [Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
+  [Official Website](https://inkroot.cn) · [Download](https://github.com/yyyyymmmmm/InkRoot/releases) · [Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
 
   ---
 
-  ## 🎉 Latest Version v1.0.9
+  ## 🎉 Latest Version v1.1.0
   
-  ### 🆕 New Features in This Update
+  ### 🆕 Highlights
   
   <table>
   <tr>
     <td width="50%">
       
-  ### 📝 Annotation System
-  Professional note annotation feature
+  ### 🧰 Maintainer Workflow
+  Production-grade repository maintenance
   
-  - Annotation sidebar design
-  - 5 annotation types (Comment/Question/Idea/Important/To-do)
-  - Add/Edit/Delete/Mark as resolved
-  - Full internationalization support
+  - Unified project CLI
+  - GitHub Actions all-platform builds
+  - PR and issue templates
+  - Dependabot dependency updates
   
     </td>
     <td width="50%">
       
-  ### 🔗 Reference Sidebar
-  Brand new reference management experience
+  ### 🔐 Android Signing
+  Safe release signing flow
   
-  - Bottom slide-out sidebar
-  - Reference type filtering
-  - Click arrow to open directly
-  - Reference cards with navigation
+  - Local keys stay out of Git
+  - GitHub Secrets based release signing
+  - Debug builds require no signing
+  - Release builds sign automatically when configured
   
     </td>
   </tr>
   <tr>
     <td>
       
-  ### 🎨 AI Settings Enhancement
-  Custom AI prompts
+  ### 📝 Editor and Rendering
+  Richer note editing experience
   
-  - Insight/Review/Continuation prompts
-  - Tag Insight/Recommendation prompts
-  - Multi-line input support
-  - Real-time save and apply
+  - Less visible Markdown syntax noise
+  - Home feed preserves user layout
+  - Better Memos Markdown rendering
+  - More accurate expand/collapse behavior
   
     </td>
     <td>
       
-  ### 🌍 Complete Internationalization
-  Seamless Chinese-English switching
+  ### ☁️ Sync and Backup
+  Better WebDAV and Memos compatibility
   
-  - Annotation features fully internationalized
-  - Reference features fully internationalized
-  - AI settings fully internationalized
-  - 50+ new translations added
+  - WebDAV image backup option
+  - Memos API version detection
+  - Safer sync timeline merge
+  - More robust backup restore
   
     </td>
   </tr>
@@ -133,16 +133,16 @@
   
   ### 🐛 Important Fixes
   
-  - 🔧 **Fixed image path issue** - Images disappeared after upgrade (critical fix)
-  - 📝 **Fixed annotation i18n** - Annotation dialogs showing as boxes
-  - 🎨 **Fixed AI settings i18n** - Custom prompts showing as boxes
-  - 🔗 **Fixed reference arrow click** - Reference arrows now clickable to open sidebar
-  - 🏷️ Fixed tag parsing errors
+  - 🔧 **Cloud config parsing** no longer throws when the server returns a failure string.
+  - 📝 **Home feed expansion** no longer shows expand controls for short rendered content.
+  - 🖼️ **Image viewer** supports tap-to-dismiss and a more native preview flow.
+  - 🕒 **Sync timeline merge** preserves local creation time for offline upload acknowledgement.
+  - ☁️ **WebDAV backup** handles image backup, recursive folders, errors, and progress more reliably.
   - ☁️ Optimized sync conflict handling
   
   <div align="center">
   
-  **[📥 Download Latest](https://github.com/yyyyymmmmm/IntRoot/releases/latest)** · **[📋 Full Changelog](CHANGELOG.md)**
+  **[📥 Download Latest](https://github.com/yyyyymmmmm/InkRoot/releases/latest)** · **[📋 Full Changelog](CHANGELOG.md)**
   
   </div>
 
@@ -322,36 +322,35 @@ InkRoot supports two modes:
 
 #### ☁️ Mode 2: Cloud Sync Mode (Optional)
 
-**Requires Memos server, supports multi-device sync!**
+**Requires a Memos server and supports multi-device sync.**
 
-**⚠️ Important: Only supports Memos v0.21.0**
+**Compatibility: InkRoot detects the Memos server version and supports the main API differences from v0.21.x to v0.28.x.**
 
 **Option A: Deploy Memos with Docker (Recommended)**
 
 ```bash
-# Must use version 0.21.0
 docker run -d \
   --name memos \
   --publish 5230:5230 \
   --volume ~/.memos/:/var/opt/memos \
-  neosmemo/memos:0.21.0
+  neosmemo/memos:latest
 ```
 
 **Version Requirements:**
-- ✅ **Only supported**: Memos v0.21.0 (must use this version)
-- ❌ **Not supported**: Memos v0.20.x and below (API incompatible)
-- ❌ **Not supported**: Memos v0.22.0 and above (API may be incompatible)
-- 📌 **Strongly recommended**: Use v0.21.0 for full compatibility
+- ✅ **Adapted**: v0.21.x, v0.22-v0.25, v0.26+, and v0.27/v0.28 differences for auth, memos, relations, and attachments
+- ⚠️ **Not recommended**: v0.20.x and below
+- 📌 **Recommendation**: use a recent stable Memos release for new deployments; existing v0.21.x servers can continue to work
+- 🧪 **Note**: features such as attachments, relations, and links depend on server-side capabilities and may degrade gracefully
 
 **Option B: Download Memos Binary**
 
-Visit [Memos Releases](https://github.com/usememos/memos/releases/tag/v0.21.0) to download v0.21.0.
+Visit [Memos Releases](https://github.com/usememos/memos/releases) to download a stable release.
 
 **Option C: Use Official Demo Server (Testing only)**
 
 ```
 Server Address: https://memos.didichou.site
-Version: v0.21.0
+Version: depends on the current demo server
 Note: Demo server data may be cleared periodically, not recommended for long-term use
 ```
 
@@ -363,7 +362,7 @@ If using cloud sync mode, configure server:
 2. Go to "Settings" → "Server Info"
 3. Enter your Memos server address
    - Format: `http://your-server:5230` or `https://your-domain.com`
-   - Ensure server version is v0.21.0
+   - InkRoot detects the Memos version and chooses the matching API
 4. Register new account or login
 
 **If using local mode, skip this step!**
@@ -480,8 +479,8 @@ If using cloud sync mode, configure server:
 #### Clone Repository
 
 ```bash
-git clone https://github.com/yyyyymmmmm/IntRoot.git
-cd IntRoot
+git clone https://github.com/yyyyymmmmm/InkRoot.git
+cd InkRoot
 ```
 
 #### Install Dependencies
@@ -551,7 +550,7 @@ Built executable location: `build\windows\x64\runner\Release\inkroot.exe`
 
 ### Method 2: Download Pre-built
 
-Visit [Releases page](https://github.com/yyyyymmmmm/IntRoot/releases) to download latest version.
+Visit [Releases page](https://github.com/yyyyymmmmm/InkRoot/releases) to download latest version.
 
 **⚠️ Installation Note**:
 - Android may show "Unknown source" or "Risk app" warning - this is normal
@@ -584,51 +583,37 @@ Visit [Releases page](https://github.com/yyyyymmmmm/IntRoot/releases) to downloa
 ### Project Structure
 
 ```
-IntRoot/
+InkRoot/
 ├── android/                    # Android native code
 ├── ios/                        # iOS native code
 ├── lib/                        # Flutter source code
 │   ├── config/                 # Configuration files (2 files)
 │   ├── l10n/                   # Internationalization (7 files)
-│   ├── models/                 # Data models (12 files) ⭐ +1 in v1.0.9
+│   ├── models/                 # Data models (12 files)
 │   ├── providers/              # State management (1 file)
 │   ├── routes/                 # Routing configuration (1 file)
 │   ├── screens/                # UI screens (30 files)
 │   ├── services/               # Business logic (36 files)
 │   ├── themes/                 # Theme styles (3 files)
 │   ├── utils/                  # Utilities (15 files)
-│   ├── widgets/                # Custom widgets (24 files) ⭐ +2 in v1.0.9
+│   ├── widgets/                # Custom widgets (24 files)
 │   └── main.dart               # App entry
 ├── assets/                     # Asset files
 ├── pubspec.yaml               # Flutter configuration
 └── README.md                  # Project documentation
 ```
 
-### 📊 Project Statistics
+### 📊 Maintenance Status
 
-| Category | Files | v1.0.9 Added | Description |
-|----------|-------|--------------|-------------|
-| **Screens** | 30 | - | All UI pages |
-| **Services** | 36 | - | Business logic layer |
-| **Widgets** | 24 | +2 ⭐ | Reusable UI components (Added annotation/reference sidebars) |
-| **Utils** | 15 | - | Utility classes |
-| **Models** | 12 | +1 ⭐ | Data models (Added annotation model) |
-| **Themes** | 3 | - | Theme and styles |
-| **L10n** | 7 | +50 translations ⭐ | Multi-language support |
-| **Config** | 2 | - | App configuration |
-| **Routes** | 1 | - | Routing config |
-| **Providers** | 1 | - | Global state |
-| **Total** | **131** | **+3** | Flutter core code files |
-
-**v1.0.9 Code Statistics:**
-- New files: 3 (annotation_model.dart, annotations_sidebar.dart, references_sidebar.dart)
-- Modified files: 10+ (note_card.dart, note_detail_screen.dart, ai_settings_screen.dart, etc.)
-- New code: ~2000 lines
-- New translations: 50+ entries
+- Single version source: `pubspec.yaml`
+- Local maintenance entrypoint: `dart tool/inkroot.dart`
+- CI coverage: Analyze, Test, Secret Scan, Android, iOS simulator, macOS, Windows, Linux, Web
+- Release workflow: see [Maintenance Guide](docs/MAINTENANCE.md)
+- Android signing: see [Android Signing](scripts/ANDROID_SIGNING.md)
 
 ### Architecture Design
 
-InkRoot uses a layered architecture design to ensure maintainability and scalability. v1.0.9 builds on v1.0.8 by adding professional annotation system and reference management features, with complete internationalization support:
+InkRoot uses a layered architecture. Core code is organized by UI, state management, business services, and data access:
 
 ```
 ┌─────────────────────────────────────┐
@@ -652,42 +637,6 @@ InkRoot uses a layered architecture design to ensure maintainability and scalabi
 └──────────────────┴──────────────────┘
 ```
 
-#### New Features (v1.0.8)
-
-- **🌍 Full Internationalization**
-  - Chinese/English language switching
-  - All UI and messages fully internationalized
-  - Custom `translations.dart` system for translation management
-  - Dynamic language switch without app restart
-  
-- **🏷️ Enhanced Tag System**
-  - Hierarchical tags support (`#parent/child`)
-  - Tree view with expand/collapse
-  - AI-powered related tag recommendations
-  - Tag statistics and visualization
-  - Custom tag colors
-  
-- **📥 Flomo Import**
-  - Import notes from Flomo HTML files
-  - Smart content and tag parsing
-  - Preserve original timestamps
-  - Auto image migration and compression
-  - Smart duplicate detection (content match + exact match)
-  - Relative path storage to prevent path invalidation
-
-- **⚡ Performance Optimization**
-  - AI API efficiency improved by 50%
-  - WebDAV sync optimized with incremental sync
-  - Image compression optimized (1200x1200, 85% quality)
-  - Project size reduced by 400-600MB
-  
-- **🐛 Critical Fixes**
-  - Fixed image path issue (images disappeared after iOS upgrade)
-  - Use relative paths with dynamic resolution to absolute paths
-  - Fixed UI layout overflow issues
-  - Fixed tag parsing errors
-  - Optimized sync conflict handling
-
 ---
 
 ## ⚙️ Configuration
@@ -696,9 +645,9 @@ InkRoot uses a layered architecture design to ensure maintainability and scalabi
 
 #### Supported Versions
 
-- Memos v0.21.0 (only this version)
-- API version: v1
-- ⚠️ Not supported: v0.20.x and below, v0.22.0 and above
+- Memos API v1
+- Adapted for v0.21.x through v0.28.x main API differences
+- v0.20.x and below are not recommended
 
 #### Server Address Format
 
@@ -763,8 +712,8 @@ flutter doctor
 #### 2. Clone Project
 
 ```bash
-git clone https://github.com/yyyyymmmmm/IntRoot.git
-cd IntRoot
+git clone https://github.com/yyyyymmmmm/InkRoot.git
+cd InkRoot
 ```
 
 #### 3. Install Dependencies
@@ -936,9 +885,9 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 - **Developer Email**: [inkroot2025@gmail.com](mailto:inkroot2025@gmail.com)
 - **Official Website**: [https://inkroot.cn](https://inkroot.cn)
-- **GitHub Repository**: [https://github.com/yyyyymmmmm/IntRoot](https://github.com/yyyyymmmmm/IntRoot)
-- **Issue Reports**: [GitHub Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
-- **Feature Requests**: [GitHub Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
+- **GitHub Repository**: [https://github.com/yyyyymmmmm/InkRoot](https://github.com/yyyyymmmmm/InkRoot)
+- **Issue Reports**: [GitHub Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
+- **Feature Requests**: [GitHub Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
 
 ---
 
@@ -981,4 +930,3 @@ You can also support us by:
 [⬆ Back to Top](#inkroot---note-taking-app)
 
 </div>
-

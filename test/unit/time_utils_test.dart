@@ -14,7 +14,7 @@ void main() {
     });
 
     test('TU-02 毫秒级 13 位 int 时间戳正确解析', () {
-      final ms = 1700000000000;
+      const ms = 1700000000000;
       final dt = TimeUtils.parseTimeStamp(ms);
       expect(dt.millisecondsSinceEpoch, ms);
     });
@@ -57,7 +57,7 @@ void main() {
     });
 
     test('TU-08 自定义格式 yyyy/MM/dd', () {
-      final dt = DateTime(2024, 1, 5, 0, 0);
+      final dt = DateTime(2024, 1, 5);
       final s = TimeUtils.formatDateTime(dt, format: 'yyyy/MM/dd');
       expect(s, '2024/01/05');
     });

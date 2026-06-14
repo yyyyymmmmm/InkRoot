@@ -1,45 +1,46 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/screens/about_screen.dart';
 import 'package:inkroot/screens/account_info_screen.dart';
 import 'package:inkroot/screens/ai_settings_screen.dart';
 import 'package:inkroot/screens/data_cleanup_screen.dart';
 import 'package:inkroot/screens/feedback_screen.dart';
+import 'package:inkroot/screens/flomo_import_screen.dart';
 import 'package:inkroot/screens/forgot_password_screen.dart';
 import 'package:inkroot/screens/help_screen.dart';
 import 'package:inkroot/screens/home_screen.dart';
 import 'package:inkroot/screens/import_export_main_screen.dart';
-import 'package:inkroot/screens/local_backup_restore_screen.dart';
-import 'package:inkroot/screens/flomo_import_screen.dart';
-import 'package:inkroot/screens/weread_import_screen.dart';
 import 'package:inkroot/screens/knowledge_graph_screen_custom.dart';
 import 'package:inkroot/screens/laboratory_screen.dart';
+import 'package:inkroot/screens/legal_document_screen.dart';
+import 'package:inkroot/screens/local_backup_restore_screen.dart';
 import 'package:inkroot/screens/login_screen.dart';
 import 'package:inkroot/screens/note_detail_screen.dart';
 import 'package:inkroot/screens/notifications_screen.dart';
+import 'package:inkroot/screens/notion_settings_screen.dart';
 import 'package:inkroot/screens/onboarding_screen.dart';
+import 'package:inkroot/screens/performance_dashboard_screen.dart';
 import 'package:inkroot/screens/preferences_screen.dart';
 import 'package:inkroot/screens/privacy_policy_screen.dart';
 import 'package:inkroot/screens/random_review_screen.dart';
-import 'package:inkroot/screens/sidebar_customization_screen.dart';
 import 'package:inkroot/screens/register_screen.dart';
 import 'package:inkroot/screens/server_info_screen.dart';
 import 'package:inkroot/screens/settings_screen.dart';
+import 'package:inkroot/screens/sidebar_customization_screen.dart';
+import 'package:inkroot/screens/tag_notes_screen.dart';
 // import 'package:inkroot/screens/splash_screen.dart'; // 🚀 大厂标准：不需要自定义启动页，只用Native Splash
 import 'package:inkroot/screens/tags_screen.dart';
-import 'package:inkroot/screens/tag_notes_screen.dart';
-import 'package:inkroot/screens/webdav_settings_screen.dart';
-import 'package:inkroot/screens/notion_settings_screen.dart';
-import 'package:inkroot/screens/performance_dashboard_screen.dart';
 import 'package:inkroot/screens/user_preferences_screen.dart'; // 🧠 用户偏好可视化
-import 'package:inkroot/widgets/desktop_layout.dart';
-import 'package:provider/provider.dart';
+import 'package:inkroot/screens/webdav_settings_screen.dart';
+import 'package:inkroot/screens/weread_import_screen.dart';
 import 'package:inkroot/services/preferences_service.dart';
+import 'package:inkroot/widgets/desktop_layout.dart';
 
 // 自定义路由，用于实现从上往下的返回动画
 
@@ -71,30 +72,11 @@ Page<void> buildDrawerTransition({
         reverseCurve: Curves.linear,
       );
 
-      // 🎯 新页面几乎无位移（0%）
-      // 🔥 关键：大厂的平级页面切换几乎没有位移！
-      // 纯粹靠透明度变化，原地交叉溶解
-      final newPageSlide = Tween<Offset>(
-        begin: Offset.zero, // 完全不移动
-        end: Offset.zero,
-      ).animate(curve);
-
       // 🎨 新页面线性淡入（交叉溶解的核心）
       final newPageFade = Tween<double>(
         begin: 0,
         end: 1,
       ).animate(curve);
-
-      // 🎯 旧页面也无位移（0%）
-      final oldPageSlide = Tween<Offset>(
-        begin: Offset.zero,
-        end: Offset.zero, // 完全不移动
-      ).animate(
-        CurvedAnimation(
-          parent: secondaryAnimation,
-          curve: Curves.linear,
-        ),
-      );
 
       // 💨 旧页面线性淡出（交叉溶解的核心）
       final oldPageFade = Tween<double>(
@@ -275,6 +257,36 @@ class AppRouter {
       ),
 
       GoRoute(
+        path: '/privacy-policy-detail',
+        name: 'privacyPolicyDetail',
+        pageBuilder: (context, state) => buildSlideTransition(
+          context: context,
+          state: state,
+          child: const LegalDocumentScreen(type: LegalDocumentType.privacy),
+        ),
+      ),
+
+      GoRoute(
+        path: '/user-agreement',
+        name: 'userAgreement',
+        pageBuilder: (context, state) => buildSlideTransition(
+          context: context,
+          state: state,
+          child: const LegalDocumentScreen(type: LegalDocumentType.agreement),
+        ),
+      ),
+
+      GoRoute(
+        path: '/legal-documents',
+        name: 'legalDocuments',
+        pageBuilder: (context, state) => buildSlideTransition(
+          context: context,
+          state: state,
+          child: const LegalDocumentsHubScreen(),
+        ),
+      ),
+
+      GoRoute(
         path: '/onboarding',
         name: 'onboarding',
         pageBuilder: (context, state) => buildSlideTransition(
@@ -304,8 +316,8 @@ class AppRouter {
           final sharedContent = extra?['sharedContent'] as String?;
 
           // 桌面端使用NoTransitionPage，移动端使用动画
-          final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-          
+          final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
           if (isDesktop) {
             return NoTransitionPage<void>(
               key: state.pageKey,
@@ -314,7 +326,7 @@ class AppRouter {
               ),
             );
           }
-          
+
           return buildSlideTransition(
             context: context,
             state: state,
@@ -486,8 +498,8 @@ class AppRouter {
         path: '/random-review',
         name: 'randomReview',
         pageBuilder: (context, state) {
-          final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-          
+          final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
           if (isDesktop) {
             return NoTransitionPage<void>(
               key: state.pageKey,
@@ -496,7 +508,7 @@ class AppRouter {
               ),
             );
           }
-          
+
           return buildSlideTransition(
             context: context,
             state: state,
@@ -514,8 +526,8 @@ class AppRouter {
         path: '/tags',
         name: 'tags',
         pageBuilder: (context, state) {
-          final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-          
+          final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
           if (isDesktop) {
             return NoTransitionPage<void>(
               key: state.pageKey,
@@ -524,7 +536,7 @@ class AppRouter {
               ),
             );
           }
-          
+
           return buildSlideTransition(
             context: context,
             state: state,
@@ -541,70 +553,72 @@ class AppRouter {
             name: 'tag-notes',
             pageBuilder: (context, state) {
               try {
-                // 🎯 标签名统一做一次 Uri.decodeComponent，兼容手动拼接 URL 的场景
-                final rawTag = state.uri.queryParameters['tag'] ?? '';
-                String tagName = rawTag;
-                
-                // 🛡️ 安全解码：尝试解码，如果失败则使用原始值
-                if (rawTag.isNotEmpty) {
-                  try {
-                    tagName = Uri.decodeComponent(rawTag);
-                  } catch (e) {
-                    print('⚠️ [路由] URI解码失败，使用原始值: $e');
-                    tagName = rawTag; // 如果解码失败，使用原始值
-                  }
-                }
-                
-                print('🏷️ [路由] 原始标签参数: "$rawTag"');
-                print('🏷️ [路由] 解码后的标签名称: "$tagName"');
-                
+                // GoRouter 的 queryParameters 已经是解码后的值。
+                final tagName = state.uri.queryParameters['tag']?.trim() ?? '';
+
                 // 🛡️ 防御性检查
                 if (tagName.isEmpty || tagName.trim().isEmpty) {
-                  print('❌ [路由] 标签名为空！');
                   return MaterialPage(
                     key: state.pageKey,
                     child: Scaffold(
-                      appBar: AppBar(title: const Text('错误')),
-                      body: const Center(child: Text('标签名称无效')),
+                      appBar: AppBar(
+                        title: Text(
+                          AppLocalizationsSimple.of(context)?.routeErrorTitle ??
+                              '错误',
+                        ),
+                      ),
+                      body: Center(
+                        child: Text(
+                          AppLocalizationsSimple.of(context)?.invalidTagName ??
+                              '标签名称无效',
+                        ),
+                      ),
                     ),
                   );
                 }
-                
-                print('✅ [路由] 准备加载标签笔记页面: "$tagName"');
-                
+
                 // 🔥 在iOS上使用CupertinoPage以支持侧滑返回手势
-                if (Platform.isIOS) {
+                if (!kIsWeb && Platform.isIOS) {
                   return CupertinoPage<void>(
                     key: state.pageKey,
                     child: TagNotesScreen(tagName: tagName),
                   );
                 }
-                
+
                 // 🎯 Android使用自定义滑动动画
                 return CustomTransitionPage(
                   key: state.pageKey,
                   child: TagNotesScreen(tagName: tagName),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(1, 0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) =>
+                          SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1, 0),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
                         parent: animation,
                         curve: Curves.easeOutCubic,
-                      )),
-                      child: child,
-                    );
-                  },
+                      ),
+                    ),
+                    child: child,
+                  ),
                 );
-              } catch (e, stackTrace) {
-                print('❌ [路由] 标签页面构建失败: $e');
-                print('❌ [路由] 堆栈: $stackTrace');
+              } on Object catch (e) {
                 return MaterialPage(
                   key: state.pageKey,
                   child: Scaffold(
-                    appBar: AppBar(title: const Text('错误')),
-                    body: Center(child: Text('页面加载失败: $e')),
+                    appBar: AppBar(
+                      title: Text(
+                        AppLocalizationsSimple.of(context)?.routeErrorTitle ??
+                            '错误',
+                      ),
+                    ),
+                    body: Center(
+                      child: Text(
+                        '${AppLocalizationsSimple.of(context)?.pageLoadFailed ?? '页面加载失败'}: $e',
+                      ),
+                    ),
                   ),
                 );
               }
@@ -619,8 +633,8 @@ class AppRouter {
         path: '/knowledge-graph',
         name: 'knowledgeGraph',
         pageBuilder: (context, state) {
-          final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-          
+          final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
           if (isDesktop) {
             return NoTransitionPage<void>(
               key: state.pageKey,
@@ -629,7 +643,7 @@ class AppRouter {
               ),
             );
           }
-          
+
           return buildSlideTransition(
             context: context,
             state: state,
@@ -646,8 +660,8 @@ class AppRouter {
         path: '/help',
         name: 'help',
         pageBuilder: (context, state) {
-          final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-          
+          final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
           if (isDesktop) {
             return NoTransitionPage<void>(
               key: state.pageKey,
@@ -656,7 +670,7 @@ class AppRouter {
               ),
             );
           }
-          
+
           return buildSlideTransition(
             context: context,
             state: state,
@@ -698,7 +712,7 @@ class AppRouter {
               child: const AboutScreen(),
             ),
           ),
-          
+
           // 导入导出主页面
           GoRoute(
             path: 'import-export',
@@ -709,7 +723,7 @@ class AppRouter {
               child: const ImportExportMainScreen(),
             ),
           ),
-          
+
           // 本地备份/恢复页面
           GoRoute(
             path: 'local-backup-restore',
@@ -720,7 +734,7 @@ class AppRouter {
               child: const LocalBackupRestoreScreen(),
             ),
           ),
-          
+
           // Flomo 导入页面
           GoRoute(
             path: 'flomo-import',
@@ -731,7 +745,7 @@ class AppRouter {
               child: const FlomoImportScreen(),
             ),
           ),
-          
+
           // 微信读书笔记导入页面
           GoRoute(
             path: 'weread-import',
@@ -742,7 +756,7 @@ class AppRouter {
               child: const WeReadImportScreen(),
             ),
           ),
-          
+
           // Notion 同步设置页面
           GoRoute(
             path: 'notion-settings',
@@ -805,11 +819,17 @@ class AppRouter {
     ],
     redirect: (context, state) async {
       // 🔒 大厂标准：隐私政策优先级最高（第一次安装时必须先同意）
-      final hasAgreedToPrivacy = await _preferencesService.hasAgreedToPrivacyPolicy();
-      
+      final hasAgreedToPrivacy =
+          await _preferencesService.hasAgreedToPrivacyPolicy();
+
       // 如果未同意隐私政策，强制跳转到隐私政策页面
       if (!hasAgreedToPrivacy) {
-        if (state.matchedLocation != '/privacy-policy') {
+        const allowedLegalPaths = {
+          '/privacy-policy',
+          '/privacy-policy-detail',
+          '/user-agreement',
+        };
+        if (!allowedLegalPaths.contains(state.matchedLocation)) {
           return '/privacy-policy';
         }
         return null; // 已在隐私政策页面，停止重定向
@@ -825,7 +845,7 @@ class AppRouter {
       // 用户可以在设置中查看帮助和教程
       // if (hasAgreedToPrivacy) {
       //   final isFirstLaunch = await _preferencesService.isFirstLaunch();
-      //   
+      //
       //   if (isFirstLaunch &&
       //       state.matchedLocation != '/onboarding' &&
       //       state.matchedLocation != '/welcome') {
@@ -841,28 +861,25 @@ class AppRouter {
       return null;
     },
     errorBuilder: (context, state) {
-      // 🐛 调试日志：记录404错误
-      print('❌ [GoRouter] 404错误 - 未找到页面');
-      print('❌ [GoRouter] 请求的路径: ${state.uri}');
-      print('❌ [GoRouter] 完整URI: ${state.uri.toString()}');
-      print('❌ [GoRouter] 路径参数: ${state.pathParameters}');
-      print('❌ [GoRouter] 查询参数: ${state.uri.queryParameters}');
-      print('❌ [GoRouter] 匹配的位置: ${state.matchedLocation}');
-      print('❌ [GoRouter] 错误: ${state.error}');
-      
+      if (kDebugMode) {
+        debugPrint('GoRouter 404: uri=${state.uri}, error=${state.error}');
+      }
+      final l10n = AppLocalizationsSimple.of(context);
+
       return MaterialApp(
         home: Scaffold(
           appBar: AppBar(
-            title: const Text('页面未找到'),
+            title: Text(l10n?.pageNotFound ?? '页面未找到'),
           ),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('哎呀，页面走丢了!'),
+                Text(l10n?.pageLost ?? '哎呀，页面走丢了!'),
                 const SizedBox(height: 16),
                 Text(
-                  '请求路径: ${state.uri}',
+                  l10n?.requestPath(state.uri.toString()) ??
+                      '请求路径: ${state.uri}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],

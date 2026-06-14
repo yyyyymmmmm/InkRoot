@@ -1,9 +1,13 @@
 import 'dart:convert'; // Added for jsonEncode and jsonDecode
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseService {
   factory DatabaseService() => _instance;
@@ -11,28 +15,54 @@ class DatabaseService {
   DatabaseService._internal();
   static final DatabaseService _instance = DatabaseService._internal();
   static Database? _database;
+  static bool _ffiInitialized = false;
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    if (_database != null) {
+      return _database!;
+    }
     _database = await _initDatabase();
     return _database!;
   }
 
   // 初始化数据库
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'notes.db');
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      if (!_ffiInitialized) {
+        sqfliteFfiInit();
+        _ffiInitialized = true;
+      }
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    final dbPath = !kIsWeb && (Platform.isWindows || Platform.isLinux)
+        ? await _desktopDatabaseDirectory()
+        : await getDatabasesPath();
+    final path = join(dbPath, AppConfig.databaseName);
 
     return openDatabase(
       path,
-      version: 8, // 🔥 版本8：添加annotations字段，支持批注功能
+      version: schemaVersion,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: (Database db, int version) => createSchema(db),
       onUpgrade: (db, oldVersion, newVersion) =>
           upgradeSchema(db, oldVersion: oldVersion, newVersion: newVersion),
     );
   }
 
-  static const int schemaVersion = 8;
+  Future<String> _desktopDatabaseDirectory() async {
+    final supportDirectory = await getApplicationSupportDirectory();
+    final databaseDirectory =
+        Directory(join(supportDirectory.path, 'databases'));
+    if (!await databaseDirectory.exists()) {
+      await databaseDirectory.create(recursive: true);
+    }
+    return databaseDirectory.path;
+  }
+
+  static const int schemaVersion = AppConfig.databaseVersion;
 
   /// Creates all tables/indexes for the latest schema.
   static Future<void> createSchema(Database db) async {
@@ -275,7 +305,10 @@ class DatabaseService {
   // 清空所有笔记
   Future<void> clearAllNotes() async {
     final db = await database;
-    await db.delete('notes');
+    await db.transaction((txn) async {
+      await txn.delete('reminder_notifications');
+      await txn.delete('notes');
+    });
   }
 
   // 批量保存笔记（upsert：存在则更新，不存在则插入）
@@ -294,9 +327,27 @@ class DatabaseService {
     await batch.commit();
   }
 
+  /// 原子替换全部笔记。用于恢复备份，避免先清空后逐条写入导致半恢复状态。
+  Future<void> replaceAllNotes(List<Note> notes) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('reminder_notifications');
+      await txn.delete('notes');
+      for (final note in notes) {
+        await txn.insert(
+          'notes',
+          note.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
   /// 删除服务器已不存在的本地已同步笔记（安全清理，不影响未同步数据）
   Future<void> deleteSyncedNotesNotIn(List<String> serverIds) async {
-    if (serverIds.isEmpty) return;
+    if (serverIds.isEmpty) {
+      return;
+    }
     final db = await database;
     final placeholders = List.filled(serverIds.length, '?').join(',');
     await db.delete(
@@ -315,55 +366,26 @@ class DatabaseService {
       whereArgs: ['%$tag%'],
     );
 
-    return List.generate(maps.length, (i) {
-      final map = maps[i];
-      return Note(
-        id: map['id'],
-        content: map['content'],
-        createdAt: DateTime.parse(map['createdAt']),
-        updatedAt: DateTime.parse(map['updatedAt']),
-        displayTime: map['displayTime'] != null
-            ? DateTime.parse(map['displayTime'])
-            : null,
-        tags: map['tags'] != null && map['tags'].isNotEmpty
-            ? map['tags'].split(',')
-            : null,
-        creator: map['creator'],
-        isSynced: map['is_synced'] == 1,
-        isPinned: map['isPinned'] == 1,
-        visibility: map['visibility'] ?? 'PRIVATE',
-      );
-    });
+    return maps.map(Note.fromMap).toList();
   }
 
   // 搜索笔记
   Future<List<Note>> searchNotes(String query) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) {
+      return const [];
+    }
+
     final db = await database;
+    final pattern = '%$normalizedQuery%';
     final List<Map<String, dynamic>> maps = await db.query(
       'notes',
-      where: 'content LIKE ?',
-      whereArgs: ['%$query%'],
+      where: 'content LIKE ? OR tags LIKE ?',
+      whereArgs: [pattern, pattern],
+      orderBy: 'createdAt DESC',
     );
 
-    return List.generate(maps.length, (i) {
-      final map = maps[i];
-      return Note(
-        id: map['id'],
-        content: map['content'],
-        createdAt: DateTime.parse(map['createdAt']),
-        updatedAt: DateTime.parse(map['updatedAt']),
-        displayTime: map['displayTime'] != null
-            ? DateTime.parse(map['displayTime'])
-            : null,
-        tags: map['tags'] != null && map['tags'].isNotEmpty
-            ? map['tags'].split(',')
-            : null,
-        creator: map['creator'],
-        isSynced: map['is_synced'] == 1,
-        isPinned: map['isPinned'] == 1,
-        visibility: map['visibility'] ?? 'PRIVATE',
-      );
-    });
+    return maps.map(Note.fromMap).toList();
   }
 
   // 获取数据库大小（估算值，单位：字节）
@@ -382,6 +404,40 @@ class DatabaseService {
       'exportTime': DateTime.now().toIso8601String(),
       'notes': jsonList,
     });
+  }
+
+  /// 将单条笔记导出为带元数据的 Markdown。
+  ///
+  /// 正文仍是用户可读的 Markdown；顶部 front matter 让本应用重新导入时能恢复
+  /// 创建时间、更新时间、标签、提醒、批注等本地字段。
+  String exportNoteToMarkdown(Note note) {
+    final metadata = <String, dynamic>{
+      'inkrootNote': true,
+      'id': note.id,
+      'createdAt': note.createdAt.toIso8601String(),
+      'updatedAt': note.updatedAt.toIso8601String(),
+      'displayTime': note.displayTime.toIso8601String(),
+      'tags': note.tags,
+      'creator': note.creator,
+      'isSynced': note.isSynced,
+      'isPinned': note.isPinned,
+      'visibility': note.visibility,
+      'rowStatus': note.rowStatus,
+      'resourceList': note.resourceList,
+      'relations': note.relations,
+      'annotations':
+          note.annotations.map((annotation) => annotation.toJson()).toList(),
+      'reminderTime': note.reminderTime?.toIso8601String(),
+      'lastSyncTime': note.lastSyncTime?.toIso8601String(),
+    };
+
+    final buffer = StringBuffer('---\n');
+    metadata.forEach((key, value) {
+      buffer.writeln('$key: ${jsonEncode(value)}');
+    });
+    buffer.writeln('---');
+    buffer.write(note.content);
+    return buffer.toString();
   }
 
   // 导入JSON格式的笔记
@@ -404,7 +460,7 @@ class DatabaseService {
           try {
             final note = Note.fromJson(item);
             notes.add(note);
-          } catch (e) {
+          } on Object catch (e) {
             debugPrint('解析笔记失败: $e');
           }
         }
@@ -415,7 +471,7 @@ class DatabaseService {
         overwriteExisting: overwriteExisting,
         asNewNotes: asNewNotes,
       );
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('导入JSON笔记失败: $e');
       throw Exception('导入JSON笔记失败: $e');
     }
@@ -424,63 +480,179 @@ class DatabaseService {
   // 导入Markdown格式的笔记
   Future<int> importNotesFromMarkdown(
     List<String> markdownFiles,
-    List<String> contents,
-  ) async {
+    List<String> contents, {
+    bool overwriteExisting = false,
+    bool asNewNotes = true,
+  }) async {
     if (markdownFiles.length != contents.length) {
       throw Exception('File name and content count mismatch'); // 文件名和内容数量不匹配
     }
 
     final notes = <Note>[];
-    final now = DateTime.now();
-
     for (var i = 0; i < markdownFiles.length; i++) {
-      final fileName = markdownFiles[i];
       final content = contents[i];
+      final backupNote = _tryParseMarkdownBackupNote(content, index: i);
+      if (backupNote != null) {
+        notes.add(backupNote);
+        continue;
+      }
+
+      final importedAt = DateTime.now().add(Duration(milliseconds: i));
       final tags = Note.extractTagsFromContent(content);
 
       notes.add(
         Note(
           id: 'local_${DateTime.now().millisecondsSinceEpoch}_$i',
           content: content,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: importedAt,
+          updatedAt: importedAt,
           tags: tags,
         ),
       );
     }
 
-    return _importNotes(notes);
+    return _importNotes(
+      notes,
+      overwriteExisting: overwriteExisting,
+      asNewNotes: asNewNotes,
+    );
   }
 
   // 导入纯文本格式的笔记
   Future<int> importNotesFromText(
     List<String> textFiles,
-    List<String> contents,
-  ) async {
+    List<String> contents, {
+    bool overwriteExisting = false,
+    bool asNewNotes = true,
+  }) async {
     if (textFiles.length != contents.length) {
       throw Exception('File name and content count mismatch'); // 文件名和内容数量不匹配
     }
 
     final notes = <Note>[];
-    final now = DateTime.now();
 
     for (var i = 0; i < textFiles.length; i++) {
-      final fileName = textFiles[i];
       final content = contents[i];
+      final backupNotes = _tryParseTextBackupNotes(content);
+      if (backupNotes.isNotEmpty) {
+        notes.addAll(backupNotes);
+        continue;
+      }
+
+      final importedAt = DateTime.now().add(Duration(milliseconds: i));
       final tags = Note.extractTagsFromContent(content);
 
       notes.add(
         Note(
           id: 'local_${DateTime.now().millisecondsSinceEpoch}_$i',
           content: content,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: importedAt,
+          updatedAt: importedAt,
           tags: tags,
         ),
       );
     }
 
-    return _importNotes(notes);
+    return _importNotes(
+      notes,
+      overwriteExisting: overwriteExisting,
+      asNewNotes: asNewNotes,
+    );
+  }
+
+  Note? _tryParseMarkdownBackupNote(String content, {required int index}) {
+    final match = RegExp(
+      r'^---\r?\n(.*?)\r?\n---\r?\n?',
+      dotAll: true,
+    ).firstMatch(content);
+    if (match == null) {
+      return null;
+    }
+
+    final metadata = <String, dynamic>{};
+    for (final line in const LineSplitter().convert(match.group(1) ?? '')) {
+      final separator = line.indexOf(':');
+      if (separator <= 0) {
+        continue;
+      }
+      final key = line.substring(0, separator).trim();
+      final rawValue = line.substring(separator + 1).trim();
+      if (key.isEmpty) {
+        continue;
+      }
+      try {
+        metadata[key] = jsonDecode(rawValue);
+      } on Object {
+        metadata[key] = rawValue;
+      }
+    }
+
+    if (metadata['inkrootNote'] != true) {
+      return null;
+    }
+
+    final body = content.substring(match.end);
+    final json = <String, dynamic>{
+      ...metadata,
+      'id': metadata['id']?.toString().isNotEmpty ?? false
+          ? metadata['id']
+          : 'local_${DateTime.now().millisecondsSinceEpoch}_$index',
+      'content': body,
+    };
+
+    return Note.fromJson(json);
+  }
+
+  List<Note> _tryParseTextBackupNotes(String content) {
+    final notes = <Note>[];
+    final blockRegex = RegExp(
+      r'--- 笔记 (.*?) ---\r?\n'
+      r'创建时间: (.*?)\r?\n'
+      r'更新时间: (.*?)\r?\n'
+      r'标签: (.*?)\r?\n'
+      r'内容:\r?\n'
+      r'(.*?)(?:\r?\n-{20,}\r?\n|$)',
+      dotAll: true,
+    );
+
+    for (final match in blockRegex.allMatches(content)) {
+      final id = match.group(1)?.trim();
+      final createdAt = _parseBackupDate(match.group(2));
+      final updatedAt = _parseBackupDate(match.group(3));
+      final rawTags = match.group(4)?.trim() ?? '';
+      final body = match.group(5) ?? '';
+      if (createdAt == null || updatedAt == null || id == null || id.isEmpty) {
+        continue;
+      }
+
+      final tags = rawTags.isEmpty
+          ? Note.extractTagsFromContent(body)
+          : rawTags
+              .split(',')
+              .map((tag) => tag.trim())
+              .where((tag) => tag.isNotEmpty)
+              .toList();
+      notes.add(
+        Note(
+          id: id,
+          content: body.trimRight(),
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          tags: tags,
+        ),
+      );
+    }
+
+    return notes;
+  }
+
+  DateTime? _parseBackupDate(String? rawDate) {
+    if (rawDate == null) {
+      return null;
+    }
+    final value = rawDate.trim();
+    return DateTime.tryParse(value) ??
+        DateTime.tryParse(value.replaceFirst(' ', 'T'));
   }
 
   // 内部方法：导入笔记通用逻辑
@@ -500,6 +672,8 @@ class DatabaseService {
             final newNote = note.copyWith(
               id: 'local_${DateTime.now().millisecondsSinceEpoch}_$imported',
               isSynced: false,
+              relations: const [],
+              clearLastSyncTime: true,
             );
 
             await txn.insert(
@@ -555,7 +729,7 @@ class DatabaseService {
               imported++;
             }
           }
-        } catch (e) {
+        } on Object catch (e) {
           debugPrint('导入单条笔记失败: $e');
         }
       }
@@ -566,7 +740,9 @@ class DatabaseService {
 
   // 批量更新笔记（增量同步专用）
   Future<void> updateNotesBatch(List<Note> notes) async {
-    if (notes.isEmpty) return;
+    if (notes.isEmpty) {
+      return;
+    }
 
     final db = await database;
     await db.transaction((txn) async {
@@ -585,7 +761,9 @@ class DatabaseService {
 
   // 批量插入笔记（增量同步专用）
   Future<void> insertNotesBatch(List<Note> notes) async {
-    if (notes.isEmpty) return;
+    if (notes.isEmpty) {
+      return;
+    }
 
     final db = await database;
     await db.transaction((txn) async {

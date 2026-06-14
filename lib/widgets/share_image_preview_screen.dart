@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:inkroot/config/app_config.dart'; // 🔥 导入AppConfig
 import 'package:inkroot/l10n/app_localizations.dart'; // 🌍 国际化
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/themes/app_theme.dart';
+import 'package:inkroot/utils/image_utils.dart';
 import 'package:inkroot/utils/share_image_widget.dart'; // 🔥 导入模板枚举
 import 'package:inkroot/utils/share_utils.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
@@ -128,7 +128,9 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
         }
       }
 
-      if (kDebugMode) debugPrint('📄 SharePreview: 开始生成预览图...');
+      if (kDebugMode) {
+        debugPrint('📄 SharePreview: 开始生成预览图...');
+      }
 
       // 🔥 使用新的预览方法，传递包含图片的content和字体大小
       final imageBytes = await ShareUtils.generatePreviewImageFromWidget(
@@ -142,14 +144,20 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
       );
 
       if (!mounted) {
-        if (kDebugMode) debugPrint('⚠️ SharePreview: Widget 已卸载，取消更新状态');
+        if (kDebugMode) {
+          debugPrint('⚠️ SharePreview: Widget 已卸载，取消更新状态');
+        }
         return;
       }
 
-      if (kDebugMode) debugPrint('🔄 SharePreview: 准备调用 setState...');
+      if (kDebugMode) {
+        debugPrint('🔄 SharePreview: 准备调用 setState...');
+      }
 
       setState(() {
-        if (kDebugMode) debugPrint('🔄 SharePreview: setState 内部执行中...');
+        if (kDebugMode) {
+          debugPrint('🔄 SharePreview: setState 内部执行中...');
+        }
         _previewImageBytes = imageBytes;
         _isGeneratingPreview = false;
         if (kDebugMode) {
@@ -159,7 +167,9 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
         }
       });
 
-      if (kDebugMode) debugPrint('✅ SharePreview: setState 调用完成');
+      if (kDebugMode) {
+        debugPrint('✅ SharePreview: setState 调用完成');
+      }
 
       // 🔧 强制触发下一帧渲染
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -171,7 +181,7 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
           setState(() {});
         }
       });
-    } catch (e) {
+    } on Object catch (e) {
       setState(() {
         _isGeneratingPreview = false;
       });
@@ -185,82 +195,13 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
     }
   }
 
-  // 获取图片路径
-  Future<List<String>> _getImagePaths() async {
-    final imagePaths = <String>[];
-
-    // 从现有笔记获取图片资源
-    final provider = Provider.of<AppProvider>(context, listen: false);
-    final notes = provider.notes;
-    final currentNote = notes.firstWhere(
-      (note) => note.id == widget.noteId,
-      orElse: () => Note(
-        id: widget.noteId,
-        content: widget.content,
-        createdAt: widget.timestamp,
-        updatedAt: widget.timestamp,
-      ),
-    );
-
-    for (final resource in currentNote.resourceList) {
-      final uid = resource['uid'] as String?;
-      final type = resource['type'] as String?;
-      final filename = resource['filename'] as String?;
-
-      // 🛡️ 过滤掉视频文件，只保留图片
-      if (uid != null) {
-        // 检查是否为视频文件
-        var isVideo = false;
-        if (type != null && type.toLowerCase().startsWith('video')) {
-          isVideo = true;
-        } else if (filename != null) {
-          final ext = filename.toLowerCase();
-          if (ext.endsWith('.mov') ||
-              ext.endsWith('.mp4') ||
-              ext.endsWith('.avi') ||
-              ext.endsWith('.mkv') ||
-              ext.endsWith('.webm') ||
-              ext.endsWith('.flv')) {
-            isVideo = true;
-          }
-        }
-
-        if (!isVideo) {
-          final resourcePath = '/o/r/$uid';
-          imagePaths.add(resourcePath);
-        }
-      }
-    }
-
-    // 从content中提取Markdown格式的图片
-    final imageRegex = RegExp(r'!\[.*?\]\((.*?)\)');
-    final imageMatches = imageRegex.allMatches(widget.content);
-
-    for (final match in imageMatches) {
-      final path = match.group(1) ?? '';
-      if (path.isNotEmpty && !imagePaths.contains(path)) {
-        imagePaths.add(path);
-      }
-    }
-
-    return imagePaths;
-  }
-
-  // 🎨 切换模板（已支持多模板！）
-  void _switchTemplate(ShareTemplateStyle template) {
-    if (_currentTemplate != template) {
-      setState(() {
-        _currentTemplate = template;
-      });
-      _generatePreview();
-    }
-  }
-
   // 🎨 构建预览内容
   Widget _buildPreviewContent(AppLocalizations? l10n) {
     // 正在生成预览
     if (_isGeneratingPreview) {
-      if (kDebugMode) debugPrint('🎨 显示：加载中');
+      if (kDebugMode) {
+        debugPrint('🎨 显示：加载中');
+      }
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -306,7 +247,9 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
     }
 
     // 生成失败
-    if (kDebugMode) debugPrint('🎨 显示：错误');
+    if (kDebugMode) {
+      debugPrint('🎨 显示：错误');
+    }
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -571,12 +514,12 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
               Container(
                 width: 20,
                 height: 4,
-                color: primaryColor.withOpacity(0.7),
+                color: primaryColor.withValues(alpha: 0.7),
               ),
               Container(
                 width: 15,
                 height: 4,
-                color: primaryColor.withOpacity(0.7),
+                color: primaryColor.withValues(alpha: 0.7),
               ),
             ],
           ),
@@ -585,19 +528,19 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
           Container(
             width: double.infinity,
             height: 3,
-            color: primaryColor.withOpacity(0.5),
+            color: primaryColor.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 3),
           Container(
             width: double.infinity,
             height: 3,
-            color: primaryColor.withOpacity(0.5),
+            color: primaryColor.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 3),
           Container(
             width: double.infinity * 0.7,
             height: 3,
-            color: primaryColor.withOpacity(0.5),
+            color: primaryColor.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 8),
           // 底部信息
@@ -606,7 +549,7 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
             child: Container(
               width: 25,
               height: 3,
-              color: primaryColor.withOpacity(0.6),
+              color: primaryColor.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -632,7 +575,9 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
 
   // 🎨 分享图片（支持多模板）
   Future<void> _shareImage() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final l10n = AppLocalizations.of(context);
 
@@ -646,7 +591,9 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
     }
 
     try {
-      if (kDebugMode) debugPrint('📤 开始分享预览图...');
+      if (kDebugMode) {
+        debugPrint('📤 开始分享预览图...');
+      }
 
       // ✅ 直接使用已生成的预览图分享（不重新生成！）
       final tempDir = await getTemporaryDirectory();
@@ -662,21 +609,27 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
             '📝 来自${AppConfig.appName}的分享\n\n${widget.content.length > 100 ? '${widget.content.substring(0, 100)}...' : widget.content}',
       );
 
-      if (kDebugMode) debugPrint('✅ 分享完成');
-    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('✅ 分享完成');
+      }
+    } on Object catch (e) {
       if (mounted) {
         SnackBarUtils.showError(
           context,
           '${l10n?.shareImageShareFailed ?? "分享失败"}: $e',
         );
       }
-      if (kDebugMode) debugPrint('❌ 分享图片失败: $e');
+      if (kDebugMode) {
+        debugPrint('❌ 分享图片失败: $e');
+      }
     }
   }
 
   // 保存图片
   Future<void> _saveImage() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final l10n = AppLocalizations.of(context);
 
@@ -688,82 +641,60 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
       return;
     }
 
-    // 缓存需要的国际化文本（带回退）
     final savingText = l10n?.shareImageSaving ?? '正在保存...';
-    final savingToAlbumText = l10n?.shareImageSavingToAlbum ?? '正在保存到相册，请稍候';
 
     // 显示加载对话框
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppTheme.darkCardColor
-                : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                savingText,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : AppTheme.textPrimaryColor,
+    unawaited(
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppTheme.darkCardColor
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  savingText,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : AppTheme.textPrimaryColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                savingToAlbumText,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey[400]
-                      : Colors.grey[600],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
 
     try {
-      // 🔥 直接使用预览图片保存
-      final result = await ImageGallerySaverPlus.saveImage(
+      await ImageUtils.saveImageBytes(
+        context,
         _previewImageBytes!,
-        name: 'inkroot_share_${DateTime.now().millisecondsSinceEpoch}',
-        quality: 100,
+        fileName: 'inkroot_share_${DateTime.now().millisecondsSinceEpoch}.png',
       );
 
       // 关闭加载对话框
-      if (mounted) Navigator.of(context).pop();
-
       if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        if (result['isSuccess'] == true) {
-          SnackBarUtils.showSuccess(
-            context,
-            l10n?.shareImageSaveSuccess ?? '图片已保存到相册',
-          );
-        } else {
-          SnackBarUtils.showError(
-            context,
-            l10n?.shareImageSaveFailed ?? '保存失败',
-          );
-        }
+        Navigator.of(context).pop();
       }
-    } catch (e) {
+    } on Object catch (e) {
       // 关闭加载对话框
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
 
       if (mounted) {
         final l10n = AppLocalizations.of(context);
@@ -772,7 +703,9 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
           '${l10n?.shareImageSaveFailed ?? "保存失败"}: $e',
         );
       }
-      if (kDebugMode) debugPrint('Error saving image: $e');
+      if (kDebugMode) {
+        debugPrint('Error saving image: $e');
+      }
     }
   }
 
@@ -808,14 +741,13 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) =>
-              WillPopScope(
-            onWillPop: () async {
+              PopScope(
+            onPopInvokedWithResult: (didPop, result) {
               // 关闭时触发最后一次生成
               _debounceTimer?.cancel();
               if (_fontSize != initialFontSize) {
                 _generatePreview();
               }
-              return true;
             },
             child: Container(
               height: 240, // 🔧 增加高度避免溢出
@@ -888,7 +820,7 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -965,7 +897,8 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.primaryColor,
                               side: BorderSide(
-                                color: AppTheme.primaryColor.withOpacity(0.3),
+                                color: AppTheme.primaryColor
+                                    .withValues(alpha: 0.3),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -1130,7 +1063,7 @@ class _ShareImagePreviewScreenState extends State<ShareImagePreviewScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
-                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
                         ),
                       ),
                     ),

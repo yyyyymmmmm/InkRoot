@@ -5,11 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 标签颜色配置模型
 /// 支持自定义背景色和字体颜色
 class TagColor {
-  final String tagName;
-  final Color backgroundColor;
-  final Color textColor;
-  final DateTime updatedAt;
-
   const TagColor({
     required this.tagName,
     required this.backgroundColor,
@@ -17,24 +12,39 @@ class TagColor {
     required this.updatedAt,
   });
 
+  factory TagColor.fromJson(Map<String, dynamic> json) => TagColor(
+        tagName: json['tagName'] as String,
+        backgroundColor: Color(json['backgroundColor'] as int),
+        textColor: Color(json['textColor'] as int),
+        updatedAt: DateTime.parse(json['updatedAt'] as String),
+      );
+  final String tagName;
+  final Color backgroundColor;
+  final Color textColor;
+  final DateTime updatedAt;
+
   // 默认配色（主题色）
   static Color defaultBackgroundColor(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return isDark
-        ? const Color(0xFF1E3A5F)
-        : const Color(0xFFEDF3FF);
+    return isDark ? const Color(0xFF17352E) : const Color(0xFFE9F6F1);
   }
 
   static Color defaultTextColor(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return isDark
-        ? const Color(0xFF82B1FF)
-        : const Color(0xFF1976D2);
+    return isDark ? const Color(0xFF5DB79F) : const Color(0xFF2C9678);
   }
 
   // 预设配色方案（简洁优雅，符合主题）
   static const List<Map<String, dynamic>> presetColors = [
-    // 蓝色系（默认）
+    // 品牌绿（默认）
+    {
+      'name': '品牌绿',
+      'bg': Color(0xFFE9F6F1),
+      'text': Color(0xFF2C9678),
+      'darkBg': Color(0xFF17352E),
+      'darkText': Color(0xFF5DB79F),
+    },
+    // 蓝色系（可选）
     {
       'name': '经典蓝',
       'bg': Color(0xFFEDF3FF),
@@ -103,17 +113,10 @@ class TagColor {
   // JSON 序列化
   Map<String, dynamic> toJson() => {
         'tagName': tagName,
-        'backgroundColor': backgroundColor.value,
-        'textColor': textColor.value,
+        'backgroundColor': backgroundColor.toARGB32(),
+        'textColor': textColor.toARGB32(),
         'updatedAt': updatedAt.toIso8601String(),
       };
-
-  factory TagColor.fromJson(Map<String, dynamic> json) => TagColor(
-        tagName: json['tagName'] as String,
-        backgroundColor: Color(json['backgroundColor'] as int),
-        textColor: Color(json['textColor'] as int),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
 
   // 复制方法
   TagColor copyWith({
@@ -160,7 +163,7 @@ class TagColorService {
     final colors = await getAllTagColors();
     try {
       return colors.firstWhere((c) => c.tagName == tagName);
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -169,14 +172,16 @@ class TagColorService {
   static Future<List<TagColor>> getAllTagColors() async {
     final prefs = await _getPrefs();
     final jsonStr = prefs.getString(_storageKey);
-    if (jsonStr == null || jsonStr.isEmpty) return [];
+    if (jsonStr == null || jsonStr.isEmpty) {
+      return [];
+    }
 
     try {
       final jsonList = jsonDecode(jsonStr) as List;
       return jsonList
           .map((json) => TagColor.fromJson(json as Map<String, dynamic>))
           .toList();
-    } catch (e) {
+    } on Object {
       return [];
     }
   }
@@ -197,8 +202,6 @@ class TagColorService {
     await prefs.remove(_storageKey);
   }
 
-  static Future<SharedPreferences> _getPrefs() async {
-    return await SharedPreferences.getInstance();
-  }
+  static Future<SharedPreferences> _getPrefs() async =>
+      SharedPreferences.getInstance();
 }
-

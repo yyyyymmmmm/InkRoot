@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inkroot/config/app_config.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/reminder_notification_model.dart';
 import 'package:inkroot/services/reminder_notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,6 +15,12 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:uuid/uuid.dart';
 
 /// 通知服务 - 使用原生Android AlarmManager实现
+abstract class NotificationAppProviderBridge {
+  Future<void> cancelNoteReminder(String noteId);
+
+  Future<void> refreshUnreadAnnouncementsCount();
+}
+
 class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -21,9 +28,10 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
+  bool _initialized = false;
 
   // 🔥 原生Android AlarmManager Method Channel
-  static final platform = MethodChannel(AppConfig.channelNativeAlarm);
+  static const platform = MethodChannel(AppConfig.channelNativeAlarm);
 
   // 通知点击回调
   Function(int noteId)? _onNotificationTapped;
@@ -37,7 +45,8 @@ class NotificationService {
 
   // 🔥 全局GoRouter引用，用于通知点击跳转
   static GoRouter? _globalRouter;
-  static dynamic _globalAppProvider; // 🔥 全局AppProvider引用
+  static NotificationAppProviderBridge?
+      _globalAppProvider; // 🔥 全局AppProvider引用
 
   // 🔥 提醒通知服务
   final ReminderNotificationService _reminderNotificationService =
@@ -49,7 +58,7 @@ class NotificationService {
   }
 
   /// 设置全局AppProvider引用
-  static void setGlobalAppProvider(appProvider) {
+  static void setGlobalAppProvider(NotificationAppProviderBridge appProvider) {
     _globalAppProvider = appProvider;
   }
 
@@ -65,16 +74,23 @@ class NotificationService {
       if (Platform.isAndroid) {
         try {
           await platform.invokeMethod('cancelAlarm', {'noteId': 0});
-        } on PlatformException {}
+        } on PlatformException {
+          // The test alarm may not exist on this device.
+        }
       }
 
       // 🔥 取消 flutter_local_notifications 中的 noteId=0 通知
       await _notifications.cancel(0);
-    } catch (e) {}
+    } on Object catch (_) {
+      // Invalid-reminder cleanup must not block notification initialization.
+    }
   }
 
   /// 初始化通知服务
   Future<void> initialize() async {
+    if (_initialized) {
+      return;
+    }
     debugPrint('🔔 [NotificationService] 初始化通知服务');
 
     // 🔥 首先清理无效的测试提醒
@@ -105,8 +121,9 @@ class NotificationService {
         debugPrint(
           '📍 使用时区: $locationName (UTC${hours >= 0 ? '+' : ''}$hours)',
         );
-        return;
-      } catch (e) {}
+      } on Object catch (_) {
+        // Fall through to the Etc/GMT fallback below.
+      }
     }
 
     // 备选方案：使用Etc/GMT时区（注意符号是反的！）
@@ -116,7 +133,7 @@ class NotificationService {
       final tzName = 'Etc/GMT$sign${hours.abs()}';
       tz.setLocalLocation(tz.getLocation(tzName));
       debugPrint('📍 使用时区: $tzName (UTC${hours >= 0 ? '+' : ''}$hours)');
-    } catch (e) {
+    } on Object {
       // 最后的备选：直接使用Asia/Shanghai
       tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
     }
@@ -137,6 +154,8 @@ class NotificationService {
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
+      macOS: iosSettings,
+      linux: LinuxInitializationSettings(defaultActionName: 'Open'),
     );
 
     // 初始化，并设置通知点击回调
@@ -163,18 +182,23 @@ class NotificationService {
               await _reminderNotificationService
                   .markAsClicked(unreadReminder.id);
             }
-          } catch (e) {}
+          } on Object catch (_) {
+            // Marking a notification as clicked is best-effort.
+          }
 
           // 🎯 清除笔记的提醒时间并刷新未读数（大厂逻辑：点击系统通知=已查看）
-          if (_globalAppProvider != null) {
+          final appProvider = _globalAppProvider;
+          if (appProvider != null) {
             try {
-              await _globalAppProvider.cancelNoteReminder(noteIdString);
-              await _globalAppProvider.refreshUnreadAnnouncementsCount();
-            } catch (e) {}
+              await appProvider.cancelNoteReminder(noteIdString);
+              await appProvider.refreshUnreadAnnouncementsCount();
+            } on Object catch (_) {
+              // Note reminder cleanup is best-effort after notification tap.
+            }
           }
 
           // 🔥 市面上常见做法：点击通知后立即取消该通知
-          _notifications.cancel(noteHashCode);
+          unawaited(_notifications.cancel(noteHashCode));
           _scheduledReminders.remove(noteHashCode);
           _activeTimers.remove(noteHashCode);
 
@@ -183,8 +207,10 @@ class NotificationService {
             await Future.delayed(const Duration(milliseconds: 300));
             try {
               _globalRouter!.go('/note/$noteIdString');
-            } catch (e) {}
-          } else {}
+            } on Object catch (_) {
+              // Navigation can fail if the router is not ready yet.
+            }
+          }
 
           // 调用回调（如果有的话）
           if (_onNotificationTapped != null) {
@@ -200,13 +226,14 @@ class NotificationService {
     // 🍎 iOS：注册通知分类和动作
     await _registerIOSNotificationCategories();
 
-    // 请求权限
-    await _requestPermissions();
+    _initialized = true;
   }
 
   /// 注册iOS通知分类（实现iOS原生风格）
   Future<void> _registerIOSNotificationCategories() async {
-    if (!Platform.isIOS) return;
+    if (!Platform.isIOS) {
+      return;
+    }
 
     // 这里不做权限请求，只在实际设置提醒时请求
     // iOS的通知分类可以在Info.plist中配置，或在首次请求权限时自动注册
@@ -232,47 +259,6 @@ class NotificationService {
     }
   }
 
-  /// 请求通知权限
-  Future<void> _requestPermissions() async {
-    debugPrint('🔐 [NotificationService] 开始请求通知权限');
-
-    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-
-    if (androidPlugin != null) {
-      // 请求通知权限
-      final notificationPermission =
-          await androidPlugin.requestNotificationsPermission();
-
-      // 请求精确闹钟权限
-      final exactAlarmPermission =
-          await androidPlugin.requestExactAlarmsPermission();
-
-      if (notificationPermission != true) {
-        debugPrint('   1. 打开"设置" → "应用设置" → "应用管理" → "InkRoot"');
-        debugPrint('   2. 点击"通知管理" → 开启所有通知');
-        debugPrint('   3. 点击"省电策略" → 选择"无限制"');
-        debugPrint('   4. 点击"自启动" → 开启');
-      }
-      if (exactAlarmPermission != true) {}
-    }
-
-    final iosPlugin = _notifications.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
-
-    if (iosPlugin != null) {
-      // 🍎 iOS权限请求（不在初始化时请求，仅在此处记录状态）
-      // 实际权限请求在用户设置提醒时进行
-      try {
-        final currentPermissions = await iosPlugin.checkPermissions();
-        if (currentPermissions != null) {
-        } else {}
-      } catch (e) {}
-    }
-
-    debugPrint('🔐 [NotificationService] 权限请求完成');
-  }
-
   /// 检查通知权限是否已授予
   Future<bool> areNotificationsEnabled() async {
     try {
@@ -293,14 +279,14 @@ class NotificationService {
             final granted = await iosPlugin.checkPermissions();
             // 检查是否有任何通知权限被授予
             return granted != null;
-          } catch (e) {
+          } on Object {
             return false;
           }
         }
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -330,18 +316,20 @@ class NotificationService {
         final tzName = 'Etc/GMT$sign${hours.abs()}';
         try {
           tz.setLocalLocation(tz.getLocation(tzName));
-        } catch (e) {
+        } on Object catch (_) {
           // 最后的fallback
           tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
         }
       }
 
       // 验证设置结果
-    } catch (e) {
+    } on Object {
       // 尝试使用UTC作为最后的fallback
       try {
         tz.setLocalLocation(tz.getLocation('UTC'));
-      } catch (utcError) {}
+      } on Object catch (_) {
+        // No further fallback is available.
+      }
     }
   }
 
@@ -374,6 +362,7 @@ class NotificationService {
     required DateTime reminderTime,
     BuildContext? context,
   }) async {
+    await initialize();
     final now = DateTime.now();
     if (reminderTime.isBefore(now)) {
       return false;
@@ -426,6 +415,10 @@ class NotificationService {
     final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
+      macOS: iosDetails,
+      linux: const LinuxNotificationDetails(
+        urgency: LinuxNotificationUrgency.critical,
+      ),
     );
 
     try {
@@ -453,36 +446,43 @@ class NotificationService {
       // 🔥 保存映射关系（重要：用于通知点击时反查笔记）
       NotificationService.noteIdMapping[noteId] = noteIdString;
 
-      // iOS和Android使用不同的通知方法
-      if (Platform.isIOS) {
-        // iOS使用flutter_local_notifications
+      // iOS/macOS 使用 flutter_local_notifications，Android 使用原生 AlarmManager。
+      if (Platform.isIOS || Platform.isMacOS) {
         try {
           // 🔥 关键：先验证权限状态
-          final iosPlugin =
-              _notifications.resolvePlatformSpecificImplementation<
-                  IOSFlutterLocalNotificationsPlugin>();
+          final iosPlugin = Platform.isIOS
+              ? _notifications.resolvePlatformSpecificImplementation<
+                  IOSFlutterLocalNotificationsPlugin>()
+              : null;
+          final macOSPlugin = Platform.isMacOS
+              ? _notifications.resolvePlatformSpecificImplementation<
+                  MacOSFlutterLocalNotificationsPlugin>()
+              : null;
 
-          if (iosPlugin == null) {
+          if (iosPlugin == null && macOSPlugin == null) {
             return false;
           }
 
-          // 🔥 iOS权限检查和请求（修复版）
-
-          // 先尝试直接请求权限（iOS会记住用户的选择）
-          final granted = await iosPlugin.requestPermissions(
-            alert: true, // 横幅通知
-            badge: true, // 角标
-            sound: true, // 声音
-          );
+          final granted = Platform.isIOS
+              ? await iosPlugin!.requestPermissions(
+                  alert: true,
+                  badge: true,
+                  sound: true,
+                )
+              : await macOSPlugin!.requestPermissions(
+                  alert: true,
+                  badge: true,
+                  sound: true,
+                );
 
           // 检查是否授权
           if (granted != true) {
             // 引导用户到设置
-            if (context != null) {
+            if (context != null && context.mounted) {
               _showPermissionDeniedDialog(
                 context,
                 '需要通知权限',
-                '为了准时提醒您，InkRoot需要发送通知。请在iPhone设置中找到InkRoot，开启"允许通知"，并启用"时间敏感通知"。',
+                '为了准时提醒您，InkRoot 需要发送通知。请在系统设置中为 InkRoot 开启通知权限。',
               );
             }
             return false;
@@ -512,7 +512,7 @@ class NotificationService {
                   UILocalNotificationDateInterpretation.absoluteTime,
               payload: noteIdString, // 🔥 修复：直接传递原始字符串ID，不用hashCode
             );
-          } catch (scheduleError) {
+          } on Object {
             return false;
           }
 
@@ -536,16 +536,18 @@ class NotificationService {
               );
               await _reminderNotificationService
                   .saveReminderNotification(reminderNotification);
-            } catch (saveError) {}
+            } on Object catch (_) {
+              // The reminder itself is scheduled; DB history is best-effort.
+            }
 
             return true;
           } else {
             return false;
           }
-        } catch (e) {
+        } on Object {
           return false;
         }
-      } else {
+      } else if (Platform.isAndroid) {
         // Android使用原生AlarmManager
         try {
           final success = await platform.invokeMethod('scheduleAlarm', {
@@ -568,96 +570,10 @@ class NotificationService {
           return false;
         }
       }
-    } catch (e) {
+      return false;
+    } on Object {
       debugPrint('═══════════════════════════════════════\n');
       return false;
-    }
-  }
-
-  /// 发送提醒通知（参考微信、滴答清单的简洁风格）
-  Future<void> _sendReminderNotification(
-    int noteId,
-    String title,
-    String body,
-  ) async {
-    // 微信/滴答清单风格：简洁、清晰、不花哨
-    final androidDetails = AndroidNotificationDetails(
-      'note_reminders',
-      '笔记提醒',
-      channelDescription: '笔记定时提醒通知',
-
-      // 🔥 关键：必须指定图标（使用应用图标）
-      icon: '@mipmap/ic_launcher',
-
-      // 重要性设置
-      importance: Importance.high,
-      priority: Priority.high,
-
-      // 简洁的通知样式（类似微信、滴答清单）
-      styleInformation: BigTextStyleInformation(
-        body,
-        contentTitle: title,
-        summaryText: 'InkRoot', // 简洁的应用名
-      ),
-
-      // 基础设置
-      category: AndroidNotificationCategory.reminder,
-      visibility: NotificationVisibility.public,
-      when: DateTime.now().millisecondsSinceEpoch,
-
-      // 简洁的操作按钮（参考滴答清单）
-      actions: <AndroidNotificationAction>[
-        const AndroidNotificationAction(
-          'view_note',
-          '查看',
-          showsUserInterface: true,
-        ),
-        const AndroidNotificationAction(
-          'dismiss',
-          '关闭',
-        ),
-      ],
-    );
-
-    // iOS样式（简洁，符合原生提醒风格）
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: false, // 🔥 不显示角标
-      presentSound: true,
-      sound: 'default', // 系统默认提醒音
-      subtitle: 'InkRoot 提醒', // 副标题
-      threadIdentifier: 'note_reminders',
-      interruptionLevel: InterruptionLevel.timeSensitive,
-    );
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    try {
-      debugPrint('📤 开始发送通知...');
-      debugPrint('   通知ID: $noteId');
-      debugPrint('   标题: $title');
-      debugPrint('   内容: $body');
-
-      await _notifications.show(
-        noteId,
-        title,
-        body,
-        details,
-        payload: noteId.toString(),
-      );
-
-      debugPrint('   1. 手机通知栏是否被下拉查看');
-      debugPrint('   2. 设置 → 通知管理 → InkRoot → 允许通知');
-      debugPrint('   3. 小米用户：设置 → 省电策略 → 无限制');
-    } catch (e, stackTrace) {
-      debugPrint('Stack trace: $stackTrace');
-      debugPrint('');
-      debugPrint('   1. 卸载应用后重新安装');
-      debugPrint('   2. 手动开启所有通知权限');
-      debugPrint('   3. 关闭MIUI优化');
     }
   }
 
@@ -672,28 +588,16 @@ class NotificationService {
       if (Platform.isAndroid) {
         try {
           await platform.invokeMethod('cancelAlarm', {'noteId': noteId});
-        } on PlatformException {}
+        } on PlatformException {
+          // The native alarm may already have been removed.
+        }
       }
 
       // iOS和Android都取消flutter_local_notifications的通知
       await _notifications.cancel(noteId);
-    } catch (e) {}
-  }
-
-  /// 验证通知是否真的被调度了
-  Future<void> _verifyScheduledNotification(int noteId) async {
-    try {
-      final pendingNotifications =
-          await _notifications.pendingNotificationRequests();
-      final found = pendingNotifications.any((n) => n.id == noteId);
-
-      if (found) {
-        debugPrint('   当前队列中共有 ${pendingNotifications.length} 个待发送通知');
-      } else {
-        debugPrint('   这可能导致提醒不会触发');
-        debugPrint('   当前队列：${pendingNotifications.map((n) => n.id).toList()}');
-      }
-    } catch (e) {}
+    } on Object catch (_) {
+      // Cancel is idempotent and can safely fail for missing notifications.
+    }
   }
 
   /// 显示权限被拒绝的对话框
@@ -722,20 +626,23 @@ class NotificationService {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '操作步骤：',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    AppLocalizationsSimple.of(context)?.permissionStepTitle ??
+                        '操作步骤：',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    '1. 点击"去设置"按钮\n2. 找到"通知"权限\n3. 开启权限开关\n4. 返回应用重试',
-                    style: TextStyle(fontSize: 12),
+                    AppLocalizationsSimple.of(context)
+                            ?.permissionStepNotification ??
+                        '1. 点击"去设置"按钮\n2. 找到"通知"权限\n3. 开启权限开关\n4. 返回应用重试',
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
@@ -745,14 +652,15 @@ class NotificationService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
               await openAppSettings();
             },
-            child: const Text('去设置'),
+            child:
+                Text(AppLocalizationsSimple.of(context)?.goToSettings ?? '去设置'),
           ),
         ],
       ),

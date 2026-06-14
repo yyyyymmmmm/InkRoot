@@ -204,8 +204,8 @@ Complete API reference for developers integrating with InkRoot or Memos server.
 - ✨ 有改进文档的建议
 
 请：
-1. 📧 [提交 Issue](https://github.com/yyyyymmmmm/IntRoot/issues)
-2. 💬 [参与讨论](https://github.com/yyyyymmmmm/IntRoot/discussions)
+1. 📧 [提交 Issue](https://github.com/yyyyymmmmm/InkRoot/issues)
+2. 💬 [参与讨论](https://github.com/yyyyymmmmm/InkRoot/discussions)
 3. 🔀 提交 Pull Request
 
 ---
@@ -216,8 +216,8 @@ Complete API reference for developers integrating with InkRoot or Memos server.
 
 - 📧 **邮箱**: [inkroot2025@gmail.com](mailto:inkroot2025@gmail.com)
 - 🌐 **官网**: [https://inkroot.cn](https://inkroot.cn)
-- 💬 **讨论**: [GitHub Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
-- 🐛 **报告问题**: [GitHub Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
+- 💬 **讨论**: [GitHub Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
+- 🐛 **报告问题**: [GitHub Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
 
 ---
 
@@ -232,7 +232,7 @@ Complete API reference for developers integrating with InkRoot or Memos server.
 
 <div align="center">
 
-**InkRoot 文档中心** | [主页](../README.md) | [GitHub](https://github.com/yyyyymmmmm/IntRoot)
+**InkRoot 文档中心** | [主页](../README.md) | [GitHub](https://github.com/yyyyymmmmm/InkRoot)
 
 让我们一起构建更好的文档！ 📚✨
 

@@ -26,7 +26,12 @@ flutter config --enable-windows-desktop
 
 1. 打开命令提示符（CMD）或 PowerShell
 2. 切换到项目目录
-3. 运行构建脚本：
+3. 运行统一维护 CLI：
+```bash
+dart tool/inkroot.dart build windows-debug
+```
+
+也可以运行旧脚本：
 ```bash
 scripts\windows\build_windows.bat
 ```
@@ -61,11 +66,11 @@ build\windows\x64\runner\Release\inkroot.exe
 ```iss
 [Setup]
 AppName=InkRoot
-AppVersion=1.0.9
+AppVersion=1.1.0
 DefaultDirName={autopf}\InkRoot
 DefaultGroupName=InkRoot
 OutputDir=installer
-OutputBaseFilename=InkRoot-1.0.9-Setup
+OutputBaseFilename=InkRoot-1.1.0-Setup
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -98,7 +103,7 @@ msix_config:
   display_name: InkRoot
   publisher_display_name: Your Name
   identity_name: com.didichou.inkroot
-  msix_version: 1.0.9.0
+  msix_version: 1.1.0.0
   logo_path: assets/images/logo.png
 
 # 3. 创建 MSIX 包

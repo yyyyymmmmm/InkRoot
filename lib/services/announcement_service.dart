@@ -24,7 +24,7 @@ class AnnouncementService {
         debugPrint('获取公告失败，状态码: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('获取公告异常: $e');
       return null;
     }
@@ -45,7 +45,7 @@ class AnnouncementService {
       final hasUpdate = versionInfo.needsUpdate(currentVersion);
 
       return (versionInfo, hasUpdate);
-    } catch (e) {
+    } on Object {
       return (null, false);
     }
   }
@@ -60,7 +60,7 @@ class AnnouncementService {
         viewedAnnouncements.add(announcementId);
         await prefs.setStringList(_lastViewedKey, viewedAnnouncements);
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('标记公告已读异常: $e');
     }
   }
@@ -72,7 +72,7 @@ class AnnouncementService {
       final viewedAnnouncements = prefs.getStringList(_lastViewedKey) ?? [];
 
       return viewedAnnouncements.contains(announcementId);
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -95,7 +95,7 @@ class AnnouncementService {
       }
 
       return unreadCount;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('获取未读通知数量异常: $e');
       return 0;
     }
@@ -119,7 +119,7 @@ class AnnouncementService {
       }
 
       await prefs.setStringList(_lastViewedKey, viewedAnnouncements);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('标记所有通知已读异常: $e');
     }
   }
@@ -170,7 +170,7 @@ class AnnouncementService {
       }
 
       return false;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('判断是否显示更新提示异常: $e');
       return false;
     }

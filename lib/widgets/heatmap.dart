@@ -39,8 +39,8 @@ class _StatCardWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
           decoration: BoxDecoration(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.03)
-                : Colors.black.withOpacity(0.02),
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(5),
           ),
           child: Column(
@@ -63,7 +63,7 @@ class _StatCardWidget extends StatelessWidget {
                   context,
                   10,
                   color: isDarkMode
-                      ? AppTheme.darkTextSecondaryColor.withOpacity(0.8)
+                      ? AppTheme.darkTextSecondaryColor.withValues(alpha: 0.8)
                       : AppTheme.textSecondaryColor,
                 ),
               ),
@@ -146,9 +146,6 @@ class _HeatmapState extends State<Heatmap> {
     final uniqueDates = <String>{};
     for (final note in widget.notes) {
       uniqueDates.add(_keyDateFormat.format(note.createdAt));
-      if (note.updatedAt != note.createdAt) {
-        uniqueDates.add(_keyDateFormat.format(note.updatedAt));
-      }
     }
     return uniqueDates.length;
   }
@@ -160,8 +157,7 @@ class _HeatmapState extends State<Heatmap> {
     var count = 0;
     for (final note in widget.notes) {
       final createDateStr = _keyDateFormat.format(note.createdAt);
-      final updateDateStr = _keyDateFormat.format(note.updatedAt);
-      if (createDateStr == todayStr || updateDateStr == todayStr) {
+      if (createDateStr == todayStr) {
         count += _getActualWordCount(note.content);
       }
     }
@@ -170,7 +166,9 @@ class _HeatmapState extends State<Heatmap> {
 
   // 🎯 大厂标准：只统计实际文字（去除Markdown语法、标点、空格）
   int _getActualWordCount(String content) {
-    if (content.isEmpty) return 0;
+    if (content.isEmpty) {
+      return 0;
+    }
 
     var cleaned = content;
 
@@ -189,29 +187,24 @@ class _HeatmapState extends State<Heatmap> {
     return cleaned.length;
   }
 
-  // 🔥 计算今日活跃笔记数量（大厂标准：今天创建或修改的）
-  // 这样导入数据后也能正确显示统计
+  // 计算今日新增笔记数量。热力图表示记录历史，不把同步/批量更新算作新记录。
   int _getTodayNewNoteCount() {
     final today = DateTime.now();
     final todayStr = _keyDateFormat.format(today);
     return widget.notes.where((note) {
       final createDateStr = _keyDateFormat.format(note.createdAt);
-      final updateDateStr = _keyDateFormat.format(note.updatedAt);
-      // 今天创建或今天更新的都算活跃笔记
-      return createDateStr == todayStr || updateDateStr == todayStr;
+      return createDateStr == todayStr;
     }).length;
   }
 
-  // 🔥 计算今日活跃标签数量（大厂标准：活跃笔记中的标签）
+  // 计算今日新增标签数量。
   int _getTodayNewTagCount() {
     final today = DateTime.now();
     final todayStr = _keyDateFormat.format(today);
     final todayTags = <String>{};
     for (final note in widget.notes) {
       final createDateStr = _keyDateFormat.format(note.createdAt);
-      final updateDateStr = _keyDateFormat.format(note.updatedAt);
-      // 今天创建或今天更新的笔记中的标签
-      if (createDateStr == todayStr || updateDateStr == todayStr) {
+      if (createDateStr == todayStr) {
         todayTags.addAll(note.tags);
       }
     }
@@ -304,8 +297,8 @@ class _HeatmapState extends State<Heatmap> {
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.03),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -338,11 +331,11 @@ class _HeatmapState extends State<Heatmap> {
                   decoration: BoxDecoration(
                     color: _canGoNext
                         ? (isDarkMode
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.black.withOpacity(0.03))
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.black.withValues(alpha: 0.03))
                         : (isDarkMode
-                            ? Colors.white.withOpacity(0.02)
-                            : Colors.black.withOpacity(0.01)),
+                            ? Colors.white.withValues(alpha: 0.02)
+                            : Colors.black.withValues(alpha: 0.01)),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -351,8 +344,8 @@ class _HeatmapState extends State<Heatmap> {
                     color: _canGoNext
                         ? primaryColor
                         : (isDarkMode
-                            ? Colors.white.withOpacity(0.2)
-                            : Colors.black.withOpacity(0.2)),
+                            ? Colors.white.withValues(alpha: 0.2)
+                            : Colors.black.withValues(alpha: 0.2)),
                   ),
                 ),
               ),
@@ -393,7 +386,7 @@ class _HeatmapState extends State<Heatmap> {
                                 (isDarkMode
                                     ? darkModeColors[0]
                                     : lightModeColors[0]))
-                            .withOpacity(0.3),
+                            .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(3.5), // 圆角方块
                   ),
                 ),
@@ -416,7 +409,7 @@ class _HeatmapState extends State<Heatmap> {
                     style: AppTextStyles.custom(
                       context,
                       8,
-                      color: secondaryTextColor.withOpacity(0.6),
+                      color: secondaryTextColor.withValues(alpha: 0.6),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -435,7 +428,7 @@ class _HeatmapState extends State<Heatmap> {
               style: AppTextStyles.custom(
                 context,
                 8,
-                color: secondaryTextColor.withOpacity(0.6),
+                color: secondaryTextColor.withValues(alpha: 0.6),
               ),
             ),
             ...List.generate(4, (index) {
@@ -498,21 +491,12 @@ class _HeatmapState extends State<Heatmap> {
       result[dateStr] = 0;
     }
 
-    // 同时考虑创建日期和更新日期来计算每天的笔记活动
+    // 只按创建日期计算记录热力图，避免同步/恢复/批量更新污染历史分布。
     for (final note in widget.notes) {
-      // 记录创建日期的笔记
       final createDateStr = _keyDateFormat.format(note.createdAt);
       if (note.createdAt.month == displayMonth.month &&
           note.createdAt.year == displayMonth.year) {
         result[createDateStr] = (result[createDateStr] ?? 0) + 1;
-      }
-
-      // 如果更新日期与创建日期不同，且在显示月份，也计入活动
-      final updateDateStr = _keyDateFormat.format(note.updatedAt);
-      if (note.updatedAt != note.createdAt &&
-          note.updatedAt.month == displayMonth.month &&
-          note.updatedAt.year == displayMonth.year) {
-        result[updateDateStr] = (result[updateDateStr] ?? 0) + 1;
       }
     }
 

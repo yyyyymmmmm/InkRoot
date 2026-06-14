@@ -85,7 +85,9 @@ class GraphDataService {
       final nextLevel = <String>{};
 
       for (final noteId in currentLevel) {
-        if (processedIds.contains(noteId)) continue;
+        if (processedIds.contains(noteId)) {
+          continue;
+        }
         processedIds.add(noteId);
 
         final note = allNotes.firstWhere(

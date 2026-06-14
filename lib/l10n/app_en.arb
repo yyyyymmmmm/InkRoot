@@ -350,17 +350,17 @@
     "description": "Saving image message"
   },
 
-  "shareImageSavingToAlbum": "Saving to album, please wait",
+  "shareImageSavingToAlbum": "Saving image, please wait",
   "@shareImageSavingToAlbum": {
     "description": "Saving to album message"
   },
 
-  "shareImageSaveSuccess": "Image saved to album",
+  "shareImageSaveSuccess": "Image saved",
   "@shareImageSaveSuccess": {
     "description": "Image save success message"
   },
 
-  "shareImageSaveFailed": "Save failed, please check album permissions",
+  "shareImageSaveFailed": "Save failed. Please check permissions or save location",
   "@shareImageSaveFailed": {
     "description": "Save failed message"
   },

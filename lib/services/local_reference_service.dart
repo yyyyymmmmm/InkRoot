@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:inkroot/models/note_model.dart';
-import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/services/database_service.dart';
 import 'package:inkroot/services/unified_reference_manager.dart';
 
@@ -13,7 +11,6 @@ class LocalReferenceService {
   static LocalReferenceService get instance => _instance;
 
   final DatabaseService _databaseService = DatabaseService();
-  AppProvider? _appProvider;
 
   /// 创建引用关系（离线）
   /// 在本地数据库中创建引用关系，标记为未同步
@@ -31,7 +28,7 @@ class LocalReferenceService {
       } else {}
 
       return success;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -74,7 +71,7 @@ class LocalReferenceService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -101,7 +98,6 @@ class LocalReferenceService {
         final type = relation['type'];
         if (type == 'REFERENCE' || type == 1) {
           final memoId = relation['memoId']?.toString();
-          final relatedMemoId = relation['relatedMemoId']?.toString();
 
           if (memoId == noteId) {
             outgoingRefs.add(relation);
@@ -111,7 +107,9 @@ class LocalReferenceService {
 
       // 查找其他笔记中引用当前笔记的关系
       for (final otherNote in allNotes) {
-        if (otherNote.id == noteId) continue;
+        if (otherNote.id == noteId) {
+          continue;
+        }
 
         for (final relation in otherNote.relations) {
           final type = relation['type'];
@@ -129,7 +127,7 @@ class LocalReferenceService {
         'outgoing': outgoingRefs,
         'incoming': incomingRefs,
       };
-    } catch (e) {
+    } on Object {
       return {'outgoing': [], 'incoming': []};
     }
   }
@@ -156,7 +154,7 @@ class LocalReferenceService {
       }
 
       return createdCount;
-    } catch (e) {
+    } on Object {
       return 0;
     }
   }
@@ -180,7 +178,7 @@ class LocalReferenceService {
       }
 
       return unsyncedRefs;
-    } catch (e) {
+    } on Object {
       return [];
     }
   }
@@ -192,7 +190,9 @@ class LocalReferenceService {
   ) async {
     try {
       final note = await _databaseService.getNoteById(noteId);
-      if (note == null) return false;
+      if (note == null) {
+        return false;
+      }
 
       // 查找并更新对应的关系
       final updatedRelations = note.relations.map((rel) {
@@ -206,29 +206,12 @@ class LocalReferenceService {
       await _databaseService.updateNote(updatedNote);
 
       return true;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
 
   // 私有辅助方法
-
-  /// 检查引用关系是否已存在
-  bool _hasReference(
-    List<Map<String, dynamic>> relations,
-    String fromId,
-    String toId,
-    String type,
-  ) =>
-      relations.any((relation) {
-        final memoId = relation['memoId']?.toString();
-        final relatedMemoId = relation['relatedMemoId']?.toString();
-        final relationType = relation['type']?.toString();
-
-        return memoId == fromId &&
-            relatedMemoId == toId &&
-            (relationType == type || relationType == type.toLowerCase());
-      });
 
   /// 解析文本中的引用内容，获取被引用的内容列表
   List<String> _parseReferencesFromText(String content) {
@@ -271,7 +254,7 @@ class LocalReferenceService {
       }
 
       return foundIds;
-    } catch (e) {
+    } on Object {
       return [];
     }
   }
@@ -281,19 +264,4 @@ class LocalReferenceService {
       rel1['memoId'] == rel2['memoId'] &&
       rel1['relatedMemoId'] == rel2['relatedMemoId'] &&
       rel1['type'] == rel2['type'];
-
-  /// 设置AppProvider实例
-  void setAppProvider(AppProvider appProvider) {
-    _appProvider = appProvider;
-  }
-
-  /// 通知AppProvider更新笔记
-  void _notifyAppProviderUpdate(Note updatedNote) {
-    if (_appProvider != null) {
-      _appProvider!.updateNoteInMemory(updatedNote);
-      if (kDebugMode) {
-        // 已通知AppProvider更新笔记
-      }
-    }
-  }
 }

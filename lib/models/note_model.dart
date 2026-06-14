@@ -34,14 +34,17 @@ class Note {
 
     // 处理resourceList
     var resourceList = <Map<String, dynamic>>[];
-    if (map['resourceList'] != null && map['resourceList'].isNotEmpty) {
+    final resourceListJson = map['resourceList'] as String?;
+    if (resourceListJson != null && resourceListJson.isNotEmpty) {
       // if (kDebugMode) debugPrint('Note.fromMap: resourceList原始数据: ${map['resourceList']}');
       try {
-        final decoded = json.decode(map['resourceList']);
+        final decoded = json.decode(resourceListJson);
         resourceList = List<Map<String, dynamic>>.from(decoded);
         // if (kDebugMode) debugPrint('Note.fromMap: resourceList解析成功，长度: ${resourceList.length}');
-      } catch (e) {
-        if (kDebugMode) debugPrint('Note.fromMap: 解析resourceList失败: $e');
+      } on Object catch (e) {
+        if (kDebugMode) {
+          debugPrint('Note.fromMap: 解析resourceList失败: $e');
+        }
       }
     } else {
       // if (kDebugMode) debugPrint('Note.fromMap: resourceList为空或null');
@@ -49,19 +52,23 @@ class Note {
 
     // 处理relations
     var relations = <Map<String, dynamic>>[];
-    if (map['relations'] != null && map['relations'].isNotEmpty) {
+    final relationsJson = map['relations'] as String?;
+    if (relationsJson != null && relationsJson.isNotEmpty) {
       try {
-        final decoded = json.decode(map['relations']);
+        final decoded = json.decode(relationsJson);
         relations = List<Map<String, dynamic>>.from(decoded);
-      } catch (e) {
-        if (kDebugMode) debugPrint('Note.fromMap: 解析relations失败: $e');
+      } on Object catch (e) {
+        if (kDebugMode) {
+          debugPrint('Note.fromMap: 解析relations失败: $e');
+        }
       }
     }
 
     // 处理annotations（批注）
     var annotations = <Annotation>[];
-    if (map['annotations'] != null && map['annotations'].isNotEmpty) {
-      annotations = AnnotationList.fromJsonString(map['annotations']);
+    final annotationsJson = map['annotations'] as String?;
+    if (annotationsJson != null && annotationsJson.isNotEmpty) {
+      annotations = AnnotationList.fromJsonString(annotationsJson);
     }
 
     final note = Note(
@@ -72,8 +79,8 @@ class Note {
       displayTime: map['displayTime'] != null
           ? DateTime.parse(map['displayTime'])
           : null,
-      tags: map['tags'] != null && map['tags'].isNotEmpty
-          ? map['tags'].split(',')
+      tags: (map['tags'] as String?)?.isNotEmpty ?? false
+          ? (map['tags'] as String).split(',')
           : null,
       creator: map['creator'],
       isSynced: map['is_synced'] == 1,
@@ -107,40 +114,24 @@ class Note {
     // ── Timestamps ────────────────────────────────────────────────────────
     // v0.21.0: 'createdTs'/'updatedTs' – Unix seconds (int)
     // v0.22.0+: 'createTime'/'updateTime' – ISO-8601 string
-    DateTime createdAt;
-    DateTime updatedAt;
-    if (json['createdTs'] != null) {
-      createdAt = DateTime.fromMillisecondsSinceEpoch((json['createdTs'] as int) * 1000);
-      updatedAt = DateTime.fromMillisecondsSinceEpoch(((json['updatedTs'] ?? json['createdTs']) as int) * 1000);
-    } else {
-      createdAt = DateTime.tryParse(json['createTime']?.toString() ?? '') ?? DateTime.now();
-      updatedAt = DateTime.tryParse(json['updateTime']?.toString() ?? '') ?? createdAt;
-    }
+    final createdAt = _parseCreatedAt(json);
+    final updatedAt = _parseUpdatedAt(json) ?? createdAt;
 
     // ── Display time ──────────────────────────────────────────────────────
-    DateTime? displayTime;
-    if (json['displayTime'] != null) {
-      displayTime = DateTime.tryParse(json['displayTime'].toString());
-    }
+    final displayTime = _parseTimestamp(json['displayTime']);
 
     // ── Resources / Attachments ───────────────────────────────────────────
     // v0.21.0: 'resourceList'
     // v0.22.0–v0.26.x: 'resources'
     // v0.27.0+: 'attachments'  (resource_service → attachment_service rename)
-    var resourceList = <Map<String, dynamic>>[];
     final rawResources =
         json['attachments'] ?? json['resourceList'] ?? json['resources'];
-    if (rawResources != null) {
-      resourceList = List<Map<String, dynamic>>.from(rawResources as List);
-    }
+    final resourceList = _parseMapList(rawResources);
 
     // ── Relations ─────────────────────────────────────────────────────────
     // v0.21.0: 'relationList'   v0.22.0+: 'relations'
-    var relations = <Map<String, dynamic>>[];
     final rawRelations = json['relationList'] ?? json['relations'];
-    if (rawRelations != null) {
-      relations = List<Map<String, dynamic>>.from(rawRelations as List);
-    }
+    final relations = _parseMapList(rawRelations);
 
     // ── Row status / State ────────────────────────────────────────────────
     // v0.21.0–v0.26.x: 'rowStatus' (ROW_STATUS_UNSPECIFIED / NORMAL / ARCHIVED)
@@ -155,15 +146,15 @@ class Note {
 
     // ── Tags ──────────────────────────────────────────────────────────────
     // v0.22.0+: 'tags' is List<String>; v0.21.0: absent (extracted from content)
-    final rawTags = json['tags'];
-    final List<String> tags = rawTags != null
-        ? List<String>.from(rawTags as List)
-        : [];
+    final tags = _parseTags(json['tags']);
 
     // ── Creator ───────────────────────────────────────────────────────────
     // v0.21.0: 'creatorId' (int) or 'creator' (string username)
     // v0.22.0+: 'creator' = "users/{id}"
-    final creator = json['creatorId']?.toString() ?? json['creator']?.toString();
+    final creator =
+        json['creatorId']?.toString() ?? json['creator']?.toString();
+    final isSynced = _parseBool(json['isSynced'] ?? json['is_synced']) ?? true;
+    final annotations = _parseAnnotations(json['annotations']);
 
     return Note(
       id: id,
@@ -171,17 +162,23 @@ class Note {
       createdAt: createdAt,
       updatedAt: updatedAt,
       displayTime: displayTime,
-      tags: tags.isNotEmpty ? tags : Note.extractTagsFromContent(json['content']?.toString() ?? ''),
+      tags: tags.isNotEmpty
+          ? tags
+          : Note.extractTagsFromContent(json['content']?.toString() ?? ''),
       creator: creator,
-      isSynced: true,
-      isPinned: json['pinned'] as bool? ?? false,
+      isSynced: isSynced,
+      isPinned:
+          _parseBool(json['pinned'] ?? json['isPinned'] ?? json['is_pinned']) ??
+              false,
       visibility: visibility,
       rowStatus: rowStatus,
       resourceList: resourceList,
       relations: relations,
-      lastSyncTime: json['lastSyncTime'] != null
-          ? DateTime.tryParse(json['lastSyncTime'].toString())
-          : null,
+      annotations: annotations,
+      reminderTime:
+          _parseTimestamp(json['reminderTime'] ?? json['reminder_time']),
+      lastSyncTime:
+          _parseTimestamp(json['lastSyncTime'] ?? json['last_sync_time']),
     );
   }
   final String id;
@@ -201,6 +198,165 @@ class Note {
   final DateTime? reminderTime;
   final DateTime? lastSyncTime; // WebDAV同步时间戳
 
+  static DateTime _parseCreatedAt(Map<String, dynamic> json) {
+    final parsed = _parseTimestamp(
+      json['createTime'] ??
+          json['createdAt'] ??
+          json['createdTime'] ??
+          json['created_at'] ??
+          json['create_time'] ??
+          json['createdTs'] ??
+          json['created_ts'],
+    );
+    if (parsed != null) {
+      return parsed;
+    }
+
+    final updated = _parseUpdatedAt(json);
+    if (updated != null) {
+      return updated;
+    }
+
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  static DateTime? _parseUpdatedAt(Map<String, dynamic> json) =>
+      _parseTimestamp(
+        json['updateTime'] ??
+            json['updatedAt'] ??
+            json['updatedTime'] ??
+            json['updated_at'] ??
+            json['update_time'] ??
+            json['updatedTs'] ??
+            json['updated_ts'],
+      );
+
+  static DateTime? _parseTimestamp(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is int) {
+      final milliseconds = value.abs() < 100000000000 ? value * 1000 : value;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+    }
+    if (value is double) {
+      return _parseTimestamp(value.round());
+    }
+
+    final raw = value.toString().trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+    final numeric = int.tryParse(raw);
+    if (numeric != null) {
+      return _parseTimestamp(numeric);
+    }
+    return DateTime.tryParse(raw);
+  }
+
+  static bool? _parseBool(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+
+    final normalized = value.toString().trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') {
+      return true;
+    }
+    if (normalized == 'false' || normalized == '0') {
+      return false;
+    }
+    return null;
+  }
+
+  static List<String> _parseTags(Object? rawTags) {
+    if (rawTags == null) {
+      return const [];
+    }
+    if (rawTags is List) {
+      return rawTags.map((tag) => tag.toString()).toList();
+    }
+    if (rawTags is String) {
+      final value = rawTags.trim();
+      if (value.isEmpty) {
+        return const [];
+      }
+      if (value.startsWith('[')) {
+        try {
+          final decoded = jsonDecode(value);
+          if (decoded is List) {
+            return decoded.map((tag) => tag.toString()).toList();
+          }
+        } on Object catch (e) {
+          if (kDebugMode) {
+            debugPrint('Note.fromJson: 解析tags失败: $e');
+          }
+        }
+      }
+      return value
+          .split(',')
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  static List<Map<String, dynamic>> _parseMapList(Object? rawList) {
+    if (rawList == null) {
+      return const [];
+    }
+    if (rawList is String) {
+      final value = rawList.trim();
+      if (value.isEmpty) {
+        return const [];
+      }
+      try {
+        return _parseMapList(jsonDecode(value));
+      } on Object catch (e) {
+        if (kDebugMode) {
+          debugPrint('Note.fromJson: 解析列表字段失败: $e');
+        }
+        return const [];
+      }
+    }
+    if (rawList is List) {
+      return rawList.whereType<Map>().map(Map<String, dynamic>.from).toList();
+    }
+    return const [];
+  }
+
+  static List<Annotation> _parseAnnotations(Object? rawAnnotations) {
+    if (rawAnnotations == null) {
+      return const [];
+    }
+    if (rawAnnotations is String) {
+      return AnnotationList.fromJsonString(rawAnnotations);
+    }
+    if (rawAnnotations is List) {
+      try {
+        return rawAnnotations
+            .whereType<Map>()
+            .map((item) => Annotation.fromMap(Map<String, dynamic>.from(item)))
+            .toList();
+      } on Object catch (e) {
+        if (kDebugMode) {
+          debugPrint('Note.fromJson: 解析annotations失败: $e');
+        }
+      }
+    }
+    return const [];
+  }
+
   Note copyWith({
     String? id,
     String? content,
@@ -219,6 +375,7 @@ class Note {
     DateTime? reminderTime,
     bool clearReminderTime = false,
     DateTime? lastSyncTime,
+    bool clearLastSyncTime = false,
   }) =>
       Note(
         id: id ?? this.id,
@@ -237,7 +394,8 @@ class Note {
         annotations: annotations ?? this.annotations,
         reminderTime:
             clearReminderTime ? null : (reminderTime ?? this.reminderTime),
-        lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+        lastSyncTime:
+            clearLastSyncTime ? null : (lastSyncTime ?? this.lastSyncTime),
       );
 
   Map<String, dynamic> toMap() => {
@@ -254,7 +412,8 @@ class Note {
         'rowStatus': rowStatus,
         'resourceList': json.encode(resourceList), // 将resourceList序列化为JSON字符串
         'relations': json.encode(relations), // 将relations序列化为JSON字符串
-        'annotations': AnnotationList.toJsonString(annotations), // 将批注序列化为JSON字符串
+        'annotations':
+            AnnotationList.toJsonString(annotations), // 将批注序列化为JSON字符串
         'reminder_time': reminderTime?.toIso8601String(),
         'last_sync_time': lastSyncTime?.toIso8601String(),
       };
@@ -262,17 +421,22 @@ class Note {
   Map<String, dynamic> toJson() => {
         'id': id,
         'content': content,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
         'createdTs': createdAt.millisecondsSinceEpoch ~/
             1000, // 🔧 转换为秒级时间戳，与 Memos API 一致
         'updatedTs': updatedAt.millisecondsSinceEpoch ~/ 1000, // 🔧 转换为秒级时间戳
         'displayTime': displayTime.toIso8601String(),
         'tags': tags,
         'creator': creator,
+        'isSynced': isSynced,
         'pinned': isPinned,
         'visibility': visibility,
         'rowStatus': rowStatus,
         'resourceList': resourceList, // ✅ 包含图片/资源
         'relationList': relations, // ✅ 包含关系
+        'annotations':
+            annotations.map((annotation) => annotation.toJson()).toList(),
         'reminderTime': reminderTime?.toIso8601String(), // ✅ 包含提醒时间
         'lastSyncTime': lastSyncTime?.toIso8601String(), // ✅ 包含同步时间
       };
@@ -299,7 +463,7 @@ class Note {
 
     for (final line in lines) {
       // 如果这行包含URL，需要排除URL中的#
-      if (line.contains(RegExp(r'[a-zA-Z]+://'))) {
+      if (line.contains(RegExp('[a-zA-Z]+://'))) {
         // 找出所有URL的位置范围
         final urlRegex = RegExp(r'[a-zA-Z]+://[^\s\)]+');
         final urlMatches = urlRegex.allMatches(line).toList();

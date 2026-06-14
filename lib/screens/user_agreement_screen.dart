@@ -42,7 +42,7 @@ class UserAgreementScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -297,9 +297,10 @@ class UserAgreementScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
+                    color: accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: accentColor.withOpacity(0.3)),
+                    border:
+                        Border.all(color: accentColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     AppLocalizationsSimple.of(context)
@@ -344,9 +345,10 @@ class UserAgreementScreen extends StatelessWidget {
             padding: isHighlight ? const EdgeInsets.all(12) : EdgeInsets.zero,
             decoration: isHighlight
                 ? BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
+                    color: accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: accentColor.withOpacity(0.3)),
+                    border:
+                        Border.all(color: accentColor.withValues(alpha: 0.3)),
                   )
                 : null,
             child: Text(

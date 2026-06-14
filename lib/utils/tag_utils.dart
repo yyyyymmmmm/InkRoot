@@ -2,18 +2,16 @@
 // 提供统一的标签识别和提取逻辑
 
 /// 获取改进的标签正则表达式
-/// 
+///
 /// 规则（参考Obsidian/Notion/Logseq）：
 /// - 排除URL中的#（不在://之后）
 /// - 前缀要求：#前面不能是字母、数字、下划线、冒号、斜杠
 /// - 排除连续##（Markdown标题）
 /// - 标签内容不包含#
-RegExp getTagRegex() {
-  return RegExp(
-    r'(?<![\w:/])(?!##)#([^\s\[\],，、;；:：！!？?\n#]+)',
-    unicode: true,
-  );
-}
+RegExp getTagRegex() => RegExp(
+      r'(?<![\w:/])(?!##)#([^\s\[\],，、;；:：！!？?\n#]+)',
+      unicode: true,
+    );
 
 /// 提取内容中的所有标签（排除URL中的#）
 List<String> extractTagsFromContent(String content) {
@@ -23,7 +21,7 @@ List<String> extractTagsFromContent(String content) {
 
   for (final line in lines) {
     // 如果这行包含URL，需要排除URL中的#
-    if (line.contains(RegExp(r'[a-zA-Z]+://'))) {
+    if (line.contains(RegExp('[a-zA-Z]+://'))) {
       // 找出所有URL的位置范围
       final urlRegex = RegExp(r'[a-zA-Z]+://[^\s\)]+');
       final urlMatches = urlRegex.allMatches(line).toList();
@@ -58,13 +56,12 @@ List<String> extractTagsFromContent(String content) {
 bool isTagInUrl(String line, int tagStart, int tagEnd) {
   final urlRegex = RegExp(r'[a-zA-Z]+://[^\s\)]+');
   final urlMatches = urlRegex.allMatches(line);
-  
+
   for (final match in urlMatches) {
     if (tagStart >= match.start && tagEnd <= match.end) {
       return true;
     }
   }
-  
+
   return false;
 }
-

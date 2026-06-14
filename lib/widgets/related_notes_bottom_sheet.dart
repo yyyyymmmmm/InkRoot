@@ -48,8 +48,8 @@ class RelatedNotesBottomSheet extends StatelessWidget {
             height: 4,
             decoration: BoxDecoration(
               color: isDark
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2),
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -80,7 +80,7 @@ class RelatedNotesBottomSheet extends StatelessWidget {
                         color: (isDark
                                 ? AppTheme.primaryLightColor
                                 : AppTheme.primaryColor)
-                            .withOpacity(0.3),
+                            .withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -264,59 +264,58 @@ class RelatedNotesBottomSheet extends StatelessWidget {
               ],
             ),
 
-            // 标签和时间
-            if (note.tags.isNotEmpty || note.createdAt != null) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  // 标签
-                  if (note.tags.isNotEmpty)
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: note.tags
-                            .take(3)
-                            .map(
-                              (tag) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: (isDark
-                                          ? AppTheme.primaryLightColor
-                                          : AppTheme.primaryColor)
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '#$tag',
-                                  style: TextStyle(
-                                    color: isDark
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // 标签
+                if (note.tags.isNotEmpty)
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: note.tags
+                          .take(3)
+                          .map(
+                            (tag) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (isDark
                                         ? AppTheme.primaryLightColor
-                                        : AppTheme.primaryColor,
-                                    fontSize: 12,
-                                  ),
+                                        : AppTheme.primaryColor)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '#$tag',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppTheme.primaryLightColor
+                                      : AppTheme.primaryColor,
+                                  fontSize: 12,
                                 ),
                               ),
-                            )
-                            .toList(),
-                      ),
+                            ),
+                          )
+                          .toList(),
                     ),
+                  )
+                else
+                  const Spacer(),
 
-                  // 时间
-                  Text(
-                    _formatTime(note.createdAt),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? AppTheme.darkTextTertiaryColor
-                              : AppTheme.textTertiaryColor,
-                        ),
-                  ),
-                ],
-              ),
-            ],
+                // 时间
+                Text(
+                  _formatTime(note.createdAt),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppTheme.darkTextTertiaryColor
+                            : AppTheme.textTertiaryColor,
+                      ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -334,14 +333,14 @@ class RelatedNotesBottomSheet extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color.withOpacity(0.8), color],
+            colors: [color.withValues(alpha: 0.8), color],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

@@ -371,7 +371,7 @@ When making architectural changes:
 
 <div align="center">
 
-**Architecture Documentation** | [InkRoot](https://github.com/yyyyymmmmm/IntRoot)
+**Architecture Documentation** | [InkRoot](https://github.com/yyyyymmmmm/InkRoot)
 
 [Back to Main README](../../README.md) | [View ADRs](adr/README.md)
 

@@ -1,5 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/services/user_behavior_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
@@ -40,30 +42,36 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   }
 
   Future<void> _clearData() async {
+    final l10n = AppLocalizationsSimple.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清除所有数据'),
-        content: const Text('确定要清除所有学习偏好数据吗？这将重置个性化推荐。'),
+        title: Text(l10n?.clearAllDataTitle ?? '清除所有数据'),
+        content: Text(
+          l10n?.clearLearningPreferencesMessage ?? '确定要清除所有学习偏好数据吗？这将重置个性化推荐。',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n?.cancel ?? '取消'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('清除'),
+            child: Text(l10n?.clear ?? '清除'),
           ),
         ],
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed ?? false) {
       await _behaviorService.clearAllData();
       if (mounted) {
-        SnackBarUtils.showSuccess(context, '已清除所有数据');
-        _loadData();
+        SnackBarUtils.showSuccess(
+          context,
+          AppLocalizationsSimple.of(context)?.allDataCleared ?? '已清除所有数据',
+        );
+        unawaited(_loadData());
       }
     }
   }
@@ -72,11 +80,12 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
+    final l10n = AppLocalizationsSimple.of(context);
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkBackgroundColor : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Personalization'),
+        title: Text(l10n?.personalization ?? '个性化'),
         backgroundColor: isDark ? AppTheme.darkCardColor : Colors.white,
         elevation: 0,
         actions: [
@@ -84,7 +93,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: _clearData,
-              tooltip: '清除数据',
+              tooltip: l10n?.clearDataTooltip ?? '清除数据',
             ),
         ],
       ),
@@ -97,92 +106,89 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   }
 
   /// 空状态 - 极简设计
-  Widget _buildEmptyState(bool isDark, ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.grey[800]?.withOpacity(0.3)
-                  : Colors.grey[200],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.insights_outlined,
-              size: 40,
-              color: isDark ? Colors.grey[600] : Colors.grey[400],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No Data Yet',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: isDark ? Colors.grey[500] : Colors.grey[400],
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
-              'Start using AI-powered related notes\nto build your personalization profile',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: isDark ? Colors.grey[600] : Colors.grey[500],
-                height: 1.6,
-                letterSpacing: 0.2,
+  Widget _buildEmptyState(bool isDark, ThemeData theme) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.grey[800]?.withValues(alpha: 0.3)
+                    : Colors.grey[200],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.insights_outlined,
+                size: 40,
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 24),
+            Text(
+              AppLocalizationsSimple.of(context)?.noDataYet ?? '暂无数据',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: isDark ? Colors.grey[500] : Colors.grey[400],
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Text(
+                AppLocalizationsSimple.of(context)?.personalizationEmptyHint ??
+                    '开始使用 AI 相关笔记后，这里会生成你的个性化画像',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? Colors.grey[600] : Colors.grey[500],
+                  height: 1.6,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   /// 主内容
-  Widget _buildContent(bool isDark, ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // 总体统计
-        _buildStatisticsCard(isDark, theme),
-        const SizedBox(height: 16),
+  Widget _buildContent(bool isDark, ThemeData theme) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // 总体统计
+          _buildStatisticsCard(isDark, theme),
+          const SizedBox(height: 16),
 
-        // 最喜欢的标签
-        _buildTopTagsCard(isDark, theme),
-        const SizedBox(height: 16),
+          // 最喜欢的标签
+          _buildTopTagsCard(isDark, theme),
+          const SizedBox(height: 16),
 
-        // 最喜欢的关系类型
-        _buildTopRelationTypesCard(isDark, theme),
-        const SizedBox(height: 16),
+          // 最喜欢的关系类型
+          _buildTopRelationTypesCard(isDark, theme),
+          const SizedBox(height: 16),
 
-        // 最近浏览
-        _buildRecentClicksCard(isDark, theme),
-      ],
-    );
-  }
+          // 最近浏览
+          _buildRecentClicksCard(isDark, theme),
+        ],
+      );
 
   /// 统计卡片 - 🎨 精致设计
   Widget _buildStatisticsCard(bool isDark, ThemeData theme) {
     final pref = _preference!;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         // 🌈 渐变背景
         gradient: LinearGradient(
           colors: isDark
               ? [
-                  const Color(0xFF6366F1).withOpacity(0.12),
-                  const Color(0xFF8B5CF6).withOpacity(0.08),
+                  const Color(0xFF6366F1).withValues(alpha: 0.12),
+                  const Color(0xFF8B5CF6).withValues(alpha: 0.08),
                 ]
               : [
-                  const Color(0xFF6366F1).withOpacity(0.06),
-                  const Color(0xFFF59E0B).withOpacity(0.04),
+                  const Color(0xFF6366F1).withValues(alpha: 0.06),
+                  const Color(0xFFF59E0B).withValues(alpha: 0.04),
                 ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -192,8 +198,8 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.04),
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: -4,
@@ -202,8 +208,8 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
         // 🪟 玻璃态边框
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.08)
-              : Colors.white.withOpacity(0.5),
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.5),
           width: 1.5,
         ),
       ),
@@ -228,7 +234,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6366F1).withOpacity(0.3),
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -242,7 +248,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                 ),
                 const SizedBox(width: 14),
                 Text(
-                  'USAGE STATS',
+                  AppLocalizationsSimple.of(context)?.usageStats ?? '使用统计',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.5,
@@ -262,7 +268,8 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     isDark,
                     theme,
                     icon: Icons.touch_app_rounded,
-                    label: '总点击',
+                    label: AppLocalizationsSimple.of(context)?.totalClicks ??
+                        '总点击',
                     value: '${pref.totalClicks}',
                     color: const Color(0xFF3B82F6),
                   ),
@@ -273,7 +280,9 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     isDark,
                     theme,
                     icon: Icons.timer_outlined,
-                    label: '平均时长',
+                    label:
+                        AppLocalizationsSimple.of(context)?.averageDuration ??
+                            '平均时长',
                     value: '${pref.avgViewDuration.toInt()}s',
                     color: const Color(0xFF10B981),
                   ),
@@ -293,78 +302,76 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
     required String label,
     required String value,
     required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        // 🌈 渐变背景
-        gradient: LinearGradient(
-          colors: [
-            color.withOpacity(0.15),
-            color.withOpacity(0.08),
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          // 🌈 渐变背景
+          gradient: LinearGradient(
+            colors: [
+              color.withValues(alpha: 0.15),
+              color.withValues(alpha: 0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          // ✨ 柔和阴影
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: -2,
+            ),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          // 🪟 玻璃态边框
+          border: Border.all(
+            color: color.withValues(alpha: 0.2),
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-        // ✨ 柔和阴影
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-            spreadRadius: -2,
-          ),
-        ],
-        // 🪟 玻璃态边框
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
+        child: Column(
+          children: [
+            // 💎 图标容器
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 12),
+            // 📊 数值
+            Text(
+              value,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: color,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // 🏷️ 标签
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
-      ),
-      child: Column(
-        children: [
-          // 💎 图标容器
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.2),
-                  blurRadius: 8,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 12),
-          // 📊 数值
-          Text(
-            value,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: color,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          // 🏷️ 标签
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      );
 
   /// Top 标签卡片 - 极简设计
   Widget _buildTopTagsCard(bool isDark, ThemeData theme) {
@@ -395,7 +402,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'TOP TAGS',
+                  AppLocalizationsSimple.of(context)?.topTags ?? '高频标签',
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.2,
@@ -417,10 +424,10 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Colors.orange.withOpacity(0.3),
+                      color: Colors.orange.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -480,7 +487,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'RELATION TYPES',
+                  AppLocalizationsSimple.of(context)?.relationTypes ?? '关系类型',
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.2,
@@ -521,9 +528,8 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: percent / 100,
-                        backgroundColor: isDark
-                            ? Colors.grey[800]
-                            : Colors.grey[200],
+                        backgroundColor:
+                            isDark ? Colors.grey[800] : Colors.grey[200],
                         valueColor: AlwaysStoppedAnimation<Color>(
                           _getRelationTypeColor(type),
                         ),
@@ -567,7 +573,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'RECENT ACTIVITY',
+                  AppLocalizationsSimple.of(context)?.recentActivity ?? '最近活动',
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.2,
@@ -585,7 +591,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     Icon(
                       Icons.circle,
                       size: 8,
-                      color: Colors.teal.withOpacity(0.5),
+                      color: Colors.teal.withValues(alpha: 0.5),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -615,8 +621,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
                     Text(
                       timeAgo,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color:
-                            isDark ? Colors.grey[500] : Colors.grey[500],
+                        color: isDark ? Colors.grey[500] : Colors.grey[500],
                       ),
                     ),
                   ],
@@ -630,17 +635,18 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   }
 
   String _getRelationTypeLabel(String type) {
+    final l10n = AppLocalizationsSimple.of(context);
     switch (type.toUpperCase()) {
       case 'CONTINUE':
-        return '📚 延续学习';
+        return l10n?.relationContinue ?? '📚 延续学习';
       case 'COMPLEMENT':
-        return '🧩 补充知识';
+        return l10n?.relationComplement ?? '🧩 补充知识';
       case 'COMPARE':
-        return '🔄 对比分析';
+        return l10n?.relationCompare ?? '🔄 对比分析';
       case 'QA':
-        return '❓ 问答';
+        return l10n?.relationQa ?? '❓ 问答';
       case 'PRACTICE':
-        return '🎯 实践';
+        return l10n?.relationPractice ?? '🎯 实践';
       default:
         return type;
     }
@@ -664,12 +670,23 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
   }
 
   String _getTimeAgo(DateTime time) {
+    final l10n = AppLocalizationsSimple.of(context);
     final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
-    if (diff.inDays < 1) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
-    return '${(diff.inDays / 7).floor()}周前';
+    if (diff.inMinutes < 1) {
+      return l10n?.justNow ?? '刚刚';
+    }
+    if (diff.inHours < 1) {
+      return l10n?.minutesAgo(diff.inMinutes) ?? '${diff.inMinutes}分钟前';
+    }
+    if (diff.inDays < 1) {
+      return l10n?.hoursAgo(diff.inHours) ?? '${diff.inHours}小时前';
+    }
+    if (diff.inDays < 7) {
+      return l10n?.daysAgo(diff.inDays) ?? '${diff.inDays}天前';
+    }
+    final weeks = (diff.inDays / 7).floor();
+    return l10n?.locale.languageCode == 'zh'
+        ? '$weeks周前'
+        : '$weeks week${weeks == 1 ? '' : 's'} ago';
   }
 }
-

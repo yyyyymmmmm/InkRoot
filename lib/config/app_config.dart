@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:inkroot/config/app_identity.dart';
 import 'package:inkroot/services/app_info_service.dart';
 
 /// 🚀 大厂标准：应用配置中心
@@ -8,7 +9,13 @@ class AppConfig {
   // ==================== 应用基本信息 ====================
 
   /// 应用名称
-  static const String appName = 'InkRoot';
+  static const String appName = AppIdentity.name;
+
+  /// 应用展示名称
+  static const String appDisplayName = AppIdentity.displayName;
+
+  /// 应用完整名称
+  static const String appFullName = AppIdentity.fullName;
 
   /// 应用版本（单一真源：来自打包元数据 / pubspec.yaml）
   static String get appVersion => AppInfoService.version;
@@ -19,17 +26,18 @@ class AppConfig {
   /// 应用ID
   static const String appId = String.fromEnvironment(
     'CLOUD_VERIFY_APP_ID',
-    defaultValue: '',
   );
 
   /// 应用密钥
   static const String appKey = String.fromEnvironment(
     'CLOUD_VERIFY_APP_KEY',
-    defaultValue: '',
   );
 
   /// 应用包名
-  static const String packageName = 'com.didichou.inkroot';
+  static const String packageName = AppIdentity.packageName;
+
+  /// 默认 WebDAV 同步路径
+  static const String defaultWebDavPath = AppIdentity.defaultWebDavPath;
 
   // ==================== 环境配置 ====================
 
@@ -67,7 +75,6 @@ class AppConfig {
   /// Sentry DSN（错误追踪）
   static const String sentryDsn = String.fromEnvironment(
     'SENTRY_DSN',
-    defaultValue: '',
   );
 
   /// Sentry追踪采样率
@@ -107,7 +114,6 @@ class AppConfig {
   /// 现在不需要：功能开关存在本地就够用了
   static const String featureFlagServerUrl = String.fromEnvironment(
     'FEATURE_FLAG_URL',
-    defaultValue: '', // 留空表示不使用远程配置
   );
 
   /// 默认功能开关
@@ -141,36 +147,33 @@ class AppConfig {
   );
 
   /// 是否启用友盟统计
-  static bool get enableUmengAnalytics => 
-      enableAnalytics && (umengAndroidAppKey.isNotEmpty || umengIOSAppKey.isNotEmpty);
+  static bool get enableUmengAnalytics =>
+      enableAnalytics &&
+      (umengAndroidAppKey.isNotEmpty || umengIOSAppKey.isNotEmpty);
 
   // ==================== 🚀 百度语音识别配置 ====================
-  
+
   /// 百度语音识别 API Key
   /// 应用名称：墨根
   /// 应用描述：用于语音识别
   /// 应用ID：7257984
   static const String baiduSpeechApiKey = String.fromEnvironment(
     'BAIDU_SPEECH_API_KEY',
-    defaultValue: '',
   );
-  
+
   /// 百度语音识别 Secret Key
   static const String baiduSpeechSecretKey = String.fromEnvironment(
     'BAIDU_SPEECH_SECRET_KEY',
-    defaultValue: '',
   );
-  
+
   /// 百度语音识别应用ID
   static const String baiduSpeechAppId = String.fromEnvironment(
     'BAIDU_SPEECH_APP_ID',
-    defaultValue: '',
   );
-  
+
   /// 是否启用百度语音识别
   static const bool enableBaiduSpeech = bool.fromEnvironment(
     'ENABLE_BAIDU_SPEECH',
-    defaultValue: false,
   );
 
   // ==================== 🚀 AI配置 ====================
@@ -225,7 +228,7 @@ class AppConfig {
   static const String databaseName = 'notes.db';
 
   /// 数据库版本
-  static const int databaseVersion = 5;
+  static const int databaseVersion = 8;
 
   /// 表名 - 笔记表
   static const String tableNotes = 'notes';
@@ -262,6 +265,12 @@ class AppConfig {
   /// 配置键 - 隐私政策同意
   static const String prefKeyPrivacyPolicy = 'privacy_policy_agreed';
 
+  /// 配置键 - 已同意法律文档版本
+  static const String prefKeyLegalAcceptedVersion = 'legal_accepted_version';
+
+  /// 配置键 - 法律文档同意时间
+  static const String prefKeyLegalAcceptedAt = 'legal_accepted_at';
+
   /// 配置键 - 上次同步时间
   static const String prefKeyLastSyncTime = 'last_sync_time';
 
@@ -271,7 +280,8 @@ class AppConfig {
   // ==================== 🚀 AI提示词模板 ====================
 
   /// AI默认系统提示词
-  static const String aiDefaultPrompt = '''你是一个专业的笔记助手，帮助用户更好地管理和理解他们的笔记。
+  static const String aiDefaultPrompt = '''
+你是一个专业的笔记助手，帮助用户更好地管理和理解他们的笔记。
 你的任务包括：
 1. 帮助用户总结和提炼笔记内容
 2. 回答用户关于笔记内容的问题
@@ -281,7 +291,8 @@ class AppConfig {
 请用简洁、专业的语言回复，保持友好和有帮助的态度。''';
 
   /// AI总结提示词
-  static const String aiSummaryPrompt = '''你是一个专业的内容总结专家。
+  static const String aiSummaryPrompt = '''
+你是一个专业的内容总结专家。
 请用简洁的语言总结用户提供的内容，突出要点和关键信息。
 总结应该：
 1. 简明扼要，不超过原文的30%
@@ -290,7 +301,8 @@ class AppConfig {
 4. 使用中文回复''';
 
   /// AI扩展提示词
-  static const String aiExpandPrompt = '''你是一个专业的内容扩展专家。
+  static const String aiExpandPrompt = '''
+你是一个专业的内容扩展专家。
 请帮助用户扩展和丰富他们的笔记内容。
 扩展时应该：
 1. 补充相关的背景信息
@@ -300,7 +312,8 @@ class AppConfig {
 5. 使用中文回复''';
 
   /// AI改进提示词
-  static const String aiImprovePrompt = '''你是一个专业的写作顾问。
+  static const String aiImprovePrompt = '''
+你是一个专业的写作顾问。
 请帮助用户改进他们的笔记内容。
 改进建议应该：
 1. 指出表达不清晰的地方
@@ -433,11 +446,25 @@ class AppConfig {
 
   // ==================== 法律文档 ====================
 
+  /// 当前法律文档版本。修改协议或隐私政策时更新该值，用于触发重新确认。
+  static const String legalDocumentVersion = '2026-06-14';
+
+  /// 法律文档固定更新日期，避免页面每天显示伪更新。
+  static const int legalUpdatedYear = 2026;
+  static const int legalUpdatedMonth = 6;
+  static const int legalUpdatedDay = 14;
+
   /// 隐私政策地址
   static const String privacyPolicyUrl = '${officialWebsite}privacy.html';
 
+  /// 隐私政策 Uri
+  static Uri get privacyPolicyUri => Uri.parse(privacyPolicyUrl);
+
   /// 用户协议地址
   static const String userAgreementUrl = '${officialWebsite}agreement.html';
+
+  /// 用户协议 Uri
+  static Uri get userAgreementUri => Uri.parse(userAgreementUrl);
 
   /// 开源协议地址
   static const String licenseUrl = '$githubRepo/blob/main/LICENSE';
@@ -445,10 +472,10 @@ class AppConfig {
   // ==================== 企业信息 ====================
 
   /// 公司名称
-  static const String companyName = 'InkRoot';
+  static const String companyName = AppIdentity.name;
 
   /// 公司全称
-  static const String companyFullName = 'InkRoot-墨鸣笔记';
+  static const String companyFullName = AppIdentity.fullName;
 
   /// 公司地址
   static const String companyAddress = '陕西省西安市雁塔区';
@@ -532,29 +559,23 @@ class AppConfig {
       };
 
   /// 检查功能是否启用
-  static bool isFeatureEnabled(String feature) {
-    return defaultFeatureFlags[feature] ?? false;
-  }
+  static bool isFeatureEnabled(String feature) =>
+      defaultFeatureFlags[feature] ?? false;
 
   /// 获取性能阈值
-  static num? getPerformanceThreshold(String metric) {
-    return performanceThresholds[metric];
-  }
+  static num? getPerformanceThreshold(String metric) =>
+      performanceThresholds[metric];
 
   /// 获取告警阈值
-  static num? getAlertThreshold(String metric) {
-    return alertThresholds[metric];
-  }
+  static num? getAlertThreshold(String metric) => alertThresholds[metric];
 
   /// 获取友盟AppKey（根据平台）
-  static String getUmengAppKey(bool isAndroid) {
-    return isAndroid ? umengAndroidAppKey : umengIOSAppKey;
-  }
+  static String getUmengAppKey(bool isAndroid) =>
+      isAndroid ? umengAndroidAppKey : umengIOSAppKey;
 
   /// 检查友盟是否已配置
-  static bool get isUmengConfigured {
-    return umengAndroidAppKey.isNotEmpty || umengIOSAppKey.isNotEmpty;
-  }
+  static bool get isUmengConfigured =>
+      umengAndroidAppKey.isNotEmpty || umengIOSAppKey.isNotEmpty;
 
   /// 获取MethodChannel名称
   static String getChannelName(String channelType) {

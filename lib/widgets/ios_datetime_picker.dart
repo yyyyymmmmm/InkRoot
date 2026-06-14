@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/text_style_helper.dart';
-import 'package:intl/intl.dart';
 
 /// iOS风格的日期时间选择器
 /// 符合中国人使用习惯和应用主题风格
@@ -48,7 +47,7 @@ class IOSDateTimePicker {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -64,7 +63,7 @@ class IOSDateTimePicker {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -286,29 +285,6 @@ class IOSDateTimePicker {
       hour,
     );
   }
-
-  /// 格式化日期时间（中文显示）
-  static String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = today.add(const Duration(days: 1));
-    final dateToCheck = DateTime(dateTime.year, dateTime.month, dateTime.day);
-
-    String dateStr;
-    if (dateToCheck == today) {
-      dateStr = '今天';
-    } else if (dateToCheck == tomorrow) {
-      dateStr = '明天';
-    } else {
-      // 使用中文星期
-      final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-      final weekday = weekdays[dateTime.weekday - 1];
-      dateStr = '${DateFormat('MM月dd日', 'zh_CN').format(dateTime)} $weekday';
-    }
-
-    final timeStr = DateFormat('HH:mm').format(dateTime);
-    return '$dateStr $timeStr';
-  }
 }
 
 /// 快捷选项芯片组件
@@ -366,14 +342,14 @@ class _QuickOptionChipState extends State<_QuickOptionChip> {
               color: widget.isSelected
                   ? widget.primaryColor
                   : (widget.isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.06)),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.06)),
               width: widget.isSelected ? 1.5 : 1,
             ),
             boxShadow: widget.isSelected
                 ? [
                     BoxShadow(
-                      color: widget.primaryColor.withOpacity(0.3),
+                      color: widget.primaryColor.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/providers/app_provider.dart';
-import 'package:inkroot/services/preferences_service.dart';
+import 'package:inkroot/services/memos_api_service_fixed.dart';
+import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +19,6 @@ class ServerInfoScreen extends StatefulWidget {
 }
 
 class _ServerInfoScreenState extends State<ServerInfoScreen> {
-  final PreferencesService _preferencesService = PreferencesService();
   final TextEditingController _serverAddressController =
       TextEditingController();
   final TextEditingController _portController = TextEditingController();
@@ -26,6 +26,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
   bool _useHttps = true;
   bool _isSyncing = false;
   bool _isDiagnosing = false;
+  bool _isConnectionHealthy = false;
   String _connectionStatus = '';
   String _lastSyncTime = '';
   String _latency = '0 ms';
@@ -71,12 +72,13 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
               AppLocalizationsSimple.of(context)?.notSynced ?? '未同步';
 
           // 更新日志中的本地化文本
-          if (_logs.isNotEmpty && _logs.first.message == '初始化服务器连接页面...') {
+          final initialMessage = AppLocalizationsSimple.of(context)
+                  ?.initializingServerConnection ??
+              '初始化服务器连接页面...';
+          if (_logs.isNotEmpty && _logs.first.message == initialMessage) {
             _logs[0] = LogEntry(
               time: _logs[0].time,
-              message: AppLocalizationsSimple.of(context)
-                      ?.initializingServerConnection ??
-                  '初始化服务器连接页面...',
+              message: initialMessage,
               type: _logs[0].type,
             );
           }
@@ -93,8 +95,11 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
         _serverAddressController.text = uri.host;
         _portController.text = uri.port.toString();
         _useHttps = uri.scheme == 'https';
-      } catch (e) {
-        debugPrint('解析服务器URL失败: $e');
+      } on Object catch (e) {
+        Log.ui.warning(
+          'Failed to parse server URL',
+          data: {'error': e.toString()},
+        );
       }
     } else {
       _portController.text = '443';
@@ -103,14 +108,15 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
 
     // 如果已登录，更新连接状态（延迟到didChangeDependencies）
     if (appProvider.isLoggedIn) {
-      _connectionStatus = '已连接'; // 临时硬编码，将在didChangeDependencies中更新
+      _connectionStatus = AppLocalizationsSimple.of(context)?.connected ?? '';
+      _isConnectionHealthy = true;
       _updateLastSyncTime(appProvider.user?.lastSyncTime);
     }
   }
 
   void _updateLastSyncTime(DateTime? lastSync) {
     if (lastSync == null) {
-      _lastSyncTime = '未同步'; // 临时硬编码，将在build中更新
+      _lastSyncTime = AppLocalizationsSimple.of(context)?.notSynced ?? '未同步';
       return;
     }
 
@@ -120,11 +126,17 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
     if (diff.inMinutes < 1) {
       _lastSyncTime = AppLocalizationsSimple.of(context)?.justNow ?? '刚刚';
     } else if (diff.inMinutes < 60) {
-      _lastSyncTime = '${diff.inMinutes}分钟前';
+      _lastSyncTime =
+          AppLocalizationsSimple.of(context)?.minutesAgo(diff.inMinutes) ??
+              '${diff.inMinutes}分钟前';
     } else if (diff.inHours < 24) {
-      _lastSyncTime = '${diff.inHours}小时前';
+      _lastSyncTime =
+          AppLocalizationsSimple.of(context)?.hoursAgo(diff.inHours) ??
+              '${diff.inHours}小时前';
     } else {
-      _lastSyncTime = '${diff.inDays}天前';
+      _lastSyncTime =
+          AppLocalizationsSimple.of(context)?.daysAgo(diff.inDays) ??
+              '${diff.inDays}天前';
     }
   }
 
@@ -150,28 +162,16 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
 
   Future<void> _updateConnectionStatus() async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    if (!appProvider.isLoggedIn) return;
+    if (!appProvider.isLoggedIn) {
+      return;
+    }
 
     try {
-      final response = await http.get(
-        Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v1/status'),
-        headers: {
-          'Accept': 'application/json',
-          if (appProvider.appConfig.lastToken != null)
-            'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-        },
-      ).timeout(const Duration(seconds: 15));
+      final response = await _pingMemosApi(appProvider);
 
       if (response.statusCode == 200) {
         final startTime = DateTime.now();
-        await http.get(
-          Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v1/status'),
-          headers: {
-            'Accept': 'application/json',
-            if (appProvider.appConfig.lastToken != null)
-              'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-          },
-        );
+        await _pingMemosApi(appProvider);
         final endTime = DateTime.now();
         final latency = endTime.difference(startTime).inMilliseconds;
 
@@ -179,21 +179,51 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
           setState(() {
             _connectionStatus =
                 AppLocalizationsSimple.of(context)?.connected ?? '已连接';
+            _isConnectionHealthy = true;
             _latency = '$latency ms';
           });
         }
       } else {
         throw Exception('服务器响应错误: ${response.statusCode}');
       }
-    } catch (e) {
+    } on Object {
       if (mounted) {
         setState(() {
           _connectionStatus =
               AppLocalizationsSimple.of(context)?.connectionAbnormal ?? '连接异常';
+          _isConnectionHealthy = false;
           _latency = AppLocalizationsSimple.of(context)?.timeout ?? '超时';
         });
       }
     }
+  }
+
+  Future<http.Response> _pingMemosApi(AppProvider appProvider) async {
+    final baseUrl = appProvider.appConfig.memosApiUrl;
+    if (baseUrl == null || baseUrl.isEmpty) {
+      throw Exception(
+        AppLocalizationsSimple.of(context)?.serverUrlEmpty ?? '服务器地址为空',
+      );
+    }
+
+    final headers = {
+      'Accept': 'application/json',
+      if (appProvider.appConfig.lastToken != null)
+        'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
+    };
+
+    http.Response? lastResponse;
+    for (final path in ['/api/v1/workspace/profile', '/api/v1/status']) {
+      final response = await http
+          .get(Uri.parse('$baseUrl$path'), headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        return response;
+      }
+      lastResponse = response;
+    }
+
+    return lastResponse!;
   }
 
   void _initializeLogs() {
@@ -204,7 +234,9 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
     _logs.add(
       LogEntry(
         time: _formatTime(now),
-        message: '初始化服务器连接页面...', // 临时硬编码，将在didChangeDependencies中更新
+        message:
+            AppLocalizationsSimple.of(context)?.initializingServerConnection ??
+                '初始化服务器连接页面...',
         type: LogType.info,
       ),
     );
@@ -215,7 +247,8 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
       _logs.add(
         LogEntry(
           time: _formatTime(now.subtract(const Duration(milliseconds: 100))),
-          message: '检测到已登录状态',
+          message: AppLocalizationsSimple.of(context)?.loggedInStatusDetected ??
+              '检测到已登录状态',
           type: LogType.info,
         ),
       );
@@ -227,7 +260,8 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
             LogEntry(
               time:
                   _formatTime(now.subtract(const Duration(milliseconds: 200))),
-              message: '当前服务器: ${uri.host}:${uri.port}',
+              message:
+                  '${AppLocalizationsSimple.of(context)?.currentServer ?? '当前服务器'}: ${uri.host}:${uri.port}',
               type: LogType.info,
             ),
           );
@@ -236,16 +270,18 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
             LogEntry(
               time:
                   _formatTime(now.subtract(const Duration(milliseconds: 300))),
-              message: '使用协议: ${uri.scheme.toUpperCase()}',
+              message:
+                  '${AppLocalizationsSimple.of(context)?.usingProtocol ?? '使用协议'}: ${uri.scheme.toUpperCase()}',
               type: LogType.info,
             ),
           );
-        } catch (e) {
+        } on Object catch (e) {
           _logs.add(
             LogEntry(
               time:
                   _formatTime(now.subtract(const Duration(milliseconds: 200))),
-              message: '解析服务器URL失败: $e',
+              message:
+                  '${AppLocalizationsSimple.of(context)?.parseServerUrlFailed ?? '解析服务器URL失败'}: $e',
               type: LogType.error,
             ),
           );
@@ -261,7 +297,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
           LogEntry(
             time: _formatTime(now.subtract(const Duration(milliseconds: 400))),
             message:
-                '上次同步: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(lastSync)}',
+                '${AppLocalizationsSimple.of(context)?.lastSync ?? '上次同步'}: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(lastSync)}',
             type: LogType.info,
           ),
         );
@@ -272,7 +308,9 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
             LogEntry(
               time:
                   _formatTime(now.subtract(const Duration(milliseconds: 500))),
-              message: '同步警告: 距离上次同步已超过${diff.inHours}小时',
+              message: AppLocalizationsSimple.of(context)
+                      ?.syncWarning(diff.inHours) ??
+                  '同步警告: 距离上次同步已超过${diff.inHours}小时',
               type: LogType.warning,
             ),
           );
@@ -283,8 +321,9 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
       _logs.add(
         LogEntry(
           time: _formatTime(now.subtract(const Duration(milliseconds: 600))),
-          message: '连接状态: $_connectionStatus',
-          type: _connectionStatus == '已连接' ? LogType.success : LogType.warning,
+          message:
+              '${AppLocalizationsSimple.of(context)?.connectionStatus ?? '连接状态'}: $_connectionStatus',
+          type: _isConnectionHealthy ? LogType.success : LogType.warning,
         ),
       );
     } else {
@@ -302,7 +341,9 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
       '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
 
   void _showToast(String message, ToastType type) {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final Color backgroundColor;
     switch (type) {
@@ -340,7 +381,9 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
   }
 
   Future<void> _syncData() async {
-    if (_isSyncing) return;
+    if (_isSyncing) {
+      return;
+    }
 
     setState(() {
       _isSyncing = true;
@@ -402,7 +445,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
         addLog('同步失败', LogType.error);
         _showToast('同步失败', ToastType.error);
       }
-    } catch (e) {
+    } on Object catch (e) {
       setState(() {
         _logs.insert(
           0,
@@ -422,7 +465,9 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
   }
 
   Future<void> _diagnoseConnection() async {
-    if (_isDiagnosing) return;
+    if (_isDiagnosing) {
+      return;
+    }
 
     setState(() {
       _isDiagnosing = true;
@@ -463,7 +508,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
         addLog('服务器地址: ${uri.host}', LogType.success);
         addLog('端口: ${uri.port}', LogType.success);
         addLog('协议: ${uri.scheme.toUpperCase()}', LogType.success);
-      } catch (e) {
+      } on Object catch (e) {
         addLog('解析服务器地址失败: $e', LogType.error);
         _showToast('诊断失败: 服务器地址无效', ToastType.error);
         return;
@@ -475,7 +520,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
       try {
         // 使用Http.head请求检查连接性
         final dnsStart = DateTime.now();
-        final response = await http
+        await http
             .head(
               Uri.parse('${uri.scheme}://${uri.host}:${uri.port}'),
             )
@@ -484,7 +529,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
         final dnsDuration = dnsEnd.difference(dnsStart).inMilliseconds;
 
         addLog('DNS解析成功，耗时: ${dnsDuration}ms', LogType.success);
-      } catch (e) {
+      } on Object catch (e) {
         addLog('DNS解析失败: $e', LogType.error);
       }
 
@@ -493,14 +538,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
 
       try {
         final apiStart = DateTime.now();
-        final response = await http.get(
-          Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v1/status'),
-          headers: {
-            'Accept': 'application/json',
-            if (appProvider.appConfig.lastToken != null)
-              'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-          },
-        ).timeout(const Duration(seconds: 5));
+        final response = await _pingMemosApi(appProvider);
         final apiEnd = DateTime.now();
         final apiDuration = apiEnd.difference(apiStart).inMilliseconds;
 
@@ -509,20 +547,26 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
           setState(() {
             _connectionStatus =
                 AppLocalizationsSimple.of(context)?.connected ?? '已连接';
+            _isConnectionHealthy = true;
             _latency = '$apiDuration ms';
           });
         } else {
           addLog('API连接失败: HTTP ${response.statusCode}', LogType.error);
           setState(() {
-            _connectionStatus = '连接异常';
-            _latency = '错误';
+            _connectionStatus =
+                AppLocalizationsSimple.of(context)?.connectionAbnormal ??
+                    '连接异常';
+            _isConnectionHealthy = false;
+            _latency = AppLocalizationsSimple.of(context)?.failed ?? '错误';
           });
         }
-      } catch (e) {
+      } on Object catch (e) {
         addLog('API连接失败: $e', LogType.error);
         setState(() {
-          _connectionStatus = '连接异常';
-          _latency = '超时';
+          _connectionStatus =
+              AppLocalizationsSimple.of(context)?.connectionAbnormal ?? '连接异常';
+          _isConnectionHealthy = false;
+          _latency = AppLocalizationsSimple.of(context)?.timeout ?? '超时';
         });
         _showToast('诊断失败: API连接失败', ToastType.error);
         return;
@@ -534,74 +578,34 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
 
         try {
           final tokenStart = DateTime.now();
-          final response = await http.get(
-            Uri.parse('${appProvider.appConfig.memosApiUrl}/api/v1/user/me'),
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': 'Bearer ${appProvider.appConfig.lastToken}',
-            },
-          ).timeout(const Duration(seconds: 5));
+          final tokenService = MemosApiServiceFixed(
+            baseUrl: appProvider.appConfig.memosApiUrl!,
+            token: appProvider.appConfig.lastToken,
+          );
+          await tokenService.getUserInfo().timeout(const Duration(seconds: 5));
           final tokenEnd = DateTime.now();
           final tokenDuration = tokenEnd.difference(tokenStart).inMilliseconds;
 
-          if (response.statusCode == 200) {
-            addLog('Token验证成功，响应时间: ${tokenDuration}ms', LogType.success);
-          } else {
-            addLog('Token验证失败: HTTP ${response.statusCode}', LogType.error);
-          }
-        } catch (e) {
+          addLog('Token验证成功，响应时间: ${tokenDuration}ms', LogType.success);
+        } on Object catch (e) {
           addLog('Token验证失败: $e', LogType.error);
         }
       }
 
       // 综合诊断结果
-      if (_connectionStatus == '已连接') {
+      if (_isConnectionHealthy) {
         addLog('诊断结果: 连接正常', LogType.success);
         _showToast('诊断完成: 连接状态良好', ToastType.success);
       } else {
         addLog('诊断结果: 连接异常', LogType.error);
         _showToast('诊断完成: 连接状态异常', ToastType.error);
       }
-    } catch (e) {
+    } on Object catch (e) {
       _showToast('诊断失败: $e', ToastType.error);
     } finally {
       setState(() {
         _isDiagnosing = false;
       });
-    }
-  }
-
-  Future<void> _saveSettings() async {
-    // 验证输入
-    if (_serverAddressController.text.isEmpty) {
-      _showToast('请输入服务器地址', ToastType.error);
-      return;
-    }
-
-    if (_portController.text.isEmpty) {
-      _showToast('请输入端口号', ToastType.error);
-      return;
-    }
-
-    try {
-      final appProvider = Provider.of<AppProvider>(context, listen: false);
-      final scheme = _useHttps ? 'https' : 'http';
-      final serverUrl =
-          '$scheme://${_serverAddressController.text}:${_portController.text}';
-
-      // 更新配置
-      final updatedConfig = appProvider.appConfig.copyWith(
-        memosApiUrl: serverUrl,
-        lastToken:
-            _apiKeyController.text.isNotEmpty ? _apiKeyController.text : null,
-      );
-
-      await _preferencesService.saveAppConfig(updatedConfig);
-      await appProvider.updateConfig(updatedConfig);
-
-      _showToast('设置已保存', ToastType.success);
-    } catch (e) {
-      _showToast('保存失败: $e', ToastType.error);
     }
   }
 
@@ -639,10 +643,12 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: Text(
           AppLocalizationsSimple.of(context)?.serverConnection ?? '服务器连接',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
@@ -661,7 +667,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -676,16 +682,16 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: _connectionStatus == '已连接'
-                              ? const Color(0xFF34C759).withOpacity(0.15)
-                              : const Color(0xFFFF3B30).withOpacity(0.15),
+                          color: _isConnectionHealthy
+                              ? const Color(0xFF34C759).withValues(alpha: 0.15)
+                              : const Color(0xFFFF3B30).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          _connectionStatus == '已连接'
+                          _isConnectionHealthy
                               ? Icons.show_chart
                               : Icons.error_outline,
-                          color: _connectionStatus == '已连接'
+                          color: _isConnectionHealthy
                               ? const Color(0xFF34C759)
                               : const Color(0xFFFF3B30),
                           size: 28,
@@ -704,10 +710,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _connectionStatus ==
-                                    (AppLocalizationsSimple.of(context)
-                                            ?.connected ??
-                                        '已连接')
+                            _isConnectionHealthy
                                 ? (AppLocalizationsSimple.of(context)
                                         ?.connectionNormal ??
                                     '服务器连接正常，数据同步正常')
@@ -717,7 +720,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               color: theme.textTheme.bodyMedium?.color
-                                  ?.withOpacity(0.7),
+                                  ?.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -729,7 +732,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.dividerColor.withOpacity(0.05),
+                      color: theme.dividerColor.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -811,7 +814,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                               : null,
                           style: TextButton.styleFrom(
                             backgroundColor:
-                                theme.dividerColor.withOpacity(0.05),
+                                theme.dividerColor.withValues(alpha: 0.05),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -862,11 +865,10 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.1),
+                color: theme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: theme.primaryColor.withOpacity(0.3),
-                  width: 1,
+                  color: theme.primaryColor.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -879,7 +881,8 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      AppLocalizationsSimple.of(context)?.serverInfoReadOnlyNotice ??
+                      AppLocalizationsSimple.of(context)
+                              ?.serverInfoReadOnlyNotice ??
                           '此页面仅用于查看服务器连接状态和同步日志\n服务器设置请在登录页面配置',
                       style: TextStyle(
                         fontSize: 13,
@@ -902,7 +905,8 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
                       child: Text(
-                        AppLocalizationsSimple.of(context)?.connectionInfoReadOnly ??
+                        AppLocalizationsSimple.of(context)
+                                ?.connectionInfoReadOnly ??
                             '连接信息（只读）',
                         style: TextStyle(
                           fontSize: 18,
@@ -918,7 +922,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -928,30 +932,40 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildServerDetail(
-                            AppLocalizationsSimple.of(context)?.serverAddress ?? '服务器地址',
-                            _serverAddressController.text.isEmpty 
-                                ? (AppLocalizationsSimple.of(context)?.notConfigured ?? '未配置')
+                            AppLocalizationsSimple.of(context)?.serverAddress ??
+                                '服务器地址',
+                            _serverAddressController.text.isEmpty
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.notConfigured ??
+                                    '未配置')
                                 : _serverAddressController.text,
                           ),
                           const SizedBox(height: 12),
                           _buildServerDetail(
-                            AppLocalizationsSimple.of(context)?.portNumber ?? '端口号',
-                            _portController.text.isEmpty 
-                                ? (AppLocalizationsSimple.of(context)?.notConfigured ?? '未配置')
+                            AppLocalizationsSimple.of(context)?.portNumber ??
+                                '端口号',
+                            _portController.text.isEmpty
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.notConfigured ??
+                                    '未配置')
                                 : _portController.text,
                           ),
                           const SizedBox(height: 12),
                           _buildServerDetail(
                             'HTTPS',
-                            _useHttps 
-                                ? (AppLocalizationsSimple.of(context)?.enabled ?? '已启用')
-                                : (AppLocalizationsSimple.of(context)?.disabled ?? '未启用'),
+                            _useHttps
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.enabled ??
+                                    '已启用')
+                                : (AppLocalizationsSimple.of(context)
+                                        ?.disabled ??
+                                    '未启用'),
                           ),
                           const SizedBox(height: 16),
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: theme.dividerColor.withOpacity(0.05),
+                              color: theme.dividerColor.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -959,16 +973,19 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                                 Icon(
                                   Icons.lock_outline,
                                   size: 16,
-                                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withValues(alpha: 0.6),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    AppLocalizationsSimple.of(context)?.modifyServerSettingsHint ??
+                                    AppLocalizationsSimple.of(context)
+                                            ?.modifyServerSettingsHint ??
                                         '要修改服务器设置，请退出登录后在登录页面配置',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                                      color: theme.textTheme.bodyMedium?.color
+                                          ?.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ),
@@ -979,82 +996,6 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                       ),
                     ),
                   ],
-                ),
-              ),
-
-            // 连接日志
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                    child: Text(
-                      AppLocalizationsSimple.of(context)?.connectionLog ?? '连接日志',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizationsSimple.of(context)?.noLogRecords ??
-                              '暂无日志记录',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-                          ),
-                        ),
-                        /* 这里可以添加实际的日志显示逻辑
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _logs.length,
-                          itemBuilder: (context, index) {
-                            return Text(_logs[index]);
-                          },
-                        ),
-                        */
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 移除保存按钮相关代码
-            if (false) // 永远不显示
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(''),
                 ),
               ),
 
@@ -1083,7 +1024,67 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizationsSimple.of(context)?.noLogRecords ??
+                              '暂无日志记录',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        /* 这里可以添加实际的日志显示逻辑
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _logs.length,
+                          itemBuilder: (context, index) {
+                            return Text(_logs[index]);
+                          },
+                        ),
+                        */
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 连接日志
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                    child: Text(
+                      AppLocalizationsSimple.of(context)?.connectionLog ??
+                          '连接日志',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -1094,8 +1095,8 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                       children: [
                         Row(
                           children: [
-                            Expanded(
-                              child: const Text(
+                            const Expanded(
+                              child: Text(
                                 '最近连接记录',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -1112,7 +1113,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                                       const Icon(Icons.copy_outlined, size: 20),
                                   onPressed: _copyLogs,
                                   color: theme.textTheme.bodyMedium?.color
-                                      ?.withOpacity(0.7),
+                                      ?.withValues(alpha: 0.7),
                                   padding: const EdgeInsets.all(8),
                                   constraints: const BoxConstraints(),
                                 ),
@@ -1123,7 +1124,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                                   ),
                                   onPressed: _exportLogs,
                                   color: theme.textTheme.bodyMedium?.color
-                                      ?.withOpacity(0.7),
+                                      ?.withValues(alpha: 0.7),
                                   padding: const EdgeInsets.all(8),
                                   constraints: const BoxConstraints(),
                                 ),
@@ -1134,7 +1135,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                                   ),
                                   onPressed: _clearLogs,
                                   color: theme.textTheme.bodyMedium?.color
-                                      ?.withOpacity(0.7),
+                                      ?.withValues(alpha: 0.7),
                                   padding: const EdgeInsets.all(8),
                                   constraints: const BoxConstraints(),
                                 ),
@@ -1146,7 +1147,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: theme.dividerColor.withOpacity(0.05),
+                            color: theme.dividerColor.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           constraints: const BoxConstraints(maxHeight: 200),
@@ -1165,7 +1166,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: theme.textTheme.bodyMedium?.color
-                                            ?.withOpacity(0.5),
+                                            ?.withValues(alpha: 0.5),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -1208,7 +1209,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
                     .textTheme
                     .bodyMedium
                     ?.color
-                    ?.withOpacity(0.7),
+                    ?.withValues(alpha: 0.7),
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -1231,73 +1232,6 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
         ],
       );
 
-  Widget _buildFormField({
-    required String label,
-    required TextEditingController controller,
-    required String hintText,
-    String? helpText,
-    bool isPassword = false,
-    TextInputType? keyboardType,
-  }) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.color
-                  ?.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            obscureText: isPassword,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withOpacity(0.5),
-              ),
-              filled: true,
-              fillColor: Theme.of(context).dividerColor.withOpacity(0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-            ),
-          ),
-          if (helpText != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                helpText,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.color
-                      ?.withOpacity(0.5),
-                ),
-              ),
-            ),
-        ],
-      );
-
   Color _getLogColor(LogType type, ThemeData theme) {
     switch (type) {
       case LogType.success:
@@ -1307,7 +1241,7 @@ class _ServerInfoScreenState extends State<ServerInfoScreen> {
       case LogType.warning:
         return const Color(0xFFFF9500);
       case LogType.info:
-        return theme.textTheme.bodyMedium?.color?.withOpacity(0.7) ??
+        return theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7) ??
             Colors.grey;
     }
   }

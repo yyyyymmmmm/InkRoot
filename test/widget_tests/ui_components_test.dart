@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/utils/todo_parser.dart';
+import 'package:inkroot/widgets/heatmap.dart';
+import 'package:intl/intl.dart' as intl;
 
 // ─── 辅助 Widget：笔记标签列表 ───────────────────────────────────────────────
 
@@ -82,7 +84,7 @@ class _VisibilityBadge extends StatelessWidget {
     return Chip(
       key: Key('badge_$visibility'),
       label: Text(label),
-      backgroundColor: color.withOpacity(0.2),
+      backgroundColor: color.withValues(alpha: 0.2),
     );
   }
 }
@@ -101,18 +103,15 @@ class _SearchBarState extends State<_SearchBar> {
   final _ctrl = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    return TextField(
-      key: const Key('searchField'),
-      controller: _ctrl,
-      decoration: const InputDecoration(
-        hintText: '搜索笔记...',
-        prefixIcon: Icon(Icons.search),
-        suffixIcon: null,
-      ),
-      onChanged: widget.onSearch,
-    );
-  }
+  Widget build(BuildContext context) => TextField(
+        key: const Key('searchField'),
+        controller: _ctrl,
+        decoration: const InputDecoration(
+          hintText: '搜索笔记...',
+          prefixIcon: Icon(Icons.search),
+        ),
+        onChanged: widget.onSearch,
+      );
 
   @override
   void dispose() {
@@ -124,7 +123,9 @@ class _SearchBarState extends State<_SearchBar> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child) => MaterialApp(
-      home: Scaffold(body: Padding(padding: const EdgeInsets.all(8), child: child)),
+      home: Scaffold(
+        body: Padding(padding: const EdgeInsets.all(8), child: child),
+      ),
     );
 
 void main() {
@@ -198,8 +199,7 @@ void main() {
     testWidgets('UI-08 进度文本格式 "X / Y"', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          const _TodoProgressBar(
-              content: '- [x] 完成\n- [ ] 未完成\n- [ ] 未完成'),
+          const _TodoProgressBar(content: '- [x] 完成\n- [ ] 未完成\n- [ ] 未完成'),
         ),
       );
       expect(find.text('1 / 3'), findsOneWidget);
@@ -272,12 +272,12 @@ void main() {
       const tags = ['Flutter'];
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Column(
               children: [
-                const _TagChips(tags: tags),
-                const _TodoProgressBar(content: content),
+                _TagChips(tags: tags),
+                _TodoProgressBar(content: content),
               ],
             ),
           ),
@@ -290,10 +290,10 @@ void main() {
 
     testWidgets('UI-17 公开的已归档笔记徽章组合展示', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Row(
-              children: const [
+              children: [
                 _VisibilityBadge(visibility: 'PUBLIC'),
                 Chip(label: Text('已归档')),
               ],
@@ -320,10 +320,10 @@ void main() {
 
     testWidgets('UI-19 RTL 布局不崩溃', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Directionality(
             textDirection: TextDirection.rtl,
-            child: const Scaffold(
+            child: Scaffold(
               body: _TagChips(tags: ['rtl', 'test']),
             ),
           ),
@@ -345,6 +345,40 @@ void main() {
       );
       // 测试不崩溃
       expect(find.byType(_TagChips), findsOneWidget);
+    });
+
+    testWidgets('UI-21 热力图只按创建日统计，不被更新时间污染', (tester) async {
+      final today = DateTime.now();
+      final yesterday = today.subtract(const Duration(days: 1));
+      final notes = [
+        Note(
+          id: 'heatmap-1',
+          content: '昨天创建今天更新',
+          createdAt: DateTime(yesterday.year, yesterday.month, yesterday.day),
+          updatedAt: today,
+          tags: const ['old'],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _wrap(
+          SingleChildScrollView(
+            child: Heatmap(notes: notes),
+          ),
+        ),
+      );
+
+      final todayLabel = intl.DateFormat('MMM dd, yyyy', 'en_US').format(today);
+      expect(
+        find.byWidgetPredicate((widget) {
+          if (widget is! Tooltip || widget.message == null) {
+            return false;
+          }
+          return widget.message!.contains(todayLabel) &&
+              widget.message!.contains('0 条笔记');
+        }),
+        findsOneWidget,
+      );
     });
   });
 }

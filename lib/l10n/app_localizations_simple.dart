@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:inkroot/l10n/translations.dart';
 
-/// 简单的应用国际化类 - 支持23种语言
+/// 简单的应用国际化类 - 当前正式支持简体中文和英文。
 class AppLocalizationsSimple {
   AppLocalizationsSimple(this.locale);
   final Locale locale;
@@ -38,6 +38,12 @@ class AppLocalizationsSimple {
   String get username => _t('username', fallback: '用户名');
   String get password => _t('password', fallback: '密码');
   String get settings => _t('settings', fallback: '设置');
+  String get settingsAccountAndConnection =>
+      _t('settingsAccountAndConnection', fallback: '账户与连接');
+  String get settingsGeneral => _t('settingsGeneral', fallback: '通用');
+  String get settingsDataManagement =>
+      _t('settingsDataManagement', fallback: '数据管理');
+  String get settingsSupport => _t('settingsSupport', fallback: '支持');
   String get accountInfo => _t('accountInfo', fallback: '账户信息');
   String get importExport => _t('importExport', fallback: '导入导出');
   String get dataCleanup => _t('dataCleanup', fallback: '数据清理');
@@ -225,7 +231,7 @@ class AppLocalizationsSimple {
   String languageChanged(String language) => locale.languageCode == 'zh'
       ? '语言已切换为$language'
       : 'Language changed to $language';
-  
+
   String fontChanged(String fontName) => locale.languageCode == 'zh'
       ? '字体已切换为$fontName'
       : 'Font changed to $fontName';
@@ -264,6 +270,10 @@ class AppLocalizationsSimple {
   String get emptyNote => locale.languageCode == 'zh' ? '暂无笔记' : 'No notes yet';
   String get searchNotes =>
       locale.languageCode == 'zh' ? '搜索笔记' : 'Search notes';
+  String searchResultsCount(int count) =>
+      _t('searchResultsCount', fallback: '找到 {count} 条结果')
+          .replaceAll('{count}', count.toString());
+  String get noSearchResults => _t('noSearchResults', fallback: '没有找到相关笔记');
 
   // ===== 排序 =====
   String get sortBy => locale.languageCode == 'zh' ? '排序方式' : 'Sort By';
@@ -385,8 +395,8 @@ class AppLocalizationsSimple {
   String get aiFeatures => _t('aiFeatures', fallback: 'AI功能');
   String get apiConfiguration => _t('apiConfiguration', fallback: 'API配置');
   String get aiModel => _t('aiModel', fallback: 'AI模型');
-  String get modelSelection => _t('modelSelection', fallback: '模型选择');
-  String get selectModel => _t('selectModel', fallback: '选择AI模型');
+  String get modelSelection => _t('modelSelection', fallback: '模型名称');
+  String get selectModel => _t('selectModel', fallback: '常用模型示例');
   String get domesticModels => _t('domesticModels', fallback: '国产大模型');
   String get apiAddress => _t('apiAddress', fallback: 'API地址');
   String get apiKey => _t('apiKey', fallback: 'API密钥');
@@ -407,6 +417,7 @@ class AppLocalizationsSimple {
   String get noteFeatures => _t('noteFeatures', fallback: '笔记功能');
   String get tagFeatures => _t('tagFeatures', fallback: '标签功能');
   String get dataSync => _t('dataSync', fallback: '数据同步');
+  String get formatEditing => _t('formatEditing', fallback: '格式编辑');
   String get commonQuestions => _t('commonQuestions', fallback: '常见问题');
   String get markdownSyntax => _t('markdownSyntax', fallback: 'Markdown语法');
 
@@ -493,19 +504,32 @@ class AppLocalizationsSimple {
   String get modifyEmail => _t('modifyEmail', fallback: '修改邮箱');
   String get modifyPassword => _t('modifyPassword', fallback: '修改密码');
   String get syncPersonalInfo => _t('syncPersonalInfo', fallback: '立即同步');
-  String get syncPersonalInfoDesc => _t('syncPersonalInfoDesc', fallback: '从服务器同步最新的个人资料');
+  String get syncPersonalInfoDesc =>
+      _t('syncPersonalInfoDesc', fallback: '从服务器同步最新的个人资料');
   String get logoutDesc => _t('logoutDesc', fallback: '退出当前账号并返回登录页');
   String get notLoggedInOrAPINotInitialized =>
       _t('notLoggedInOrAPINotInitialized', fallback: '未登录或API服务未初始化');
-  String get welcomeToInkRootShort => _t('welcomeToInkRootShort', fallback: '欢迎使用 InkRoot');
-  String get loginToUnlockFeatures => _t('loginToUnlockFeatures', fallback: '登录后解锁更多精彩功能');
+  String get userInfoSyncFailed => _t('userInfoSyncFailed', fallback: '同步失败');
+  String get resourceServiceNotInitialized =>
+      _t('resourceServiceNotInitialized', fallback: '资源服务未初始化');
+  String get uploadedAvatarUrlMissing =>
+      _t('uploadedAvatarUrlMissing', fallback: '无法获取上传的头像URL');
+  String get uploadAvatarFailed => _t('uploadAvatarFailed', fallback: '上传头像失败');
+  String get emailUpdateSuccess => _t('emailUpdateSuccess', fallback: '邮箱更新成功');
+  String get emailUpdateFailed => _t('emailUpdateFailed', fallback: '邮箱更新失败');
+  String get welcomeToInkRootShort =>
+      _t('welcomeToInkRootShort', fallback: '欢迎使用 InkRoot');
+  String get loginToUnlockFeatures =>
+      _t('loginToUnlockFeatures', fallback: '登录后解锁更多精彩功能');
   String get cloudSyncFeature => _t('cloudSyncFeature', fallback: '云端同步');
   String get cloudSyncDesc => _t('cloudSyncDesc', fallback: '笔记实时同步，随时随地访问');
   String get aiAssistantFeature => _t('aiAssistantFeature', fallback: 'AI 助手');
-  String get aiAssistantDesc => _t('aiAssistantDesc', fallback: '智能总结、扩展、改进笔记内容');
+  String get aiAssistantDesc =>
+      _t('aiAssistantDesc', fallback: '智能总结、扩展、改进笔记内容');
   String get remindersFeature => _t('remindersFeature', fallback: '定时提醒');
   String get remindersDesc => _t('remindersDesc', fallback: '重要事项不错过，高效管理时间');
-  String get agreeToTermsAndPrivacy => _t('agreeToTermsAndPrivacy', fallback: '注册即表示同意用户协议和隐私政策');
+  String get agreeToTermsAndPrivacy =>
+      _t('agreeToTermsAndPrivacy', fallback: '注册即表示同意用户协议和隐私政策');
 
   // ===== 服务器连接 =====
   String get connectionNormal =>
@@ -587,14 +611,17 @@ class AppLocalizationsSimple {
   String get startImportButton => _t('startImportButton', fallback: '导入备份');
 
   // ===== 服务器信息页面 =====
-  String get serverInfoReadOnlyNotice => _t('serverInfoReadOnlyNotice', 
-      fallback: '此页面仅用于查看服务器连接状态和同步日志\n服务器设置请在登录页面配置');
-  String get connectionInfoReadOnly => _t('connectionInfoReadOnly', fallback: '连接信息（只读）');
+  String get serverInfoReadOnlyNotice => _t(
+        'serverInfoReadOnlyNotice',
+        fallback: '此页面仅用于查看服务器连接状态和同步日志\n服务器设置请在登录页面配置',
+      );
+  String get connectionInfoReadOnly =>
+      _t('connectionInfoReadOnly', fallback: '连接信息（只读）');
   String get notConfigured => _t('notConfigured', fallback: '未配置');
   String get enabled => _t('enabled', fallback: '已启用');
   String get disabled => _t('disabled', fallback: '未启用');
-  String get modifyServerSettingsHint => _t('modifyServerSettingsHint', 
-      fallback: '要修改服务器设置，请退出登录后在登录页面配置');
+  String get modifyServerSettingsHint =>
+      _t('modifyServerSettingsHint', fallback: '要修改服务器设置，请退出登录后在登录页面配置');
   String get noLogRecords => _t('noLogRecords', fallback: '暂无日志记录');
 
   // ===== AI设置 =====
@@ -604,7 +631,7 @@ class AppLocalizationsSimple {
   String get apiAddressLabel => _t('apiAddressLabel', fallback: 'API地址');
   String get apiKeyLabel => _t('apiKeyLabel', fallback: 'API密钥');
   String get getAPIKey => _t('getAPIKey', fallback: '获取API密钥');
-  String get modelSelectionTitle => _t('modelSelectionTitle', fallback: '模型选择');
+  String get modelSelectionTitle => _t('modelSelectionTitle', fallback: '模型名称');
 
   // ===== 数据清理补充 =====
   String get cleanCacheDescription =>
@@ -976,6 +1003,12 @@ class AppLocalizationsSimple {
   // ===== 服务器信息页面 =====
   String get initializingServerConnection =>
       _t('initializingServerConnection', fallback: '初始化服务器连接页面...');
+  String get loggedInStatusDetected =>
+      _t('loggedInStatusDetected', fallback: '检测到已登录状态');
+  String get currentServer => _t('currentServer', fallback: '当前服务器');
+  String get usingProtocol => _t('usingProtocol', fallback: '使用协议');
+  String get parseServerUrlFailed =>
+      _t('parseServerUrlFailed', fallback: '解析服务器 URL 失败');
 
   // ===== 登录页面 =====
   String get loginFailedCheckCredentials =>
@@ -1006,8 +1039,10 @@ class AppLocalizationsSimple {
   String get customServer => _t('customServer', fallback: '自定义服务器');
   String get officialServer => _t('officialServer', fallback: '官方服务器');
   String get recommended => _t('recommended', fallback: '推荐使用');
-  String get serverAddressMustStartWithHttp =>
-      _t('serverAddressMustStartWithHttp', fallback: '服务器地址必须以 http:// 或 https:// 开头');
+  String get serverAddressMustStartWithHttp => _t(
+        'serverAddressMustStartWithHttp',
+        fallback: '服务器地址必须以 http:// 或 https:// 开头',
+      );
   String get change => _t('change', fallback: '更改');
   String get customize => _t('customize', fallback: '自定义');
   String get custom => _t('custom', fallback: '自定义');
@@ -1191,11 +1226,17 @@ class AppLocalizationsSimple {
       _t('expectedNextRelease', fallback: '预计下个版本发布');
   String get connectInkRootBot =>
       _t('connectInkRootBot', fallback: '连接 InkRoot_Bot');
-  String get telegramBotDialogContent => _t('telegramBotDialogContent',
-      fallback: '在 Telegram 中搜索 @InkRoot_Bot，连接机器人后即可发送消息自动创建笔记。支持 Markdown 格式，实时同步到 InkRoot 应用。');
-  String get voiceToTextDialogContent => _t('voiceToTextDialogContent',
-      fallback: '在笔记编辑器中点击麦克风按钮即可开始语音识别。支持离线识别，无需联网。识别过程中可随时暂停和继续，文字将自动插入到编辑器中。');
-  
+  String get telegramBotDialogContent => _t(
+        'telegramBotDialogContent',
+        fallback:
+            '在 Telegram 中搜索 @InkRoot_Bot，连接机器人后即可发送消息自动创建笔记。支持 Markdown 格式，实时同步到 InkRoot 应用。',
+      );
+  String get voiceToTextDialogContent => _t(
+        'voiceToTextDialogContent',
+        fallback:
+            '在笔记编辑器中点击麦克风按钮即可开始语音识别。支持离线识别，无需联网。识别过程中可随时暂停和继续，文字将自动插入到编辑器中。',
+      );
+
   // AI 智能助手
   String get aiSmartAssistant => _t('aiSmartAssistant', fallback: 'AI 智能助手');
   String get aiSmartAssistantDesc =>
@@ -1218,7 +1259,7 @@ class AppLocalizationsSimple {
       _t('contentSummaryDesc', fallback: '快速生成笔记内容摘要');
   String get aiAssistantTip =>
       _t('aiAssistantTip', fallback: '💡 提示：在笔记详情页点击右下角魔法棒图标即可使用');
-  
+
   // 笔记批注
   String get noteAnnotation => _t('noteAnnotation', fallback: '笔记批注');
   String get noteAnnotationDesc =>
@@ -1235,13 +1276,18 @@ class AppLocalizationsSimple {
   String get annotationIdea => _t('annotationIdea', fallback: '💡 想法');
   String get annotationIdeaDesc =>
       _t('annotationIdeaDesc', fallback: '记录灵感和新想法');
-  String get annotationImportant => _t('annotationImportant', fallback: '⚠️ 重要');
+  String get annotationImportant =>
+      _t('annotationImportant', fallback: '⚠️ 重要');
   String get annotationImportantDesc =>
       _t('annotationImportantDesc', fallback: '标记重要信息和关键点');
-  String get annotationWarning => _t('annotationWarning',
-      fallback: '⚠️ 功能暂时不稳定，请自行斟酌使用。批注数据仅保存在本地，不会同步到服务器。');
-  String get annotationUsageTip => _t('annotationUsageTip',
-      fallback: '💡 使用方法：在笔记列表或详情页点击批注图标 🟠 即可查看和管理批注');
+  String get annotationWarning => _t(
+        'annotationWarning',
+        fallback: '⚠️ 功能暂时不稳定，请自行斟酌使用。批注数据仅保存在本地，不会同步到服务器。',
+      );
+  String get annotationUsageTip => _t(
+        'annotationUsageTip',
+        fallback: '💡 使用方法：在笔记列表或详情页点击批注图标 🟠 即可查看和管理批注',
+      );
   String get iKnow => _t('iKnow', fallback: '我知道了');
 
   // ===== AI设置页面 =====
@@ -1404,9 +1450,11 @@ class AppLocalizationsSimple {
   String get fillScreen => _t('fillScreen', fallback: '填满屏幕');
   String get loadingHDImage => _t('loadingHDImage', fallback: '正在加载高清原图...');
   String get imageLoadError => _t('imageLoadError', fallback: '无法加载图片');
-  String get networkFailedNoCache => _t('networkFailedNoCache', fallback: '网络连接失败且无缓存');
+  String get networkFailedNoCache =>
+      _t('networkFailedNoCache', fallback: '网络连接失败且无缓存');
   String get authFailedNoCache => _t('authFailedNoCache', fallback: '认证失败且无缓存');
-  String get unsupportedImageFormat => _t('unsupportedImageFormat', fallback: '不支持的图片格式');
+  String get unsupportedImageFormat =>
+      _t('unsupportedImageFormat', fallback: '不支持的图片格式');
   String get allImagesCount => _t('allImagesCount', fallback: '全部图片 ({count})');
   String get timeUpdateFailed => _t('timeUpdateFailed', fallback: '时间更新失败');
   String get detailedInfo => _t('detailedInfo', fallback: '详细信息');
@@ -1421,6 +1469,15 @@ class AppLocalizationsSimple {
   String get saveAndShare => _t('saveAndShare', fallback: '保存并分享');
   String get generatingShareLink =>
       _t('generatingShareLink', fallback: '正在生成分享链接...');
+  String get reviewCopiedShort => _t('reviewCopiedShort', fallback: '✨ 点评已复制');
+  String get aiReviewCompleted =>
+      _t('aiReviewCompleted', fallback: '✨ AI点评完成！');
+  String get aiReviewTitle => _t('aiReviewTitle', fallback: '给你的点评');
+  String get aiReadingNote => _t('aiReadingNote', fallback: 'AI正在阅读笔记...');
+  String get aiAnalyzing => _t('aiAnalyzing', fallback: 'AI正在分析中...');
+  String startInsightWithCount(int count) =>
+      _t('startInsightWithCount', fallback: '开始洞察 ({count} 条笔记)')
+          .replaceAll('{count}', count.toString());
   // copyReview已在前面定义(line 796)
   // Note: close is already defined above
   // loadFailed已在前面定义(line 886)
@@ -1491,10 +1548,14 @@ class AppLocalizationsSimple {
   // ===== 版本更新 =====
   String get newVersionAvailable =>
       _t('newVersionAvailable', fallback: '发现新版本');
+  String latestVersion(String version) =>
+      _t('latestVersion', fallback: '最新版本：{version}')
+          .replaceAll('{version}', version);
   String get updateAvailableMessage =>
       _t('updateAvailableMessage', fallback: '墨鸣笔记有新版本可用，建议立即更新以体验新功能！');
   String get updateNotes => _t('updateNotes', fallback: '更新内容：');
   String get remindMeLater => _t('remindMeLater', fallback: '稍后再说');
+  String get goToUpdate => _t('goToUpdate', fallback: '前往更新');
   // updateNow已在line 519定义
 
   // ===== 分享相关 =====
@@ -1541,6 +1602,7 @@ class AppLocalizationsSimple {
   String get aiGeneratedAnalysis =>
       _t('aiGeneratedAnalysis', fallback: 'AI为您生成的深度分析');
   String get allTime => _t('allTime', fallback: '全部');
+  String get openInNewWindow => _t('openInNewWindow', fallback: '在新窗口打开');
 
   // ===== 权限和设置提示 =====
   String get permissionRequired => _t('permissionRequired', fallback: '需要通知权限');
@@ -1597,6 +1659,7 @@ class AppLocalizationsSimple {
   String get characters => _t('characters', fallback: '字符');
   // tagCount已在line 1044定义
   String get tagsCount => _t('tagsCount', fallback: '个标签');
+  String get noteCreatedSuccess => _t('noteCreatedSuccess', fallback: '笔记已创建');
   // shareNote已在line 874定义
   // shareLink已在line 875定义
   // generateShareLink已在line 876定义
@@ -1672,6 +1735,69 @@ class AppLocalizationsSimple {
   // modifyEmail已在line 375定义
   String get pleaseEnterNewEmail =>
       _t('pleaseEnterNewEmail', fallback: '请输入新的邮箱地址');
+  String get currentPasswordLabel =>
+      _t('currentPasswordLabel', fallback: '当前密码');
+  String get enterCurrentPassword =>
+      _t('enterCurrentPassword', fallback: '请输入当前密码');
+  String get enterNewPassword => _t('enterNewPassword', fallback: '请输入新密码');
+  String get enterNewPasswordWithMin =>
+      _t('enterNewPasswordWithMin', fallback: '请输入新密码（至少3位）');
+  String get confirmNewPassword => _t('confirmNewPassword', fallback: '确认新密码');
+  String get enterNewPasswordAgain =>
+      _t('enterNewPasswordAgain', fallback: '请再次输入新密码');
+  String get newPasswordTooShort =>
+      _t('newPasswordTooShort', fallback: '新密码至少需要3位');
+  String get newPasswordMismatch =>
+      _t('newPasswordMismatch', fallback: '两次输入的新密码不一致');
+  String get newPasswordSameAsCurrent =>
+      _t('newPasswordSameAsCurrent', fallback: '新密码不能与当前密码相同');
+  String get passwordUpdateSuccessRelogin =>
+      _t('passwordUpdateSuccessRelogin', fallback: '密码修改成功，请重新登录');
+  String get passwordUpdateFailedCheckCurrent =>
+      _t('passwordUpdateFailedCheckCurrent', fallback: '密码修改失败，请检查当前密码是否正确');
+  String get passwordUpdateFailed =>
+      _t('passwordUpdateFailed', fallback: '密码修改失败');
+
+  // ===== 路由错误页 =====
+  String get routeErrorTitle => _t('routeErrorTitle', fallback: '错误');
+  String get invalidTagName => _t('invalidTagName', fallback: '标签名称无效');
+  String get pageLoadFailed => _t('pageLoadFailed', fallback: '页面加载失败');
+  String get pageNotFound => _t('pageNotFound', fallback: '页面未找到');
+  String get pageLost => _t('pageLost', fallback: '哎呀，页面走丢了!');
+  String requestPath(String path) {
+    final template = _t('requestPath', fallback: '请求路径: {path}');
+    return template.replaceAll('{path}', path);
+  }
+
+  // ===== 图片保存 =====
+  String get saveImageToGallery =>
+      _t('saveImageToGallery', fallback: '保存图片到相册');
+  String get storagePermissionRequiredForImage =>
+      _t('storagePermissionRequiredForImage', fallback: '需要存储权限才能保存图片');
+  String get imageSavedToGallery =>
+      _t('imageSavedToGallery', fallback: '图片已保存到相册');
+  String get imageSavedToDevice =>
+      _t('imageSavedToDevice', fallback: '图片已保存到设备');
+  String get saveImageFailed => _t('saveImageFailed', fallback: '保存图片失败');
+  String get downloadImageFailed =>
+      _t('downloadImageFailed', fallback: '下载图片失败');
+  String get imageDataEmpty => _t('imageDataEmpty', fallback: '图片数据为空');
+  String get imagePathInvalid => _t('imagePathInvalid', fallback: '图片路径已失效');
+  String get imageNotFound => _t('imageNotFound', fallback: '图片不存在');
+  String referenceNoteMissing(String noteId) {
+    final template =
+        _t('referenceNoteMissing', fallback: '引用的笔记不存在或已被删除 (ID: {id})');
+    return template.replaceAll('{id}', noteId);
+  }
+
+  // ===== 编辑器 =====
+  String get discardEditTitle => _t('discardEditTitle', fallback: '放弃本次编辑？');
+  String get unsavedChangesMessage =>
+      _t('unsavedChangesMessage', fallback: '当前修改尚未保存。');
+  String get discard => _t('discard', fallback: '放弃');
+  String get addLink => _t('addLink', fallback: '添加链接');
+  String get displayText => _t('displayText', fallback: '显示文字');
+  String get linkAddress => _t('linkAddress', fallback: '链接地址');
 
   // ===== SnackBarUtils相关 =====
   String get networkConnectionFailed =>
@@ -1753,6 +1879,10 @@ class AppLocalizationsSimple {
   // setReminderFailed已在line 905定义
   String get setReminderFailedRetry =>
       _t('setReminderFailedRetry', fallback: '设置提醒失败，请稍后重试');
+  String get desktopReminderUnsupported => _t(
+        'desktopReminderUnsupported',
+        fallback: '当前桌面系统暂不支持系统级定时提醒，请在手机或 macOS 上设置',
+      );
 
   // ===== 笔记详情页-详细信息 =====
   String get creationTime => _t('creationTime', fallback: '创建时间');
@@ -1901,6 +2031,13 @@ class AppLocalizationsSimple {
   String get backupNow => locale.languageCode == 'zh' ? '立即备份' : 'Backup Now';
   String get restoreFromWebdav =>
       locale.languageCode == 'zh' ? '从 WebDAV 恢复' : 'Restore from WebDAV';
+  String get timedBackupSettings =>
+      locale.languageCode == 'zh' ? '定时备份设置' : 'Timed Backup Settings';
+  String get backupImageAttachments =>
+      locale.languageCode == 'zh' ? '备份图片附件' : 'Back Up Image Attachments';
+  String get backupImageAttachmentsDesc => locale.languageCode == 'zh'
+      ? '开启后会把笔记里的本地图片和 Memos 图片一起备份到 WebDAV'
+      : 'Back up local and Memos images in notes to WebDAV';
   String get enableTimedBackup =>
       locale.languageCode == 'zh' ? '启用定时备份' : 'Enable Timed Backup';
   String get autoBackupToWebdav => locale.languageCode == 'zh'
@@ -1927,11 +2064,50 @@ class AppLocalizationsSimple {
   String get pleaseEnterSyncFolderPath => locale.languageCode == 'zh'
       ? '请输入同步文件夹路径'
       : 'Please enter sync folder path';
+  String get invalidServerAddress =>
+      _t('invalidServerAddress', fallback: '服务器地址格式不正确');
+  String get webdavHttpsRequired => _t(
+        'webdavHttpsRequired',
+        fallback: '请使用 https://。仅 localhost、127.0.0.1 和内网地址允许 http://',
+      );
+  String get syncPathMustStartWithSlash =>
+      _t('syncPathMustStartWithSlash', fallback: '同步路径必须以 / 开头');
+  String get connectionTestSuccess =>
+      _t('connectionTestSuccess', fallback: '连接测试成功');
+  String get connectionTestFailed =>
+      _t('connectionTestFailed', fallback: '连接测试失败，请检查配置');
+  String get testFailed => _t('testFailed', fallback: '测试失败');
   String get webdavConfigSaved =>
       locale.languageCode == 'zh' ? 'WebDAV 配置已保存' : 'WebDAV config saved';
   String get pleaseEnableWebdavFirst => locale.languageCode == 'zh'
       ? '请先启用 WebDAV 同步'
       : 'Please enable WebDAV sync first';
+  String get backupCompleted => _t('backupCompleted', fallback: '备份完成');
+  String get restoreCompleted => _t('restoreCompleted', fallback: '恢复完成');
+  String get backupFailed => _t('backupFailed', fallback: '备份失败');
+  String get restoreFailed => _t('restoreFailed', fallback: '恢复失败');
+  String get backupServiceUnavailable =>
+      _t('backupServiceUnavailable', fallback: '备份服务未初始化');
+  String get restoreServiceUnavailable =>
+      _t('restoreServiceUnavailable', fallback: '恢复服务未初始化');
+  String get imagesBackupAttempted =>
+      _t('imagesBackupAttempted', fallback: '图片：已尝试备份');
+  String webdavResourcesUploaded(int count) =>
+      _t('webdavResourcesUploaded', fallback: '资源：{count} 个')
+          .replaceAll('{count}', count.toString());
+  String webdavBackupNotesCount(int count) =>
+      _t('webdavBackupNotesCount', fallback: '笔记：{count} 条')
+          .replaceAll('{count}', count.toString());
+  String restoredNotesCount(int count) =>
+      _t('restoredNotesCount', fallback: '已恢复：{count} 条笔记')
+          .replaceAll('{count}', count.toString());
+  String errorsCount(int count) => _t('errorsCount', fallback: '错误：{count}')
+      .replaceAll('{count}', count.toString());
+  String get confirmRestore =>
+      locale.languageCode == 'zh' ? '确认恢复' : 'Confirm Restore';
+  String get confirmRestoreMessage => locale.languageCode == 'zh'
+      ? '此操作将从 WebDAV 下载所有笔记到本地。\n\n如果本地和远程有相同的笔记，将保留远程版本（覆盖本地）。\n\n是否继续？'
+      : 'This will download all notes from WebDAV to this device.\n\nIf the same note exists locally and remotely, the remote version will be kept and overwrite the local version.\n\nContinue?';
   String get webdavHelpText => locale.languageCode == 'zh'
       ? '• 推荐使用坚果云等专业 WebDAV 服务\n• 坚果云需要使用"应用专用密码"而不是登录密码\n• 立即测试：测试 WebDAV 服务器连接\n• 立即备份：单向上传，完整备份所有数据到云端\n• 从 WebDAV 恢复：下载云端数据到本地（覆盖本地）\n• 定时备份：可选择每次启动或定时自动备份'
       : '• Recommend using professional WebDAV services like Nutstore\n• Nutstore requires using "App-specific password" instead of login password\n• Test Now: Test WebDAV server connection\n• Backup Now: One-way upload, full backup of all data to cloud\n• Restore from WebDAV: Download cloud data to local (overwrite local)\n• Timed Backup: Choose to auto backup on every startup or timed intervals';
@@ -1953,66 +2129,98 @@ class AppLocalizationsSimple {
   String get setToPublic => _t('setToPublic', fallback: '已设为公开');
   String get setFailed => _t('setFailed', fallback: '设置失败');
   String get fullText => _t('fullText', fallback: '全文');
-  String get referencedNoteNotFound => _t('referencedNoteNotFound', fallback: '引用的笔记不存在或已被删除 (ID: {id})');
+  String get referencedNoteNotFound =>
+      _t('referencedNoteNotFound', fallback: '引用的笔记不存在或已被删除 (ID: {id})');
   String get cancelSuccess => _t('cancelSuccess', fallback: '取消成功');
   String get setSuccess => _t('setSuccess', fallback: '设置成功');
-  String get editorPlaceholder => _t('editorPlaceholder', fallback: '现在的想法是...');
+  String get editorPlaceholder =>
+      _t('editorPlaceholder', fallback: '现在的想法是...');
   String get voiceListening => _t('voiceListening', fallback: '正在聆听...');
   String get voiceRecognizing => _t('voiceRecognizing', fallback: '识别中');
   String get clickToStop => _t('clickToStop', fallback: '点击停止');
-  String get microphonePermissionRequired => _t('microphonePermissionRequired', fallback: '需要麦克风权限才能使用语音识别');
-  String get referenceCreationFailed => _t('referenceCreationFailed', fallback: '创建引用关系失败');
-  String get searchNoteContent => _t('searchNoteContent', fallback: '搜索笔记内容...');
-  String get createNotesFirstToReference => _t('createNotesFirstToReference', fallback: '先创建一些笔记再来建立引用关系');
-  String get foundNotesCount => _t('foundNotesCount', fallback: '找到 {count} 个笔记');
-  String get logoutDataPrompt => _t('logoutDataPrompt', fallback: '退出登录前，请选择如何处理本地数据：');
+  String get microphonePermissionRequired =>
+      _t('microphonePermissionRequired', fallback: '需要麦克风权限才能使用语音识别');
+  String get referenceCreationFailed =>
+      _t('referenceCreationFailed', fallback: '创建引用关系失败');
+  String get searchNoteContent =>
+      _t('searchNoteContent', fallback: '搜索笔记内容...');
+  String get createNotesFirstToReference =>
+      _t('createNotesFirstToReference', fallback: '先创建一些笔记再来建立引用关系');
+  String get foundNotesCount =>
+      _t('foundNotesCount', fallback: '找到 {count} 个笔记');
+  String get logoutDataPrompt =>
+      _t('logoutDataPrompt', fallback: '退出登录前，请选择如何处理本地数据：');
   String get functionMenu => _t('functionMenu', fallback: '功能菜单');
   String get loadedAll => _t('loadedAll', fallback: '已加载全部 {count} 条笔记');
   String get serverError => _t('serverError', fallback: '服务器错误');
   String get unknownError => _t('unknownError', fallback: '未知错误');
   String get copySuccess => _t('copySuccess', fallback: '已复制');
-  
+
   // 隐私政策相关
-  String get userAgreementAndPrivacy => _t('userAgreementAndPrivacy', fallback: '用户协议与隐私政策');
+  String get userAgreementAndPrivacy =>
+      _t('userAgreementAndPrivacy', fallback: '用户协议与隐私政策');
   String get disagree => _t('disagree', fallback: '不同意');
   String get agree => _t('agree', fallback: '同意');
-  String get welcomeToApp => _t('welcomeToApp', fallback: '欢迎使用InkRoot！\n\n我们非常重视您的隐私保护和个人信息安全。在使用我们的服务前，请您仔细阅读并充分理解');
+  String get welcomeToApp => _t(
+        'welcomeToApp',
+        fallback: '欢迎使用InkRoot！\n\n我们非常重视您的隐私保护和个人信息安全。在使用我们的服务前，请您仔细阅读并充分理解',
+      );
   String get and => locale.languageCode == 'zh' ? '和' : 'and';
-  String get agreeText => _t('agreeText', fallback: '。\n\n点击"同意"即表示您已阅读并同意上述协议的全部内容。');
-  
+  String get agreeText =>
+      _t('agreeText', fallback: '。\n\n点击"同意"即表示您已阅读并同意上述协议的全部内容。');
+
   // 更新对话框相关
-  String get mustUpdateMessage => _t('mustUpdateMessage', fallback: '此为重要更新，必须更新后才能继续使用');
+  String get mustUpdateMessage =>
+      _t('mustUpdateMessage', fallback: '此为重要更新，必须更新后才能继续使用');
   String get downloading => _t('downloading', fallback: '正在下载...');
   String get laterUpdate => _t('laterUpdate', fallback: '稍后更新');
-  String get downloadComplete => _t('downloadComplete', fallback: '下载完成！请安装更新包');
-  
+  String get downloadComplete =>
+      _t('downloadComplete', fallback: '下载完成！请安装更新包');
+  String get downloadFailed =>
+      locale.languageCode == 'zh' ? '下载失败' : 'Download failed';
+  String get openLinkFailed =>
+      locale.languageCode == 'zh' ? '打开链接失败' : 'Failed to open link';
+
   // 标签相关
   String get relatedTags => _t('relatedTags', fallback: '相关标签');
   String get statistics => _t('statistics', fallback: '统计图表');
   String get rename => _t('rename', fallback: '重命名');
-  String get relatedTagsRecommendation => _t('relatedTagsRecommendation', fallback: '相关标签推荐');
+  String get relatedTagsRecommendation =>
+      _t('relatedTagsRecommendation', fallback: '相关标签推荐');
   String get noRelatedTags => _t('noRelatedTags', fallback: '暂无相关标签');
-  String get addMoreNotesForAI => _t('addMoreNotesForAI', fallback: '添加更多包含该标签的笔记，\nAI将为您推荐相关标签');
+  String get addMoreNotesForAI =>
+      _t('addMoreNotesForAI', fallback: '添加更多包含该标签的笔记，\nAI将为您推荐相关标签');
   String get tagStatistics => _t('tagStatistics', fallback: '标签统计');
   String get noteCount => _t('noteCount', fallback: '笔记数');
   String get creationMonths => _t('creationMonths', fallback: '创建月数');
-  String get recentSixMonthsTrend => _t('recentSixMonthsTrend', fallback: '最近6个月趋势');
+  String get recentSixMonthsTrend =>
+      _t('recentSixMonthsTrend', fallback: '最近6个月趋势');
   String get noStatisticsData => _t('noStatisticsData', fallback: '暂无统计数据');
   String get renameTag => _t('renameTag', fallback: '重命名标签');
   String get enterNewTagName => _t('enterNewTagName', fallback: '输入新标签名');
   String get deleteTag => _t('deleteTag', fallback: '删除标签');
-  String get deleteTagConfirm => _t('deleteTagConfirm', fallback: '确定要删除此标签吗？删除后，该标签下的所有笔记将失去此标签。');
-  String get deleteTagSimpleConfirm => _t('deleteTagSimpleConfirm', fallback: '确定要删除此标签吗？');
-  
+  String get deleteTagConfirm =>
+      _t('deleteTagConfirm', fallback: '确定要删除此标签吗？删除后，该标签下的所有笔记将失去此标签。');
+  String get deleteTagSimpleConfirm =>
+      _t('deleteTagSimpleConfirm', fallback: '确定要删除此标签吗？');
+
   // 导入导出相关
-  String get localBackupRestore => _t('localBackupRestore', fallback: '本地备份与恢复');
-  String get localBackupDescription => _t('localBackupDescription', fallback: '将笔记数据导出为本地文件，支持从备份文件恢复数据');
+  String get localBackupRestore =>
+      _t('localBackupRestore', fallback: '本地备份与恢复');
+  String get localBackupDescription =>
+      _t('localBackupDescription', fallback: '将笔记数据导出为本地文件，支持从备份文件恢复数据');
   String get flomoImport => _t('flomoImport', fallback: 'Flomo 笔记导入');
-  String get flomoImportDescription => _t('flomoImportDescription', fallback: '支持从 Flomo 导出的 HTML 文件批量导入笔记内容');
-  String get backupTip => _t('backupTip', fallback: '💡 数据安全提示：建议定期备份笔记数据。导入前请确认文件格式正确，避免数据丢失。');
-  String get browserExtension => _t('browserExtension', fallback: 'Memos 浏览器扩展');
-  String get browserExtensionDescription => _t('browserExtensionDescription', fallback: '第三方浏览器扩展程序，支持 Chrome/Edge，可快速收集网页内容至 Memos');
-  
+  String get flomoImportDescription =>
+      _t('flomoImportDescription', fallback: '支持从 Flomo 导出的 HTML 文件批量导入笔记内容');
+  String get backupTip =>
+      _t('backupTip', fallback: '💡 数据安全提示：建议定期备份笔记数据。导入前请确认文件格式正确，避免数据丢失。');
+  String get browserExtension =>
+      _t('browserExtension', fallback: 'Memos 浏览器扩展');
+  String get browserExtensionDescription => _t(
+        'browserExtensionDescription',
+        fallback: '第三方浏览器扩展程序，支持 Chrome/Edge，可快速收集网页内容至 Memos',
+      );
+
   // 标签页面相关
   String get noTagsYet => _t('noTagsYet', fallback: '还没有任何标签');
   String get tagsHelp => _t('tagsHelp', fallback: '标签可以帮助你更好地组织和查找笔记');
@@ -2021,46 +2229,72 @@ class AppLocalizationsSimple {
   String get collapseAll => _t('collapseAll', fallback: '收起所有');
   String get expandAllTags => _t('expandAllTags', fallback: '展开全部');
   String expandAllTagsWithCount(int count) {
-    final template = _t('expandAllTagsWithCount', fallback: '展开全部 ({count}个标签)');
+    final template =
+        _t('expandAllTagsWithCount', fallback: '展开全部 ({count}个标签)');
     return template.replaceAll('{count}', count.toString());
   }
+
   String get startWriting => _t('startWriting', fallback: '开始写笔记');
   String get noMatchingTags => _t('noMatchingTags', fallback: '未找到匹配的标签');
-  
+
   // Flomo导入页面相关
   String get flomoNoteImport => _t('flomoNoteImport', fallback: 'Flomo 笔记导入');
   String get importInstructions => _t('importInstructions', fallback: '导入说明');
-  String get flomoImportStep1 => _t('flomoImportStep1', fallback: '1. 在 Flomo 应用中，进入"设置 > 账号详情 > 导出所有数据"');
-  String get flomoImportStep2 => _t('flomoImportStep2', fallback: '2. 导出后会得到一个包含 HTML 文件和 file 目录的文件夹');
-  String get flomoImportStep3 => _t('flomoImportStep3', fallback: '3. 📁 将整个导出文件夹保存到"文件"App中（iCloud Drive或本地）');
-  String get flomoImportStep4 => _t('flomoImportStep4', fallback: '4. 点击下方"选择Flomo导出文件夹"按钮');
-  String get flomoImportStep5 => _t('flomoImportStep5', fallback: '5. 标签会自动识别（以 # 开头的文本）');
-  String get flomoExportWarning => _t('flomoExportWarning', fallback: 'Flomo 每 7 天只能导出一次，请妥善保管导出的文件');
+  String get flomoImportStep1 =>
+      _t('flomoImportStep1', fallback: '1. 在 Flomo 应用中，进入"设置 > 账号详情 > 导出所有数据"');
+  String get flomoImportStep2 =>
+      _t('flomoImportStep2', fallback: '2. 导出后会得到一个包含 HTML 文件和 file 目录的文件夹');
+  String get flomoImportStep3 => _t(
+        'flomoImportStep3',
+        fallback: '3. 📁 将整个导出文件夹保存到"文件"App中（iCloud Drive或本地）',
+      );
+  String get flomoImportStep4 =>
+      _t('flomoImportStep4', fallback: '4. 点击下方"选择Flomo导出文件夹"按钮');
+  String get flomoImportStep5 =>
+      _t('flomoImportStep5', fallback: '5. 标签会自动识别（以 # 开头的文本）');
+  String get flomoExportWarning =>
+      _t('flomoExportWarning', fallback: 'Flomo 每 7 天只能导出一次，请妥善保管导出的文件');
   String get selectFile => _t('selectFile', fallback: '选择文件');
-  String get selectFlomoExportFolder => _t('selectFlomoExportFolder', fallback: '选择 Flomo 导出文件夹');
-  String get selectFlomoHtmlFile => _t('selectFlomoHtmlFile', fallback: '选择 Flomo HTML 文件');
+  String get selectFlomoExportFolder =>
+      _t('selectFlomoExportFolder', fallback: '选择 Flomo 导出文件夹');
+  String get selectFlomoHtmlFile =>
+      _t('selectFlomoHtmlFile', fallback: '选择 Flomo HTML 文件');
   String get alreadyInTagPage => _t('alreadyInTagPage', fallback: '已在标签页中');
   String get imageFileMissing => _t('imageFileMissing', fallback: '图片文件缺失');
   String get possibleReasons => _t('possibleReasons', fallback: '可能原因：');
-  String get htmlAndFileSeparated => _t('htmlAndFileSeparated', fallback: '• HTML文件和file目录不在同一位置');
-  String get fileFolderMoved => _t('fileFolderMoved', fallback: '• file目录被移动或删除');
-  String get exportDataIncomplete => _t('exportDataIncomplete', fallback: '• 导出数据不完整');
+  String get htmlAndFileSeparated =>
+      _t('htmlAndFileSeparated', fallback: '• HTML文件和file目录不在同一位置');
+  String get fileFolderMoved =>
+      _t('fileFolderMoved', fallback: '• file目录被移动或删除');
+  String get exportDataIncomplete =>
+      _t('exportDataIncomplete', fallback: '• 导出数据不完整');
   String get solutionTip => _t('solutionTip', fallback: '💡 解决方法：');
-  String get ensureHtmlAndFile => _t('ensureHtmlAndFile', fallback: '1. 确保Flomo导出的HTML文件和file目录在同一文件夹中');
-  String get reselectFolder => _t('reselectFolder', fallback: '2. 重新点击"选择Flomo导出文件夹"，选择包含HTML和file目录的整个文件夹');
-  String get doNotMoveFiles => _t('doNotMoveFiles', fallback: '3. 不要单独移动HTML文件或file目录');
+  String get ensureHtmlAndFile =>
+      _t('ensureHtmlAndFile', fallback: '1. 确保Flomo导出的HTML文件和file目录在同一文件夹中');
+  String get reselectFolder => _t(
+        'reselectFolder',
+        fallback: '2. 重新点击"选择Flomo导出文件夹"，选择包含HTML和file目录的整个文件夹',
+      );
+  String get doNotMoveFiles =>
+      _t('doNotMoveFiles', fallback: '3. 不要单独移动HTML文件或file目录');
   String get preserveTags => _t('preserveTags', fallback: '保留标签');
-  String get preserveTagsDesc => _t('preserveTagsDesc', fallback: '将 Flomo 中的 # 标签导入为笔记标签');
+  String get preserveTagsDesc =>
+      _t('preserveTagsDesc', fallback: '将 Flomo 中的 # 标签导入为笔记标签');
   String get preserveTime => _t('preserveTime', fallback: '保留时间');
-  String get preserveTimeDesc => _t('preserveTimeDesc', fallback: '尽可能保留笔记的创建时间');
+  String get preserveTimeDesc =>
+      _t('preserveTimeDesc', fallback: '尽可能保留笔记的创建时间');
   String get importAsNew => _t('importAsNew', fallback: '作为新笔记导入');
-  String get importAsNewDesc => _t('importAsNewDesc', fallback: '所有导入的笔记将作为新笔记添加');
+  String get importAsNewDesc =>
+      _t('importAsNewDesc', fallback: '所有导入的笔记将作为新笔记添加');
   String get importImages => _t('importImages', fallback: '导入图片');
-  String get importImagesDesc => _t('importImagesDesc', fallback: '导入笔记中的图片附件（图片会被复制到本地存储）');
+  String get importImagesDesc =>
+      _t('importImagesDesc', fallback: '导入笔记中的图片附件（图片会被复制到本地存储）');
   String get smartDeduplication => _t('smartDeduplication', fallback: '智能去重');
   String get detectDuplicates => _t('detectDuplicates', fallback: '检测重复笔记');
-  String get detectDuplicatesDesc => _t('detectDuplicatesDesc', fallback: '基于内容和时间智能识别重复笔记');
-  String get whenDuplicatesFound => _t('whenDuplicatesFound', fallback: '发现重复笔记时：');
+  String get detectDuplicatesDesc =>
+      _t('detectDuplicatesDesc', fallback: '基于内容和时间智能识别重复笔记');
+  String get whenDuplicatesFound =>
+      _t('whenDuplicatesFound', fallback: '发现重复笔记时：');
   String get autoSkip => _t('autoSkip', fallback: '自动跳过');
   String get autoSkipDesc => _t('autoSkipDesc', fallback: '静默跳过所有重复笔记');
   String get askMe => _t('askMe', fallback: '询问我');
@@ -2069,318 +2303,645 @@ class AppLocalizationsSimple {
   String get importAllDesc => _t('importAllDesc', fallback: '忽略重复检测，全部作为新笔记导入');
   String get notePreview => _t('notePreview', fallback: '笔记预览（前5条）');
   String get dirNotExist => _t('dirNotExist', fallback: '目录不存在');
-  String get noHtmlFileInFolder => _t('noHtmlFileInFolder', fallback: '该文件夹中没有找到HTML文件');
-  String get selectFolderFailed => _t('selectFolderFailed', fallback: '选择文件夹失败');
+  String get noHtmlFileInFolder =>
+      _t('noHtmlFileInFolder', fallback: '该文件夹中没有找到HTML文件');
+  String get selectFolderFailed =>
+      _t('selectFolderFailed', fallback: '选择文件夹失败');
   String get fileNotExist => _t('fileNotExist', fallback: '文件不存在');
   String get selectFileFailed => _t('selectFileFailed', fallback: '选择文件失败');
   String get previewFileFailed => _t('previewFileFailed', fallback: '预览文件失败');
-  String get noValidNotesInFile => _t('noValidNotesInFile', fallback: '文件中没有找到有效的笔记内容');
-  String get pleaseSelectFileFirst => _t('pleaseSelectFileFirst', fallback: '请先选择文件');
-  String get userCancelledImport => _t('userCancelledImport', fallback: '用户取消导入');
+  String get noValidNotesInFile =>
+      _t('noValidNotesInFile', fallback: '文件中没有找到有效的笔记内容');
+  String get pleaseSelectFileFirst =>
+      _t('pleaseSelectFileFirst', fallback: '请先选择文件');
+  String get userCancelledImport =>
+      _t('userCancelledImport', fallback: '用户取消导入');
   String get importFailed => _t('importFailed', fallback: '导入失败');
   String get importSuccessful => _t('importSuccessful', fallback: '导入成功');
-  String get importedFromFlomo => _t('importedFromFlomo', fallback: '成功从 Flomo 导入：');
+  String get importedFromFlomo =>
+      _t('importedFromFlomo', fallback: '成功从 Flomo 导入：');
   String get exactMatch => _t('exactMatch', fallback: '精确匹配');
   String get contentOnly => _t('contentOnly', fallback: '内容相同');
   String get time => _t('time', fallback: '时间');
-  String get duplicatesFoundTitle => _t('duplicatesFoundTitle', fallback: '发现重复笔记');
-  String get selectedToImportHint => _t('selectedToImportHint', fallback: '选中的笔记将被导入，未选中的将跳过');
+  String get duplicatesFoundTitle =>
+      _t('duplicatesFoundTitle', fallback: '发现重复笔记');
+  String get selectedToImportHint =>
+      _t('selectedToImportHint', fallback: '选中的笔记将被导入，未选中的将跳过');
   String get selectAll => _t('selectAll', fallback: '全选');
   String get deselectAll => _t('deselectAll', fallback: '取消全选');
   String get skipAll => _t('skipAll', fallback: '全部跳过');
   String get toImport => _t('toImport', fallback: '待导入');
   String get existing => _t('existing', fallback: '已存在');
-  String get viewSkippedDuplicates => _t('viewSkippedDuplicates', fallback: '查看跳过的重复笔记');
+  String get viewSkippedDuplicates =>
+      _t('viewSkippedDuplicates', fallback: '查看跳过的重复笔记');
   String get skippedDuplicates => _t('skippedDuplicates', fallback: '跳过的重复笔记');
-  
+
   // 标签页面使用提示
-  String get createTagByTyping => _t('createTagByTyping', fallback: '在笔记中输入 #标签名 创建标签');
-  String get hierarchicalTags => _t('hierarchicalTags', fallback: '使用 / 创建层级标签，如 #工作/项目A');
-  String get hierarchicalTagsShort => _t('hierarchicalTagsShort', fallback: '使用 / 创建层级标签（如 #工作/项目A）');
+  String get createTagByTyping =>
+      _t('createTagByTyping', fallback: '在笔记中输入 #标签名 创建标签');
+  String get hierarchicalTags =>
+      _t('hierarchicalTags', fallback: '使用 / 创建层级标签，如 #工作/项目A');
+  String get hierarchicalTagsShort =>
+      _t('hierarchicalTagsShort', fallback: '使用 / 创建层级标签（如 #工作/项目A）');
   String get clickTagToView => _t('clickTagToView', fallback: '点击标签查看所有相关笔记');
-  
+
   // WebDAV设置页面
-  String get passwordAppSpecific => _t('passwordAppSpecific', fallback: '密码（应用专用密码）');
-  String get notLoginPassword => _t('notLoginPassword', fallback: '⚠️ 不是登录密码！需在服务商处生成');
-  String get clickHelpIcon => _t('clickHelpIcon', fallback: '💡 点击右上角 ? 查看如何获取');
-  
+  String get passwordAppSpecific =>
+      _t('passwordAppSpecific', fallback: '密码（应用专用密码）');
+  String get notLoginPassword =>
+      _t('notLoginPassword', fallback: '⚠️ 不是登录密码！需在服务商处生成');
+  String get clickHelpIcon =>
+      _t('clickHelpIcon', fallback: '💡 点击右上角 ? 查看如何获取');
+
   // 偏好设置页面
-  String get sidebarCustomization => _t('sidebarCustomization', fallback: '侧边栏');
-  String get adjustMenuDisplay => _t('adjustMenuDisplay', fallback: '调整菜单显示与排序');
-  
+  String get sidebarCustomization =>
+      _t('sidebarCustomization', fallback: '侧边栏');
+  String get adjustMenuDisplay =>
+      _t('adjustMenuDisplay', fallback: '调整菜单显示与排序');
+
   // 侧边栏自定义页面
   String get customizeSidebar => _t('customizeSidebar', fallback: '自定义侧边栏');
   String get headerComponents => _t('headerComponents', fallback: '头部组件');
   String get showProfileCenter => _t('showProfileCenter', fallback: '显示个人中心');
-  String get avatarUsernameLogin => _t('avatarUsernameLogin', fallback: '头像、用户名和登录按钮');
+  String get avatarUsernameLogin =>
+      _t('avatarUsernameLogin', fallback: '头像、用户名和登录按钮');
   String get showActivityLog => _t('showActivityLog', fallback: '显示活动记录');
-  String get showNoteCreationCalendar => _t('showNoteCreationCalendar', fallback: '展示笔记创建活动日历');
+  String get showNoteCreationCalendar =>
+      _t('showNoteCreationCalendar', fallback: '展示笔记创建活动日历');
   String get menuItems => _t('menuItems', fallback: '菜单项');
-  String get longPressDragToReorder => _t('longPressDragToReorder', fallback: '长按拖动可调整顺序');
-  String get confirmResetSidebar => _t('confirmResetSidebar', fallback: '确定要恢复侧边栏的默认设置吗？\n\n这将重置所有菜单项的显示状态和排序。');
+  String get longPressDragToReorder =>
+      _t('longPressDragToReorder', fallback: '长按拖动可调整顺序');
+  String get confirmResetSidebar => _t(
+        'confirmResetSidebar',
+        fallback: '确定要恢复侧边栏的默认设置吗？\n\n这将重置所有菜单项的显示状态和排序。',
+      );
   String get defaultHome => _t('defaultHome', fallback: '默认首页');
-  String get allNotesIsDefaultHome => _t('allNotesIsDefaultHome', fallback: '💡 "全部笔记"是默认首页，无法隐藏或移动');
-  String get restoreDefaultSettings => _t('restoreDefaultSettings', fallback: '恢复默认设置');
-  String get profileOrSettingsRequired => _t('profileOrSettingsRequired', fallback: '个人中心和设置至少保留一个');
-  String get defaultSettingsRestored => _t('defaultSettingsRestored', fallback: '已恢复默认设置');
-  String get sidebarConfigSaved => _t('sidebarConfigSaved', fallback: '侧边栏配置已保存');
+  String get allNotesIsDefaultHome =>
+      _t('allNotesIsDefaultHome', fallback: '💡 "全部笔记"是默认首页，无法隐藏或移动');
+  String get restoreDefaultSettings =>
+      _t('restoreDefaultSettings', fallback: '恢复默认设置');
+  String get profileOrSettingsRequired =>
+      _t('profileOrSettingsRequired', fallback: '个人中心和设置至少保留一个');
+  String get defaultSettingsRestored =>
+      _t('defaultSettingsRestored', fallback: '已恢复默认设置');
+  String get sidebarConfigSaved =>
+      _t('sidebarConfigSaved', fallback: '侧边栏配置已保存');
 
   // ===== 批注功能 =====
   String get annotations => locale.languageCode == 'zh' ? '批注' : 'Annotations';
-  String get viewAnnotations => locale.languageCode == 'zh' ? '查看批注' : 'View Annotations';
-  String get addAnnotation => locale.languageCode == 'zh' ? '添加批注' : 'Add Annotation';
-  String get editAnnotation => locale.languageCode == 'zh' ? '编辑批注' : 'Edit Annotation';
-  String get deleteAnnotation => locale.languageCode == 'zh' ? '删除批注' : 'Delete Annotation';
-  String get annotationType => locale.languageCode == 'zh' ? '批注类型' : 'Annotation Type';
-  String get annotationContent => locale.languageCode == 'zh' ? '批注内容' : 'Annotation Content';
-  String get annotationPlaceholder => locale.languageCode == 'zh' 
-      ? '在这里写下你的批注...' 
+  String get viewAnnotations =>
+      locale.languageCode == 'zh' ? '查看批注' : 'View Annotations';
+  String get addAnnotation =>
+      locale.languageCode == 'zh' ? '添加批注' : 'Add Annotation';
+  String get editAnnotation =>
+      locale.languageCode == 'zh' ? '编辑批注' : 'Edit Annotation';
+  String get deleteAnnotation =>
+      locale.languageCode == 'zh' ? '删除批注' : 'Delete Annotation';
+  String get annotationType =>
+      locale.languageCode == 'zh' ? '批注类型' : 'Annotation Type';
+  String get annotationContent =>
+      locale.languageCode == 'zh' ? '批注内容' : 'Annotation Content';
+  String get annotationPlaceholder => locale.languageCode == 'zh'
+      ? '在这里写下你的批注...'
       : 'Write your annotation here...';
-  String get annotationEditPlaceholder => locale.languageCode == 'zh' 
-      ? '修改批注内容...' 
-      : 'Edit annotation content...';
-  String get noAnnotations => locale.languageCode == 'zh' ? '还没有批注' : 'No annotations yet';
-  String get noAnnotationsHint => locale.languageCode == 'zh' 
-      ? '点击上方按钮添加批注，记录你的思考' 
+  String get annotationEditPlaceholder =>
+      locale.languageCode == 'zh' ? '修改批注内容...' : 'Edit annotation content...';
+  String get noAnnotations =>
+      locale.languageCode == 'zh' ? '还没有批注' : 'No annotations yet';
+  String get noAnnotationsHint => locale.languageCode == 'zh'
+      ? '点击上方按钮添加批注，记录你的思考'
       : 'Click the button above to add annotations';
-  String get annotationAdded => locale.languageCode == 'zh' ? '批注已添加' : 'Annotation added';
-  String get annotationUpdated => locale.languageCode == 'zh' ? '批注已更新' : 'Annotation updated';
-  String get annotationDeleted => locale.languageCode == 'zh' ? '批注已删除' : 'Annotation deleted';
-  String get confirmDeleteAnnotation => locale.languageCode == 'zh' 
-      ? '确定要删除这条批注吗？' 
+  String get annotationAdded =>
+      locale.languageCode == 'zh' ? '批注已添加' : 'Annotation added';
+  String get annotationUpdated =>
+      locale.languageCode == 'zh' ? '批注已更新' : 'Annotation updated';
+  String get annotationDeleted =>
+      locale.languageCode == 'zh' ? '批注已删除' : 'Annotation deleted';
+  String get confirmDeleteAnnotation => locale.languageCode == 'zh'
+      ? '确定要删除这条批注吗？'
       : 'Are you sure you want to delete this annotation?';
-  String get annotationCount => locale.languageCode == 'zh' ? '条批注' : 'annotations';
-  String get showResolved => locale.languageCode == 'zh' ? '显示已解决' : 'Show resolved';
-  String get markAsResolved => locale.languageCode == 'zh' ? '标记为已解决' : 'Mark as resolved';
+  String get annotationCount =>
+      locale.languageCode == 'zh' ? '条批注' : 'annotations';
+  String get showResolved =>
+      locale.languageCode == 'zh' ? '显示已解决' : 'Show resolved';
+  String get markAsResolved =>
+      locale.languageCode == 'zh' ? '标记为已解决' : 'Mark as resolved';
   String get resolved => locale.languageCode == 'zh' ? '已解决' : 'Resolved';
-  String get markedAsResolved => locale.languageCode == 'zh' ? '已标记为已解决' : 'Marked as resolved';
-  String get locatedToAnnotation => locale.languageCode == 'zh' ? '已定位到批注' : 'Located to annotation';
+  String get markedAsResolved =>
+      locale.languageCode == 'zh' ? '已标记为已解决' : 'Marked as resolved';
+  String get locatedToAnnotation =>
+      locale.languageCode == 'zh' ? '已定位到批注' : 'Located to annotation';
   String get replies => locale.languageCode == 'zh' ? '条回复' : 'replies';
   String get justNow => locale.languageCode == 'zh' ? '刚刚' : 'Just now';
-  String minutesAgo(int minutes) => locale.languageCode == 'zh' 
-      ? '$minutes 分钟前' 
-      : '$minutes minutes ago';
-  String hoursAgo(int hours) => locale.languageCode == 'zh' 
-      ? '$hours 小时前' 
-      : '$hours hours ago';
-  String daysAgo(int days) => locale.languageCode == 'zh' 
-      ? '$days 天前' 
-      : '$days days ago';
-  
+  String minutesAgo(int minutes) =>
+      locale.languageCode == 'zh' ? '$minutes 分钟前' : '$minutes minutes ago';
+  String hoursAgo(int hours) =>
+      locale.languageCode == 'zh' ? '$hours 小时前' : '$hours hours ago';
+  String daysAgo(int days) =>
+      locale.languageCode == 'zh' ? '$days 天前' : '$days days ago';
+
   // 批注类型
-  String get annotationTypeComment => locale.languageCode == 'zh' ? '评论' : 'Comment';
-  String get annotationTypeQuestion => locale.languageCode == 'zh' ? '问题' : 'Question';
+  String get annotationTypeComment =>
+      locale.languageCode == 'zh' ? '评论' : 'Comment';
+  String get annotationTypeQuestion =>
+      locale.languageCode == 'zh' ? '问题' : 'Question';
   String get annotationTypeIdea => locale.languageCode == 'zh' ? '想法' : 'Idea';
-  String get annotationTypeImportant => locale.languageCode == 'zh' ? '重要' : 'Important';
+  String get annotationTypeImportant =>
+      locale.languageCode == 'zh' ? '重要' : 'Important';
   String get annotationTypeTodo => locale.languageCode == 'zh' ? '待办' : 'To-do';
-  
+
   // 筛选
-  String get filterByType => locale.languageCode == 'zh' ? '按类型筛选' : 'Filter by type';
-  String get noAnnotationsOfType => locale.languageCode == 'zh' 
-      ? '没有此类型的批注' 
-      : 'No annotations of this type';
-  
+  String get filterByType =>
+      locale.languageCode == 'zh' ? '按类型筛选' : 'Filter by type';
+  String get noAnnotationsOfType =>
+      locale.languageCode == 'zh' ? '没有此类型的批注' : 'No annotations of this type';
+
   // AI设置 - 自定义提示词
-  String get customPrompts => locale.languageCode == 'zh' ? '自定义提示词' : 'Custom Prompts';
-  String get enableCustomPrompts => locale.languageCode == 'zh' ? '启用自定义提示词' : 'Enable Custom Prompts';
-  String get insightPrompt => locale.languageCode == 'zh' ? '洞察提示词' : 'Insight Prompt';
-  String get reviewPrompt => locale.languageCode == 'zh' ? '点评提示词' : 'Review Prompt';
-  String get continuationPrompt => locale.languageCode == 'zh' ? '续写提示词' : 'Continuation Prompt';
-  String get tagInsightPrompt => locale.languageCode == 'zh' ? '标签洞察提示词' : 'Tag Insight Prompt';
-  String get tagRecommendationPrompt => locale.languageCode == 'zh' ? '标签推荐提示词' : 'Tag Recommendation Prompt';
-  String get insightPromptHint => locale.languageCode == 'zh' 
-      ? '自定义AI洞察的提示词，留空使用默认提示词' 
+  String get customPrompts =>
+      locale.languageCode == 'zh' ? '自定义提示词' : 'Custom Prompts';
+  String get enableCustomPrompts =>
+      locale.languageCode == 'zh' ? '启用自定义提示词' : 'Enable Custom Prompts';
+  String get insightPrompt =>
+      locale.languageCode == 'zh' ? '洞察提示词' : 'Insight Prompt';
+  String get reviewPrompt =>
+      locale.languageCode == 'zh' ? '点评提示词' : 'Review Prompt';
+  String get continuationPrompt =>
+      locale.languageCode == 'zh' ? '续写提示词' : 'Continuation Prompt';
+  String get tagInsightPrompt =>
+      locale.languageCode == 'zh' ? '标签洞察提示词' : 'Tag Insight Prompt';
+  String get tagRecommendationPrompt =>
+      locale.languageCode == 'zh' ? '标签推荐提示词' : 'Tag Recommendation Prompt';
+  String get insightPromptHint => locale.languageCode == 'zh'
+      ? '自定义AI洞察的提示词，留空使用默认提示词'
       : 'Customize AI insight prompt, leave empty to use default';
-  String get reviewPromptHint => locale.languageCode == 'zh' 
-      ? '自定义AI点评的提示词，留空使用默认提示词' 
+  String get reviewPromptHint => locale.languageCode == 'zh'
+      ? '自定义AI点评的提示词，留空使用默认提示词'
       : 'Customize AI review prompt, leave empty to use default';
-  String get continuationPromptHint => locale.languageCode == 'zh' 
-      ? '自定义AI续写的提示词，留空使用默认提示词' 
+  String get continuationPromptHint => locale.languageCode == 'zh'
+      ? '自定义AI续写的提示词，留空使用默认提示词'
       : 'Customize AI continuation prompt, leave empty to use default';
-  String get tagInsightPromptHint => locale.languageCode == 'zh' 
-      ? '自定义标签洞察的提示词，留空使用默认提示词' 
+  String get tagInsightPromptHint => locale.languageCode == 'zh'
+      ? '自定义标签洞察的提示词，留空使用默认提示词'
       : 'Customize tag insight prompt, leave empty to use default';
-  String get tagRecommendationPromptHint => locale.languageCode == 'zh' 
-      ? '自定义标签推荐的提示词，留空使用默认提示词' 
+  String get tagRecommendationPromptHint => locale.languageCode == 'zh'
+      ? '自定义标签推荐的提示词，留空使用默认提示词'
       : 'Customize tag recommendation prompt, leave empty to use default';
-  
+
   // 引用关系侧边栏
-  String get referencesCount => locale.languageCode == 'zh' ? '个引用' : 'references';
-  String get referencedNotes => locale.languageCode == 'zh' ? '引用的笔记' : 'Referenced Notes';
-  String get referencedByNotes => locale.languageCode == 'zh' ? '被引用' : 'Referenced By';
+  String get referencesCount =>
+      locale.languageCode == 'zh' ? '个引用' : 'references';
+  String get referencedNotes =>
+      locale.languageCode == 'zh' ? '引用的笔记' : 'Referenced Notes';
+  String get referencedByNotes =>
+      locale.languageCode == 'zh' ? '被引用' : 'Referenced By';
   String get referenced => locale.languageCode == 'zh' ? '引用' : 'Referenced';
-  String get referencedBy => locale.languageCode == 'zh' ? '被引用' : 'Referenced By';
-  String get noReferencesYet => locale.languageCode == 'zh' ? '还没有引用关系' : 'No references yet';
-  String get noOutgoingReferences => locale.languageCode == 'zh' ? '没有引用其他笔记' : 'No outgoing references';
-  String get noIncomingReferences => locale.languageCode == 'zh' ? '没有被其他笔记引用' : 'No incoming references';
-  
+  String get referencedBy =>
+      locale.languageCode == 'zh' ? '被引用' : 'Referenced By';
+  String get noReferencesYet =>
+      locale.languageCode == 'zh' ? '还没有引用关系' : 'No references yet';
+  String get noOutgoingReferences =>
+      locale.languageCode == 'zh' ? '没有引用其他笔记' : 'No outgoing references';
+  String get noIncomingReferences =>
+      locale.languageCode == 'zh' ? '没有被其他笔记引用' : 'No incoming references';
+
   // Notion 同步
-  String get notionSync => locale.languageCode == 'zh' ? 'Notion 数据同步' : 'Notion Sync';
-  String get notionSyncDescription => locale.languageCode == 'zh' ? '与 Notion 工作区实时同步笔记数据，支持双向同步与自动同步功能' : 'Real-time sync with Notion workspace, supports bidirectional and auto-sync';
-  String get notionAccessTokenHint => locale.languageCode == 'zh' 
-      ? '输入 Notion Integration Token' 
+  String get notionSync =>
+      locale.languageCode == 'zh' ? 'Notion 数据同步' : 'Notion Sync';
+  String get notionSyncDescription => locale.languageCode == 'zh'
+      ? '与 Notion 工作区实时同步笔记数据，支持双向同步与自动同步功能'
+      : 'Real-time sync with Notion workspace, supports bidirectional and auto-sync';
+  String get notionAccessTokenHint => locale.languageCode == 'zh'
+      ? '输入 Notion Integration Token'
       : 'Enter Notion Integration Token';
-  String get notionTestConnection => locale.languageCode == 'zh' ? '测试' : 'Test';
-  String get notionSelectDatabase => locale.languageCode == 'zh' ? '选择数据库' : 'Select Database';
-  String get notionSelectDatabaseHint => locale.languageCode == 'zh' 
-      ? '选择一个 Notion 数据库' 
+  String get notionTestConnection =>
+      locale.languageCode == 'zh' ? '测试' : 'Test';
+  String get notionSelectDatabase =>
+      locale.languageCode == 'zh' ? '选择数据库' : 'Select Database';
+  String get notionSelectDatabaseHint => locale.languageCode == 'zh'
+      ? '选择一个 Notion 数据库'
       : 'Select a Notion database';
-  String get notionSyncDirection => locale.languageCode == 'zh' ? '同步方向' : 'Sync Direction';
-  String get notionSyncToNotion => locale.languageCode == 'zh' ? '仅同步到 Notion' : 'To Notion Only';
-  String get notionSyncToNotionDesc => locale.languageCode == 'zh' 
-      ? '本地笔记 → Notion' 
-      : 'Local → Notion';
-  String get notionSyncFromNotion => locale.languageCode == 'zh' ? '仅从 Notion 同步' : 'From Notion Only';
-  String get notionSyncFromNotionDesc => locale.languageCode == 'zh' 
-      ? 'Notion → 本地笔记' 
-      : 'Notion → Local';
-  String get notionSyncBoth => locale.languageCode == 'zh' ? '双向同步' : 'Bidirectional';
-  String get notionSyncBothDesc => locale.languageCode == 'zh' 
-      ? '本地笔记 ↔ Notion' 
-      : 'Local ↔ Notion';
-  String get notionAutoSync => locale.languageCode == 'zh' ? '自动同步' : 'Auto Sync';
-  String get notionAutoSyncDesc => locale.languageCode == 'zh' 
-      ? '笔记创建或编辑时自动同步至 Notion' 
+  String get notionSyncDirection =>
+      locale.languageCode == 'zh' ? '同步方向' : 'Sync Direction';
+  String get notionSyncToNotion =>
+      locale.languageCode == 'zh' ? '仅同步到 Notion' : 'To Notion Only';
+  String get notionSyncToNotionDesc =>
+      locale.languageCode == 'zh' ? '本地笔记 → Notion' : 'Local → Notion';
+  String get notionSyncFromNotion =>
+      locale.languageCode == 'zh' ? '仅从 Notion 同步' : 'From Notion Only';
+  String get notionSyncFromNotionDesc =>
+      locale.languageCode == 'zh' ? 'Notion → 本地笔记' : 'Notion → Local';
+  String get notionSyncBoth =>
+      locale.languageCode == 'zh' ? '双向同步' : 'Bidirectional';
+  String get notionSyncBothDesc =>
+      locale.languageCode == 'zh' ? '本地笔记 ↔ Notion' : 'Local ↔ Notion';
+  String get notionAutoSync =>
+      locale.languageCode == 'zh' ? '自动同步' : 'Auto Sync';
+  String get notionAutoSyncDesc => locale.languageCode == 'zh'
+      ? '笔记创建或编辑时自动同步至 Notion'
       : 'Auto sync when creating or modifying notes';
   String get notionSyncNow => locale.languageCode == 'zh' ? '立即同步' : 'Sync Now';
-  String get notionLastSync => locale.languageCode == 'zh' ? '最后同步' : 'Last Sync';
-  String get notionEnableSync => locale.languageCode == 'zh' ? '启用 Notion 同步' : 'Enable Notion Sync';
-  String get notionEnableSyncDesc => locale.languageCode == 'zh' 
-      ? '自动同步笔记到 Notion' 
+  String get notionLastSync =>
+      locale.languageCode == 'zh' ? '最后同步' : 'Last Sync';
+  String get notionEnableSync =>
+      locale.languageCode == 'zh' ? '启用 Notion 同步' : 'Enable Notion Sync';
+  String get notionEnableSyncDesc => locale.languageCode == 'zh'
+      ? '自动同步笔记到 Notion'
       : 'Auto sync notes to Notion';
-  String get notionConnectionSuccess => locale.languageCode == 'zh' ? '✅ 连接成功！' : '✅ Connection successful!';
-  String get notionConnectionFailed => locale.languageCode == 'zh' 
-      ? '❌ 连接失败，请检查令牌是否正确' 
+  String get notionConnectionSuccess =>
+      locale.languageCode == 'zh' ? '✅ 连接成功！' : '✅ Connection successful!';
+  String get notionConnectionFailed => locale.languageCode == 'zh'
+      ? '❌ 连接失败，请检查令牌是否正确'
       : '❌ Connection failed, please check your token';
-  String get notionSyncFailed => locale.languageCode == 'zh' ? '同步失败' : 'Sync failed';
-  String get notionHowToGetToken => locale.languageCode == 'zh' 
-      ? '如何获取 Notion 访问令牌？' 
+  String get notionSyncFailed =>
+      locale.languageCode == 'zh' ? '同步失败' : 'Sync failed';
+  String get notionHowToGetToken => locale.languageCode == 'zh'
+      ? '如何获取 Notion 访问令牌？'
       : 'How to get Notion access token?';
   String get notionTokenInstructions => locale.languageCode == 'zh'
       ? '1. 访问 https://www.notion.so/my-integrations\n'
-        '2. 点击"New integration"创建集成\n'
-        '3. 复制"Internal Integration Token"\n'
-        '4. 在 Notion 中分享数据库给该集成'
+          '2. 点击"New integration"创建集成\n'
+          '3. 复制"Internal Integration Token"\n'
+          '4. 在 Notion 中分享数据库给该集成'
       : '1. Visit https://www.notion.so/my-integrations\n'
-        '2. Click "New integration" to create integration\n'
-        '3. Copy "Internal Integration Token"\n'
-        '4. Share database with the integration in Notion';
-  
+          '2. Click "New integration" to create integration\n'
+          '3. Copy "Internal Integration Token"\n'
+          '4. Share database with the integration in Notion';
+
   // Notion 属性映射
-  String get notionFieldMapping => locale.languageCode == 'zh' ? '字段映射' : 'Field Mapping';
-  String get notionFieldMappingDescription => locale.languageCode == 'zh' 
-      ? '配置笔记字段如何映射到 Notion 属性' 
+  String get notionFieldMapping =>
+      locale.languageCode == 'zh' ? '字段映射' : 'Field Mapping';
+  String get notionFieldMappingDescription => locale.languageCode == 'zh'
+      ? '配置笔记字段如何映射到 Notion 属性'
       : 'Configure how note fields map to Notion properties';
-  String get notionNoteTitle => locale.languageCode == 'zh' ? '笔记标题' : 'Note Title';
-  String get notionNoteTags => locale.languageCode == 'zh' ? '笔记标签' : 'Note Tags';
-  String get notionNoteCreated => locale.languageCode == 'zh' ? '创建时间' : 'Created Time';
-  String get notionNoteUpdated => locale.languageCode == 'zh' ? '更新时间' : 'Updated Time';
-  String get notionNoteContent => locale.languageCode == 'zh' ? '笔记内容' : 'Note Content';
+  String get notionNoteTitle =>
+      locale.languageCode == 'zh' ? '笔记标题' : 'Note Title';
+  String get notionNoteTags =>
+      locale.languageCode == 'zh' ? '笔记标签' : 'Note Tags';
+  String get notionNoteCreated =>
+      locale.languageCode == 'zh' ? '创建时间' : 'Created Time';
+  String get notionNoteUpdated =>
+      locale.languageCode == 'zh' ? '更新时间' : 'Updated Time';
+  String get notionNoteContent =>
+      locale.languageCode == 'zh' ? '笔记内容' : 'Note Content';
   String get notionMapsTo => locale.languageCode == 'zh' ? '映射到' : 'Maps to';
-  String get notionPropertyType => locale.languageCode == 'zh' ? '属性类型' : 'Property Type';
-  String get notionNoProperty => locale.languageCode == 'zh' ? '不映射' : 'No Mapping';
-  String get notionAutoDetected => locale.languageCode == 'zh' ? '自动检测' : 'Auto Detected';
-  String get notionConfigureMapping => locale.languageCode == 'zh' ? '配置映射' : 'Configure Mapping';
-  String get notionUseDefaultMapping => locale.languageCode == 'zh' ? '使用默认映射' : 'Use Default Mapping';
-  String get notionMappingRequired => locale.languageCode == 'zh' ? '必需' : 'Required';
-  String get notionMappingOptional => locale.languageCode == 'zh' ? '可选' : 'Optional';
-  String get notionDatabaseProperties => locale.languageCode == 'zh' ? '数据库属性' : 'Database Properties';
-  String get notionPropertyName => locale.languageCode == 'zh' ? '属性名称' : 'Property Name';
-  String get notionContentMappingHint => locale.languageCode == 'zh' ? '不映射则写入页面正文' : 'If not mapped, write to page body';
-  
+  String get notionPropertyType =>
+      locale.languageCode == 'zh' ? '属性类型' : 'Property Type';
+  String get notionNoProperty =>
+      locale.languageCode == 'zh' ? '不映射' : 'No Mapping';
+  String get notionAutoDetected =>
+      locale.languageCode == 'zh' ? '自动检测' : 'Auto Detected';
+  String get notionConfigureMapping =>
+      locale.languageCode == 'zh' ? '配置映射' : 'Configure Mapping';
+  String get notionUseDefaultMapping =>
+      locale.languageCode == 'zh' ? '使用默认映射' : 'Use Default Mapping';
+  String get notionMappingRequired =>
+      locale.languageCode == 'zh' ? '必需' : 'Required';
+  String get notionMappingOptional =>
+      locale.languageCode == 'zh' ? '可选' : 'Optional';
+  String get notionDatabaseProperties =>
+      locale.languageCode == 'zh' ? '数据库属性' : 'Database Properties';
+  String get notionPropertyName =>
+      locale.languageCode == 'zh' ? '属性名称' : 'Property Name';
+  String get notionContentMappingHint => locale.languageCode == 'zh'
+      ? '不映射则写入页面正文'
+      : 'If not mapped, write to page body';
+
   // 帮助对话框
   String get notionHelpTitle => locale.languageCode == 'zh' ? '常见问题' : 'FAQ';
   String get notionHelpKnowIt => locale.languageCode == 'zh' ? '知道了' : 'Got it';
-  
-  String get notionFaqSyncFailTitle => locale.languageCode == 'zh' ? '❓ 同步失败怎么办？' : '❓ What if sync fails?';
-  String get notionFaqSyncFailContent => locale.languageCode == 'zh' 
+
+  String get notionFaqSyncFailTitle =>
+      locale.languageCode == 'zh' ? '❓ 同步失败怎么办？' : '❓ What if sync fails?';
+  String get notionFaqSyncFailContent => locale.languageCode == 'zh'
       ? '1. 检查字段映射是否完整（标题必须映射）\n2. 确认已在 Notion 中分享数据库给集成\n3. 查看控制台日志了解具体错误\n4. 尝试完全重启应用'
       : '1. Check if field mapping is complete (title is required)\n2. Confirm database is shared with integration in Notion\n3. Check console logs for specific errors\n4. Try completely restarting the app';
-  
-  String get notionFaqSelectTagTitle => locale.languageCode == 'zh' ? '❓ 标签属性是单选怎么办？' : '❓ What if tag property is single-select?';
+
+  String get notionFaqSelectTagTitle => locale.languageCode == 'zh'
+      ? '❓ 标签属性是单选怎么办？'
+      : '❓ What if tag property is single-select?';
   String get notionFaqSelectTagContent => locale.languageCode == 'zh'
       ? '如果你的 Notion 数据库中标签属性是"单选"类型：\n• 只会同步第一个标签\n• 建议在 Notion 中改为"多选"类型'
       : 'If your Notion database tag property is "single-select":\n• Only the first tag will be synced\n• Recommend changing to "multi-select" in Notion';
-  
-  String get notionFaqSystemTimeTitle => locale.languageCode == 'zh' ? '❓ 创建时间/更新时间无法写入？' : '❓ Cannot write created/updated time?';
+
+  String get notionFaqSystemTimeTitle => locale.languageCode == 'zh'
+      ? '❓ 创建时间/更新时间无法写入？'
+      : '❓ Cannot write created/updated time?';
   String get notionFaqSystemTimeContent => locale.languageCode == 'zh'
       ? '如果映射到系统属性（created_time、last_edited_time）：\n• 这些是只读属性，由 Notion 自动管理\n• 建议映射到普通的"日期"类型属性'
       : 'If mapped to system properties (created_time, last_edited_time):\n• These are read-only, managed by Notion\n• Recommend mapping to regular "date" type properties';
-  
-  String get notionFaqGlobalKeyTitle => locale.languageCode == 'zh' ? '❓ GlobalKey 错误怎么办？' : '❓ What about GlobalKey error?';
+
+  String get notionFaqGlobalKeyTitle => locale.languageCode == 'zh'
+      ? '❓ GlobalKey 错误怎么办？'
+      : '❓ What about GlobalKey error?';
   String get notionFaqGlobalKeyContent => locale.languageCode == 'zh'
       ? '这是 Flutter 热重载的已知问题：\n• 完全停止应用（按 q）\n• 重新运行 flutter run -d macos'
       : 'This is a known Flutter hot reload issue:\n• Stop the app completely (press q)\n• Re-run flutter run -d macos';
-  
-  String get notionFaqViewLogsTitle => locale.languageCode == 'zh' ? '❓ 如何查看详细日志？' : '❓ How to view detailed logs?';
+
+  String get notionFaqViewLogsTitle => locale.languageCode == 'zh'
+      ? '❓ 如何查看详细日志？'
+      : '❓ How to view detailed logs?';
   String get notionFaqViewLogsContent => locale.languageCode == 'zh'
       ? '在终端中查看以下标记的日志：\n• 📊 数据库信息\n• 🔍 字段映射\n• 📤 同步过程\n• ✅/❌ 成功/失败'
       : 'Check terminal for logs with these markers:\n• 📊 Database info\n• 🔍 Field mapping\n• 📤 Sync process\n• ✅/❌ Success/Failure';
-  
+
   // 新增的国际化字符串
   String get notionSave => locale.languageCode == 'zh' ? '保存' : 'Save';
   String get notionTest => locale.languageCode == 'zh' ? '测试' : 'Test';
-  String get notionAccessToken => locale.languageCode == 'zh' ? '访问令牌' : 'Access Token';
-  String get notionAutoSyncWhen => locale.languageCode == 'zh' ? '笔记创建或编辑时自动同步至 Notion' : 'Auto sync when creating or modifying notes';
-  String get notionSyncNowButton => locale.languageCode == 'zh' ? '立即同步' : 'Sync Now';
-  String notionLastSyncTime(String time) => locale.languageCode == 'zh' ? '最后同步于: $time' : 'Last synced: $time';
-  String get notionSyncingToNotion => locale.languageCode == 'zh' ? '同步到 Notion' : 'Syncing to Notion';
-  String get notionSyncingFromNotion => locale.languageCode == 'zh' ? '从 Notion 同步' : 'Syncing from Notion';
-  String get notionSyncingProgress => locale.languageCode == 'zh' ? '正在同步' : 'Syncing';
-  String get notionPleaseEnableSync => locale.languageCode == 'zh' ? '请先启用 Notion 同步' : 'Please enable Notion sync first';
-  String get notionPleaseSelectDatabase => locale.languageCode == 'zh' ? '请选择数据库' : 'Please select a database';
-  String get notionPleaseEnterToken => locale.languageCode == 'zh' ? '请输入访问令牌' : 'Please enter access token';
-  String get notionSettingsSaved => locale.languageCode == 'zh' ? '✅ 设置已保存' : '✅ Settings saved';
-  String get notionSaveSettingsFailed => locale.languageCode == 'zh' ? '保存设置失败' : 'Failed to save settings';
-  String notionSyncComplete(int success, int failed) => locale.languageCode == 'zh' 
-      ? '同步完成: 成功 $success 条，失败 $failed 条' 
-      : 'Sync complete: $success succeeded, $failed failed';
-  String notionSyncSuccess(int count) => locale.languageCode == 'zh' 
-      ? '同步成功！已同步 $count 条笔记' 
+  String get notionAccessToken =>
+      locale.languageCode == 'zh' ? '访问令牌' : 'Access Token';
+  String get notionAutoSyncWhen => locale.languageCode == 'zh'
+      ? '笔记创建或编辑时自动同步至 Notion'
+      : 'Auto sync when creating or modifying notes';
+  String get notionSyncNowButton =>
+      locale.languageCode == 'zh' ? '立即同步' : 'Sync Now';
+  String notionLastSyncTime(String time) =>
+      locale.languageCode == 'zh' ? '最后同步于: $time' : 'Last synced: $time';
+  String get notionSyncingToNotion =>
+      locale.languageCode == 'zh' ? '同步到 Notion' : 'Syncing to Notion';
+  String get notionSyncingFromNotion =>
+      locale.languageCode == 'zh' ? '从 Notion 同步' : 'Syncing from Notion';
+  String get notionSyncingProgress =>
+      locale.languageCode == 'zh' ? '正在同步' : 'Syncing';
+  String get notionPleaseEnableSync => locale.languageCode == 'zh'
+      ? '请先启用 Notion 同步'
+      : 'Please enable Notion sync first';
+  String get notionPleaseSelectDatabase =>
+      locale.languageCode == 'zh' ? '请选择数据库' : 'Please select a database';
+  String get notionPleaseEnterToken =>
+      locale.languageCode == 'zh' ? '请输入访问令牌' : 'Please enter access token';
+  String get notionSettingsSaved =>
+      locale.languageCode == 'zh' ? '✅ 设置已保存' : '✅ Settings saved';
+  String get notionSaveSettingsFailed =>
+      locale.languageCode == 'zh' ? '保存设置失败' : 'Failed to save settings';
+  String notionSyncComplete(int success, int failed) =>
+      locale.languageCode == 'zh'
+          ? '同步完成: 成功 $success 条，失败 $failed 条'
+          : 'Sync complete: $success succeeded, $failed failed';
+  String notionSyncSuccess(int count) => locale.languageCode == 'zh'
+      ? '同步成功！已同步 $count 条笔记'
       : 'Sync successful! $count notes synced';
-  String get notionTestConnectionFailed => locale.languageCode == 'zh' ? '连接测试失败' : 'Connection test failed';
-  String get notionNoDatabaseFound => locale.languageCode == 'zh' ? '未找到任何数据库，请确保已在 Notion 中分享数据库给集成' : 'No databases found. Please share a database with the integration in Notion';
-  String get notionLoadDatabasesFailed => locale.languageCode == 'zh' ? '加载数据库列表失败' : 'Failed to load databases';
-  
+  String get notionTestConnectionFailed =>
+      locale.languageCode == 'zh' ? '连接测试失败' : 'Connection test failed';
+  String get notionNoDatabaseFound => locale.languageCode == 'zh'
+      ? '未找到任何数据库，请确保已在 Notion 中分享数据库给集成'
+      : 'No databases found. Please share a database with the integration in Notion';
+  String get notionLoadDatabasesFailed =>
+      locale.languageCode == 'zh' ? '加载数据库列表失败' : 'Failed to load databases';
+
   // 微信读书笔记导入
-  String get wereadImportTitle => locale.languageCode == 'zh' ? '微信读书笔记导入' : 'WeRead Notes Import';
-  String get wereadImportDescription => locale.languageCode == 'zh' ? '支持从微信读书导出的笔记文本批量导入，自动识别书籍信息和标注内容' : 'Import notes from WeRead with automatic book info and highlight recognition';
-  
+  String get wereadImportTitle =>
+      locale.languageCode == 'zh' ? '微信读书笔记导入' : 'WeRead Notes Import';
+  String get wereadImportDescription => locale.languageCode == 'zh'
+      ? '支持从微信读书导出的笔记文本批量导入，自动识别书籍信息和标注内容'
+      : 'Import notes from WeRead with automatic book info and highlight recognition';
+
   // Obsidian 同步
-  String get obsidianSync => locale.languageCode == 'zh' ? 'Obsidian 数据同步' : 'Obsidian Sync';
-  String get obsidianSyncDescription => locale.languageCode == 'zh' ? '通过第三方插件实现与 Obsidian 笔记应用的双向同步，支持每日笔记自动集成' : 'Bidirectional sync with Obsidian via third-party plugin, supports daily notes integration';
-  String get wereadUsageInstructions => locale.languageCode == 'zh' ? '使用说明' : 'Usage Instructions';
+  String get obsidianSync =>
+      locale.languageCode == 'zh' ? 'Obsidian 数据同步' : 'Obsidian Sync';
+  String get obsidianSyncDescription => locale.languageCode == 'zh'
+      ? '通过第三方插件连接 Obsidian，具体同步方向、冲突处理和每日笔记能力以插件配置为准'
+      : 'Connect Obsidian via a third-party plugin. Sync direction, conflict handling, and daily-note support depend on the plugin settings.';
+  String get wereadUsageInstructions =>
+      locale.languageCode == 'zh' ? '使用说明' : 'Usage Instructions';
   String get wereadInstructions => locale.languageCode == 'zh'
       ? '1. 在微信读书 App 中打开一本书\n2. 点击右上角"..."→"笔记"\n3. 点击"分享"→"复制为文本"\n4. 粘贴到下方输入框\n5. 点击"检查"验证格式\n6. 可选：展开"高级选项"自定义设置\n7. 点击右上角"导入"完成导入'
       : '1. Open a book in WeRead App\n2. Tap "..." → "Notes" in top right\n3. Tap "Share" → "Copy as Text"\n4. Paste into the input box below\n5. Tap "Check" to verify format\n6. Optional: Expand "Advanced Options" to customize\n7. Tap "Import" in top right to complete';
   String get wereadPasteHint => locale.languageCode == 'zh'
       ? '粘贴微信读书笔记...\n\n例如：\n《书名》\n\n35个笔记\n点评\n\n第一章 标题\n\n笔记内容...'
       : 'Paste WeRead notes here...\n\nExample:\n《Book Title》\n\n35 notes\nReview\n\nChapter 1 Title\n\nNote content...';
-  String get wereadCheckResult => locale.languageCode == 'zh' ? '检查结果' : 'Check Result';
-  String wereadBookInfo(String title, int noteCount, int chapterCount) => locale.languageCode == 'zh'
-      ? '书名: $title\n笔记数: $noteCount 条\n章节数: $chapterCount 个'
-      : 'Book: $title\nNotes: $noteCount\nChapters: $chapterCount';
-  String get wereadAdvancedOptions => locale.languageCode == 'zh' ? '高级选项' : 'Advanced Options';
-  String get wereadShowBookTitle => locale.languageCode == 'zh' ? '显示书名来源' : 'Show Book Source';
-  String get wereadShowBookTitleDesc => locale.languageCode == 'zh' ? '在笔记末尾显示"来自《书名》"' : 'Show "From 《Book》" at note end';
-  String get wereadShowChapter => locale.languageCode == 'zh' ? '显示章节信息' : 'Show Chapter Info';
-  String get wereadShowChapterDesc => locale.languageCode == 'zh' ? '显示笔记所在章节' : 'Show note chapter';
-  String get wereadShowReview => locale.languageCode == 'zh' ? '显示点评内容' : 'Show Review';
-  String get wereadShowReviewDesc => locale.languageCode == 'zh' ? '显示笔记的点评部分' : 'Show note review section';
-  String get wereadCustomTags => locale.languageCode == 'zh' ? '自定义标签' : 'Custom Tags';
-  String get wereadCustomTagsDesc => locale.languageCode == 'zh' ? '点击上方添加按钮添加标签，默认使用"微信读书"和书名作为标签' : 'Tap add button above to add tags. Default: "WeRead" and book title';
+  String get wereadCheckResult =>
+      locale.languageCode == 'zh' ? '检查结果' : 'Check Result';
+  String wereadBookInfo(String title, int noteCount, int chapterCount) =>
+      locale.languageCode == 'zh'
+          ? '书名: $title\n笔记数: $noteCount 条\n章节数: $chapterCount 个'
+          : 'Book: $title\nNotes: $noteCount\nChapters: $chapterCount';
+  String get wereadAdvancedOptions =>
+      locale.languageCode == 'zh' ? '高级选项' : 'Advanced Options';
+  String get wereadShowBookTitle =>
+      locale.languageCode == 'zh' ? '显示书名来源' : 'Show Book Source';
+  String get wereadShowBookTitleDesc => locale.languageCode == 'zh'
+      ? '在笔记末尾显示"来自《书名》"'
+      : 'Show "From 《Book》" at note end';
+  String get wereadShowChapter =>
+      locale.languageCode == 'zh' ? '显示章节信息' : 'Show Chapter Info';
+  String get wereadShowChapterDesc =>
+      locale.languageCode == 'zh' ? '显示笔记所在章节' : 'Show note chapter';
+  String get wereadShowReview =>
+      locale.languageCode == 'zh' ? '显示点评内容' : 'Show Review';
+  String get wereadShowReviewDesc =>
+      locale.languageCode == 'zh' ? '显示笔记的点评部分' : 'Show note review section';
+  String get wereadCustomTags =>
+      locale.languageCode == 'zh' ? '自定义标签' : 'Custom Tags';
+  String get wereadCustomTagsDesc => locale.languageCode == 'zh'
+      ? '点击上方添加按钮添加标签，默认使用"微信读书"和书名作为标签'
+      : 'Tap add button above to add tags. Default: "WeRead" and book title';
   String get wereadClear => locale.languageCode == 'zh' ? '清空' : 'Clear';
   String get wereadCheck => locale.languageCode == 'zh' ? '检查' : 'Check';
   String get wereadImport => locale.languageCode == 'zh' ? '导入' : 'Import';
-  String get wereadPleasePasteContent => locale.languageCode == 'zh' ? '请粘贴微信读书笔记内容' : 'Please paste WeRead notes content';
-  String wereadCheckSuccess(int count) => locale.languageCode == 'zh' ? '✅ 检查通过！共 $count 条笔记' : '✅ Check passed! $count notes found';
-  String get wereadParseFailed => locale.languageCode == 'zh' ? '解析失败' : 'Parse failed';
-  String get wereadPleaseCheckFirst => locale.languageCode == 'zh' ? '请先预览笔记' : 'Please check notes first';
-  String wereadImportSuccess(int count) => locale.languageCode == 'zh' ? '成功导入 $count 条笔记！' : 'Successfully imported $count notes!';
-  String get wereadImportFailed => locale.languageCode == 'zh' ? '导入失败' : 'Import failed';
+  String get wereadPleasePasteContent => locale.languageCode == 'zh'
+      ? '请粘贴微信读书笔记内容'
+      : 'Please paste WeRead notes content';
+  String wereadCheckSuccess(int count) => locale.languageCode == 'zh'
+      ? '✅ 检查通过！共 $count 条笔记'
+      : '✅ Check passed! $count notes found';
+  String get wereadParseFailed =>
+      locale.languageCode == 'zh' ? '解析失败' : 'Parse failed';
+  String get wereadPleaseCheckFirst =>
+      locale.languageCode == 'zh' ? '请先预览笔记' : 'Please check notes first';
+  String wereadImportSuccess(int count) => locale.languageCode == 'zh'
+      ? '成功导入 $count 条笔记！'
+      : 'Successfully imported $count notes!';
+  String get wereadImportFailed =>
+      locale.languageCode == 'zh' ? '导入失败' : 'Import failed';
+
+  // ===== 通用弹窗与操作 =====
+  String get reset => _t('reset', fallback: '重置');
+  String get allow => _t('allow', fallback: '允许');
+  String get denyPermission => _t('denyPermission', fallback: '暂不授权');
+  String get authorizeNow => _t('authorizeNow', fallback: '立即授权');
+  String get permissionTip =>
+      _t('permissionTip', fallback: '💡 提示：授权后可以正常使用相关功能');
+  String get permissionStepTitle =>
+      _t('permissionStepTitle', fallback: '操作步骤：');
+  String get permissionStepGeneral => _t(
+        'permissionStepGeneral',
+        fallback: '1. 点击"去设置"按钮\n2. 找到相应权限开关\n3. 开启权限后返回应用\n4. 重新尝试使用功能',
+      );
+  String get permissionStepShort => _t(
+        'permissionStepShort',
+        fallback: '请按以下步骤操作：\n1. 点击"去设置"\n2. 找到相应权限开关\n3. 开启权限后返回应用',
+      );
+  String get permissionStepSpeech => _t(
+        'permissionStepSpeech',
+        fallback: '1. 点击"去设置"按钮\n2. 找到"麦克风"和"语音识别"\n3. 开启权限开关\n4. 返回应用重试',
+      );
+  String get permissionStepNotification => _t(
+        'permissionStepNotification',
+        fallback: '1. 点击"去设置"按钮\n2. 找到"通知"权限\n3. 开启权限开关\n4. 返回应用重试',
+      );
+
+  // ===== 图片操作 =====
+  String get imageActionsTitle => _t('imageActionsTitle', fallback: '图片操作');
+  String get saveToGallery => _t('saveToGallery', fallback: '保存到相册');
+  String get saveAction => _t('saveAction', fallback: '保存');
+  String get preparingShareImage =>
+      _t('preparingShareImage', fallback: '准备分享图片...');
+  String get imageShareText =>
+      _t('imageShareText', fallback: '来自 InkRoot 的图片分享');
+  String get cannotGetImageFile =>
+      _t('cannotGetImageFile', fallback: '无法获取图片文件');
+  String get shareImageFailed => _t('shareImageFailed', fallback: '分享图片失败');
+  String get savingFailed => _t('savingFailed', fallback: '保存失败');
+
+  // ===== 标签配色 =====
+  String get tagColorTitle => _t('tagColorTitle', fallback: '标签配色');
+  String get previewEffect => _t('previewEffect', fallback: '预览效果');
+  String get presetColors => _t('presetColors', fallback: '预设配色');
+  String get selectPreset => _t('selectPreset', fallback: '选择预设');
+  String get customColor => _t('customColor', fallback: '自定义');
+  String get backgroundColor => _t('backgroundColor', fallback: '背景色');
+  String get textColor => _t('textColor', fallback: '文字色');
+
+  // ===== 个性化页面 =====
+  String get personalization => _t('personalization', fallback: '个性化');
+  String get clearDataTooltip => _t('clearDataTooltip', fallback: '清除数据');
+  String get clearAllDataTitle => _t('clearAllDataTitle', fallback: '清除所有数据');
+  String get clearLearningPreferencesMessage => _t(
+        'clearLearningPreferencesMessage',
+        fallback: '确定要清除所有学习偏好数据吗？这将重置个性化推荐。',
+      );
+  String get allDataCleared => _t('allDataCleared', fallback: '已清除所有数据');
+  String get noDataYet => _t('noDataYet', fallback: '暂无数据');
+  String get personalizationEmptyHint => _t(
+        'personalizationEmptyHint',
+        fallback: '开始使用 AI 相关笔记后，这里会生成你的个性化画像',
+      );
+  String get usageStats => _t('usageStats', fallback: '使用统计');
+  String get totalClicks => _t('totalClicks', fallback: '总点击');
+  String get averageDuration => _t('averageDuration', fallback: '平均时长');
+  String get topTags => _t('topTags', fallback: '高频标签');
+  String get relationTypes => _t('relationTypes', fallback: '关系类型');
+  String get recentActivity => _t('recentActivity', fallback: '最近活动');
+  String get relationContinue => _t('relationContinue', fallback: '📚 延续学习');
+  String get relationComplement =>
+      _t('relationComplement', fallback: '🧩 补充知识');
+  String get relationCompare => _t('relationCompare', fallback: '🔄 对比分析');
+  String get relationQa => _t('relationQa', fallback: '❓ 问答');
+  String get relationPractice => _t('relationPractice', fallback: '🎯 实践');
+
+  // ===== 性能看板 =====
+  String get performanceMonitoring =>
+      _t('performanceMonitoring', fallback: '性能监控');
+  String get performanceMetrics => _t('performanceMetrics', fallback: '性能指标');
+  String get currentFps => _t('currentFps', fallback: '当前FPS');
+  String get logStats => _t('logStats', fallback: '日志统计');
+  String get errorCount => _t('errorCount', fallback: '错误');
+  String get warningCount => _t('warningCount', fallback: '警告');
+  String get totalCount => _t('totalCount', fallback: '总计');
+  String get recentErrors => _t('recentErrors', fallback: '最近错误:');
+  String get tracing => _t('tracing', fallback: '链路追踪');
+  String recentOperationCount(int count) =>
+      _t('recentOperationCount', fallback: '最近操作: {count}个')
+          .replaceAll('{count}', count.toString());
+  String get metricAppLaunch => _t('metricAppLaunch', fallback: '应用启动');
+  String get metricPageLoad => _t('metricPageLoad', fallback: '页面加载');
+  String get metricNetworkRequest =>
+      _t('metricNetworkRequest', fallback: '网络请求');
+  String get metricDatabaseQuery =>
+      _t('metricDatabaseQuery', fallback: '数据库查询');
+  String get metricImageLoad => _t('metricImageLoad', fallback: '图片加载');
+
+  // ===== 语音识别 =====
+  String get speechPermissionTitle =>
+      _t('speechPermissionTitle', fallback: '语音识别权限');
+  String get speechPermissionMessage => _t(
+        'speechPermissionMessage',
+        fallback: '语音识别功能需要访问您的麦克风来录制语音并转换为文字。\n\n这将帮助您快速输入笔记内容。',
+      );
+  String get microphonePermissionTitle =>
+      _t('microphonePermissionTitle', fallback: '麦克风权限');
+  String get microphonePermissionDenied =>
+      _t('microphonePermissionDenied', fallback: '麦克风权限被拒绝');
+  String get microphonePermissionMessage => _t(
+        'microphonePermissionMessage',
+        fallback: '语音识别功能需要访问麦克风来录制您的语音并转换为文字。',
+      );
+  String get microphoneSettingsMessage => _t(
+        'microphoneSettingsMessage',
+        fallback: '请在设置中手动开启麦克风权限以使用语音识别功能。',
+      );
+  String get speechPermissionDenied =>
+      _t('speechPermissionDenied', fallback: '语音识别权限被拒绝');
+  String get speechSettingsMessage =>
+      _t('speechSettingsMessage', fallback: '请在设置中手动开启语音识别权限。');
+  String get speechPermissionRequiredTitle =>
+      _t('speechPermissionRequiredTitle', fallback: '需要麦克风权限');
+  String get speechPermissionRequiredMessage =>
+      _t('speechPermissionRequiredMessage', fallback: '语音识别功能需要麦克风和语音识别权限。');
+  String get speechRecognitionUnavailable =>
+      _t('speechRecognitionUnavailable', fallback: '语音识别不可用');
+  String get localSpeechUnavailable =>
+      _t('localSpeechUnavailable', fallback: '本地语音识别功能暂时不可用。');
+  String get speechUnavailableReasons => _t(
+        'speechUnavailableReasons',
+        fallback: '• Android: 缺少 Google 服务\n• iOS: 系统版本过低\n• 网络连接问题',
+      );
+  String get suggestion => _t('suggestion', fallback: '💡 建议');
+  String get cloudSpeechSuggestion =>
+      _t('cloudSpeechSuggestion', fallback: '您可以使用云端语音识别功能（百度语音），识别准确率更高。');
+  String get useCloudRecognition =>
+      _t('useCloudRecognition', fallback: '使用云端识别');
+  String get cloudRecognitionNotConfigured =>
+      _t('cloudRecognitionNotConfigured', fallback: '云端识别未配置');
+  String get baiduSpeechNotConfigured =>
+      _t('baiduSpeechNotConfigured', fallback: '百度语音识别 API 尚未配置。');
+
+  // ===== Flomo 导入 =====
+  String get htmlFileNotFoundTitle =>
+      _t('htmlFileNotFoundTitle', fallback: '未找到HTML文件');
+  String get htmlFileNotFoundMessage => _t(
+        'htmlFileNotFoundMessage',
+        fallback:
+            '在选择的文件夹中未找到HTML文件。\n\n这可能是Android文件访问权限问题。\n\n建议：请直接选择HTML文件而不是文件夹。',
+      );
+  String get selectHtmlFile => _t('selectHtmlFile', fallback: '选择HTML文件');
+
+  // ===== 本地备份保存 =====
+  String get errorTitle => _t('errorTitle', fallback: '错误');
+  String get chooseSaveLocation => _t('chooseSaveLocation', fallback: '选择保存位置');
+  String get userCancelledSave => _t('userCancelledSave', fallback: '用户取消保存');
+  String get fileSaveFailed => _t('fileSaveFailed', fallback: '文件保存失败');
+  String get saveToAppDirectoryFailed =>
+      _t('saveToAppDirectoryFailed', fallback: '保存到应用目录失败');
+  String get backupShareSubject =>
+      _t('backupShareSubject', fallback: 'InkRoot-墨鸣笔记备份');
+  String backupShareText(String fileName) =>
+      _t('backupShareText', fallback: '墨鸣笔记导出备份：{fileName}')
+          .replaceAll('{fileName}', fileName);
+  String get fileSharedToSave =>
+      _t('fileSharedToSave', fallback: '文件已通过分享发送，您可以选择保存到文件管理器');
+  String get localSaveSuccessTitle =>
+      _t('localSaveSuccessTitle', fallback: '保存成功');
+  String get fileSavedTo => _t('fileSavedTo', fallback: '文件已成功保存到：');
+  String get findFileInManager =>
+      _t('findFileInManager', fallback: '您可以在文件管理器中找到该文件。');
+  String get fileSavedTitle => _t('fileSavedTitle', fallback: '文件已保存');
+  String fileSavedToPrivateDirectory(String fileName) =>
+      _t('fileSavedToPrivateDirectory', fallback: '文件已保存到应用私有目录：{fileName}')
+          .replaceAll('{fileName}', fileName);
+  String get androidSaveLimitHint => _t(
+        'androidSaveLimitHint',
+        fallback: '由于Android系统限制，建议您通过分享将文件保存到可访问的位置。',
+      );
+  String get shareNow => _t('shareNow', fallback: '立即分享');
+  String get localSaveFailedTitle =>
+      _t('localSaveFailedTitle', fallback: '本地保存失败');
+  String get localSaveFailedMessage => _t(
+        'localSaveFailedMessage',
+        fallback: '无法将文件保存到本地存储。是否改用分享方式，您可以通过分享选择保存位置？',
+      );
+  String get shareSave => _t('shareSave', fallback: '分享保存');
 }
-
-
 
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizationsSimple> {

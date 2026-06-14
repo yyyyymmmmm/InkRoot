@@ -19,12 +19,16 @@ class AiSettingsScreen extends StatefulWidget {
 class _AiSettingsScreenState extends State<AiSettingsScreen> {
   final _apiUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _modelController = TextEditingController();
   final _customInsightPromptController = TextEditingController();
   final _customReviewPromptController = TextEditingController();
   final _customContinuationPromptController = TextEditingController();
   final _customTagInsightPromptController = TextEditingController();
   final _customTagRecommendationPromptController = TextEditingController();
   bool _obscureApiKey = true;
+
+  String _text(String zh, String en) =>
+      Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
 
   @override
   void initState() {
@@ -35,17 +39,22 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     // 初始化输入框
     _apiUrlController.text = appConfig.aiApiUrl ?? AppConfig.DEEPSEEK_API_URL;
     _apiKeyController.text = appConfig.aiApiKey ?? '';
+    _modelController.text = appConfig.aiModel;
     _customInsightPromptController.text = appConfig.customInsightPrompt ?? '';
     _customReviewPromptController.text = appConfig.customReviewPrompt ?? '';
-    _customContinuationPromptController.text = appConfig.customContinuationPrompt ?? '';
-    _customTagInsightPromptController.text = appConfig.customTagInsightPrompt ?? '';
-    _customTagRecommendationPromptController.text = appConfig.customTagRecommendationPrompt ?? '';
+    _customContinuationPromptController.text =
+        appConfig.customContinuationPrompt ?? '';
+    _customTagInsightPromptController.text =
+        appConfig.customTagInsightPrompt ?? '';
+    _customTagRecommendationPromptController.text =
+        appConfig.customTagRecommendationPrompt ?? '';
   }
 
   @override
   void dispose() {
     _apiUrlController.dispose();
     _apiKeyController.dispose();
+    _modelController.dispose();
     _customInsightPromptController.dispose();
     _customReviewPromptController.dispose();
     _customContinuationPromptController.dispose();
@@ -72,10 +81,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: Text(
           AppLocalizationsSimple.of(context)?.aiSettings ?? 'AI 设置',
           style: TextStyle(
@@ -113,19 +124,19 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 gradient: LinearGradient(
                   colors: isDarkMode
                       ? [
-                          const Color(0xFF6366F1).withOpacity(0.15),
-                          const Color(0xFF8B5CF6).withOpacity(0.1),
+                          const Color(0xFF6366F1).withValues(alpha: 0.15),
+                          const Color(0xFF8B5CF6).withValues(alpha: 0.1),
                         ]
                       : [
-                          const Color(0xFF6366F1).withOpacity(0.08),
-                          const Color(0xFFF59E0B).withOpacity(0.06),
+                          const Color(0xFF6366F1).withValues(alpha: 0.08),
+                          const Color(0xFFF59E0B).withValues(alpha: 0.06),
                         ],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.white.withOpacity(0.5),
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.white.withValues(alpha: 0.5),
                   width: 1.5,
                 ),
               ),
@@ -140,7 +151,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.insights, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.insights,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -148,7 +163,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Personalization',
+                          _text('个性化', 'Personalization'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -158,7 +173,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'View AI learning preferences',
+                          _text('查看 AI 学习偏好', 'View AI learning preferences'),
                           style: TextStyle(
                             fontSize: 12,
                             color: secondaryTextColor,
@@ -168,12 +183,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: secondaryTextColor,
+                  ),
                 ],
               ),
             ),
           ),
-          
+
           // AI功能开关
           _buildSectionHeader(
             context,
@@ -246,22 +265,22 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               context,
               AppLocalizationsSimple.of(context)?.aiModel ?? 'AI模型',
             ),
-            _buildModelSelectorCard(context, appProvider, appConfig),
+            _buildModelInputCard(context, appProvider, appConfig),
 
             const SizedBox(height: 24),
 
             // 🎯 自定义Prompt
-            _buildSectionHeader(context, AppLocalizationsSimple.of(context)?.customPrompts ?? '自定义提示词'),
+            _buildSectionHeader(
+              context,
+              AppLocalizationsSimple.of(context)?.customPrompts ?? '自定义提示词',
+            ),
             _buildCustomPromptCard(context, appProvider, appConfig),
 
             const SizedBox(height: 24),
 
             // 测试连接
-            if (appConfig.aiApiKey != null &&
-                appConfig.aiApiKey!.isNotEmpty) ...[
-              _buildTestConnectionButton(context, appConfig),
-              const SizedBox(height: 24),
-            ],
+            _buildTestConnectionButton(context),
+            const SizedBox(height: 24),
 
             // 帮助信息
             _buildHelpCard(context),
@@ -315,7 +334,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -326,7 +345,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -358,7 +377,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: iconColor,
+            activeThumbColor: iconColor,
           ),
         ],
       ),
@@ -390,7 +409,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -404,7 +423,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(icon, color: iconColor, size: 16),
@@ -432,22 +451,22 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(
-                color: textColor.withOpacity(0.4),
+                color: textColor.withValues(alpha: 0.4),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.1),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.1),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.1),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.1),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -460,13 +479,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                 ),
               ),
               filled: true,
               fillColor: isDarkMode
-                  ? Colors.white.withOpacity(0.05)
-                  : Colors.grey.withOpacity(0.05),
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.withValues(alpha: 0.05),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               suffixIcon: suffixIcon,
@@ -477,8 +496,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     );
   }
 
-  // iOS风格的模型选择器卡片
-  Widget _buildModelSelectorCard(
+  Widget _buildModelInputCard(
     BuildContext context,
     AppProvider appProvider,
     AppConfig appConfig,
@@ -491,132 +509,120 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
 
-    // 获取当前模型的名称和描述（仅显示兼容OpenAI格式的模型）
-    String getModelName(String model) {
-      switch (model) {
-        // DeepSeek V3系列
-        case AppConfig.AI_MODEL_DEEPSEEK:
-          return 'DeepSeek V3';
-        case AppConfig.AI_MODEL_DEEPSEEK_REASONER:
-          return 'DeepSeek Reasoner';
-        
-        // OpenAI 2025系列
-        case AppConfig.AI_MODEL_O3_MINI:
-          return 'o3-mini';
-        case AppConfig.AI_MODEL_O1:
-          return 'o1';
-        case AppConfig.AI_MODEL_O1_MINI:
-          return 'o1-mini';
-        case AppConfig.AI_MODEL_GPT4O:
-          return 'GPT-4o';
-        case AppConfig.AI_MODEL_GPT4O_MINI:
-          return 'GPT-4o Mini';
-        
-        // 通义千问系列
-        case AppConfig.AI_MODEL_QWEN_MAX:
-          return 'Qwen Max';
-        case AppConfig.AI_MODEL_QWEN_PLUS:
-          return 'Qwen Plus';
-        case AppConfig.AI_MODEL_QWEN_TURBO:
-          return 'Qwen Turbo';
-        
-        // 智谱GLM系列
-        case AppConfig.AI_MODEL_GLM_4_FLASH:
-          return 'GLM-4-Flash';
-        case AppConfig.AI_MODEL_GLM_4_PLUS:
-          return 'GLM-4-Plus';
-        case AppConfig.AI_MODEL_GLM_4_AIR:
-          return 'GLM-4-Air';
-        
-        // Moonshot
-        case AppConfig.AI_MODEL_MOONSHOT:
-          return 'Kimi (128K)';
-        
-        default:
-          // 🎯 大厂标准：自定义模型显示实际名称，而不是"未知"
-          return '$model (自定义)';
-      }
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: appConfig.aiEnabled
-              ? () => _showModelSelectorSheet(context, appProvider, appConfig)
-              : null,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Row(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
                     Icons.model_training_rounded,
                     color: iconColor,
-                    size: 24,
+                    size: 16,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizationsSimple.of(context)?.modelSelection ??
-                            '模型选择',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        getModelName(appConfig.aiModel),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: subTextColor,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 12),
+                Text(
+                  AppLocalizationsSimple.of(context)?.modelSelection ?? '模型名称',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: subTextColor,
-                  size: 20,
+                const Spacer(),
+                TextButton(
+                  onPressed: appConfig.aiEnabled
+                      ? () => _showModelSelectorSheet(
+                            context,
+                          )
+                      : null,
+                  child: Text(_text('示例', 'Examples')),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _modelController,
+              enabled: appConfig.aiEnabled,
+              style: TextStyle(fontSize: 14, color: textColor),
+              decoration: InputDecoration(
+                hintText: 'deepseek-chat / gpt-4o / qwen-plus',
+                hintStyle: TextStyle(
+                  color: textColor.withValues(alpha: 0.4),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.1),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.1),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryColor,
+                    width: 2,
+                  ),
+                ),
+                filled: true,
+                fillColor: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.withValues(alpha: 0.05),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _text(
+                '直接填写服务商文档里的模型名。AI 模型更新很快，这里不再强制限制固定列表。',
+                'Enter the model name from your provider documentation. Models change quickly, so this field is not locked to a fixed list.',
+              ),
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                color: subTextColor,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // 显示iOS风格的模型选择器底部对话框
+  // 显示常用模型示例底部对话框
   void _showModelSelectorSheet(
     BuildContext context,
-    AppProvider appProvider,
-    AppConfig appConfig,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
@@ -625,8 +631,6 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     final secondaryColor = isDarkMode
         ? AppTheme.darkTextSecondaryColor
         : AppTheme.textSecondaryColor;
-    final primaryColor =
-        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final dividerColor =
         isDarkMode ? AppTheme.darkDividerColor : AppTheme.dividerColor;
 
@@ -649,7 +653,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -665,7 +669,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -675,7 +679,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
                       AppLocalizationsSimple.of(context)?.selectModel ??
-                          '选择AI模型',
+                          '常用模型示例',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -689,159 +693,135 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // 🔥 DeepSeek V3 系列（2025最新）
-                          _buildModelCategoryHeader(context, 'DeepSeek V3 性价比之选'),
+                          _buildModelCategoryHeader(
+                            context,
+                            'DeepSeek',
+                          ),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.flash_on,
                             title: 'DeepSeek V3',
-                            subtitle: '最新V3版本，超强性价比',
+                            subtitle: '通用对话模型示例',
                             model: AppConfig.AI_MODEL_DEEPSEEK,
                             apiUrl: AppConfig.DEEPSEEK_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.psychology,
                             title: 'DeepSeek Reasoner',
-                            subtitle: '深度推理，复杂任务首选',
+                            subtitle: '推理模型示例',
                             model: AppConfig.AI_MODEL_DEEPSEEK_REASONER,
                             apiUrl: AppConfig.DEEPSEEK_API_URL,
                           ),
 
                           const SizedBox(height: 16),
 
-                          // 🌟 OpenAI 2025系列
-                          _buildModelCategoryHeader(context, 'OpenAI 2025 全新推理模型'),
+                          _buildModelCategoryHeader(
+                            context,
+                            'OpenAI',
+                          ),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.stars,
                             title: 'o3-mini',
-                            subtitle: '2025最新推理，快速高效',
+                            subtitle: '推理模型示例',
                             model: AppConfig.AI_MODEL_O3_MINI,
                             apiUrl: AppConfig.OPENAI_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.wb_incandescent,
                             title: 'o1',
-                            subtitle: '强大推理能力，适合复杂分析',
+                            subtitle: '推理模型示例',
                             model: AppConfig.AI_MODEL_O1,
                             apiUrl: AppConfig.OPENAI_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.bolt,
                             title: 'o1-mini',
-                            subtitle: '轻量推理，性价比高',
+                            subtitle: '轻量推理模型示例',
                             model: AppConfig.AI_MODEL_O1_MINI,
                             apiUrl: AppConfig.OPENAI_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.auto_awesome,
                             title: 'GPT-4o',
-                            subtitle: '多模态旗舰，强大全能',
+                            subtitle: '多模态模型示例',
                             model: AppConfig.AI_MODEL_GPT4O,
                             apiUrl: AppConfig.OPENAI_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.speed,
                             title: 'GPT-4o Mini',
-                            subtitle: '轻量快速，日常使用',
+                            subtitle: '轻量模型示例',
                             model: AppConfig.AI_MODEL_GPT4O_MINI,
                             apiUrl: AppConfig.OPENAI_API_URL,
                           ),
 
                           const SizedBox(height: 16),
 
-                          // 📚 通义千问官方系列
-                          _buildModelCategoryHeader(context, '通义千问 阿里旗舰'),
+                          _buildModelCategoryHeader(context, '通义千问'),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.workspace_premium,
                             title: 'Qwen Max',
-                            subtitle: '旗舰版本，最强性能',
+                            subtitle: '通义千问模型示例',
                             model: AppConfig.AI_MODEL_QWEN_MAX,
                             apiUrl: AppConfig.QWEN_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.auto_awesome,
                             title: 'Qwen Plus',
-                            subtitle: '强大性能，均衡之选',
+                            subtitle: '通义千问模型示例',
                             model: AppConfig.AI_MODEL_QWEN_PLUS,
                             apiUrl: AppConfig.QWEN_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.flash_on,
                             title: 'Qwen Turbo',
-                            subtitle: '极速响应，高性价比',
+                            subtitle: '通义千问模型示例',
                             model: AppConfig.AI_MODEL_QWEN_TURBO,
                             apiUrl: AppConfig.QWEN_API_URL,
                           ),
 
                           const SizedBox(height: 16),
 
-                          // 🎯 智谱 GLM 系列
-                          _buildModelCategoryHeader(context, '智谱 AI 国产旗舰'),
+                          _buildModelCategoryHeader(context, '智谱 GLM'),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.flash_on,
                             title: 'GLM-4-Flash',
-                            subtitle: '闪电响应，完全免费 ✨',
+                            subtitle: 'GLM 模型示例',
                             model: AppConfig.AI_MODEL_GLM_4_FLASH,
                             apiUrl: AppConfig.ZHIPU_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.stars,
                             title: 'GLM-4-Plus',
-                            subtitle: '旗舰版本，智能强大',
+                            subtitle: 'GLM 模型示例',
                             model: AppConfig.AI_MODEL_GLM_4_PLUS,
                             apiUrl: AppConfig.ZHIPU_API_URL,
                           ),
                           Divider(height: 1, color: dividerColor),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.cloud,
                             title: 'GLM-4-Air',
-                            subtitle: '轻量高效，快速部署',
+                            subtitle: 'GLM 模型示例',
                             model: AppConfig.AI_MODEL_GLM_4_AIR,
                             apiUrl: AppConfig.ZHIPU_API_URL,
                           ),
@@ -852,26 +832,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                           _buildModelCategoryHeader(context, 'Moonshot AI'),
                           _buildModelSheetOption(
                             context,
-                            appProvider,
-                            appConfig,
                             icon: Icons.nightlight,
                             title: 'Kimi (128K)',
-                            subtitle: '超长上下文，长文本专家',
+                            subtitle: '长上下文模型示例',
                             model: AppConfig.AI_MODEL_MOONSHOT,
                             apiUrl: AppConfig.MOONSHOT_API_URL,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // 🎯 大厂标准：高级选项 - 自定义模型
-                          _buildModelCategoryHeader(
-                            context,
-                            '高级选项 Advanced',
-                          ),
-                          _buildCustomModelOption(
-                            context,
-                            appProvider,
-                            appConfig,
                           ),
 
                           const SizedBox(height: 20),
@@ -914,9 +879,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
   // 构建模型选项（底部对话框中）
   Widget _buildModelSheetOption(
-    BuildContext context,
-    AppProvider appProvider,
-    AppConfig appConfig, {
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -931,7 +894,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         : AppTheme.textSecondaryColor;
     final primaryColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
-    final isSelected = appConfig.aiModel == model;
+    final isSelected = _modelController.text.trim() == model;
 
     return Material(
       color: Colors.transparent,
@@ -939,12 +902,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         onTap: () {
           setState(() {
             _apiUrlController.text = apiUrl;
+            _modelController.text = model;
           });
-          final updatedConfig = appConfig.copyWith(
-            aiModel: model,
-            aiApiUrl: apiUrl,
-          );
-          appProvider.updateConfig(updatedConfig);
           Navigator.pop(context);
         },
         child: Padding(
@@ -956,10 +915,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor.withOpacity(0.15)
+                      ? primaryColor.withValues(alpha: 0.15)
                       : (isDarkMode
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.black.withOpacity(0.03)),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.03)),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1006,99 +965,28 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     );
   }
 
-  // 构建快捷操作卡片
-  Widget _buildQuickActionCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    final subTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: AppTheme.primaryColor, size: 20),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: subTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: subTextColor,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // 构建测试连接按钮
-  Widget _buildTestConnectionButton(BuildContext context, AppConfig appConfig) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => _testConnection(appConfig),
-        icon: const Icon(Icons.wifi_tethering, size: 20),
-        label: const Text('测试API连接', style: TextStyle(fontSize: 15)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildTestConnectionButton(BuildContext context) => SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _testConnection,
+          icon: const Icon(Icons.wifi_tethering, size: 20),
+          label: Text(
+            AppLocalizationsSimple.of(context)?.testingAPIConnection ??
+                '测试API连接',
+            style: const TextStyle(fontSize: 15),
           ),
-          elevation: 2,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   // 构建底部提醒卡片
   Widget _buildHelpCard(BuildContext context) {
@@ -1109,10 +997,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.08),
+        color: AppTheme.primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -1120,15 +1008,15 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.lightbulb_outline,
                 color: AppTheme.primaryColor,
                 size: 18,
               ),
               const SizedBox(width: 8),
               Text(
-                '温馨提示',
-                style: TextStyle(
+                _text('温馨提示', 'Tips'),
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.primaryColor,
@@ -1138,13 +1026,20 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            '• 选择模型后会自动填充 API 地址\n'
-            '• API 密钥仅存储在本地，不会上传\n'
-            '• 支持所有兼容 OpenAI 格式的 AI 服务',
+            _text(
+              '• 示例模型只会填入输入框，最终以右上角保存为准\n'
+                  '• 可以直接输入服务商提供的任意模型名\n'
+                  '• API 密钥仅存储在本地，不会上传\n'
+                  '• 支持所有兼容 OpenAI 格式的 AI 服务',
+              '• Example models only fill the fields; use the top-right save button to apply\n'
+                  '• You can enter any model name provided by your AI service\n'
+                  '• API keys are stored locally and are not uploaded\n'
+                  '• OpenAI-compatible AI services are supported',
+            ),
             style: TextStyle(
               fontSize: 12,
               height: 1.6,
-              color: textColor.withOpacity(0.7),
+              color: textColor.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -1153,25 +1048,43 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   }
 
   // 测试API连接
-  Future<void> _testConnection(AppConfig appConfig) async {
+  Future<void> _testConnection() async {
     // 🔧 改进：使用当前输入框的值进行测试，而不是已保存的配置
     // 这样用户可以在保存前测试新配置，符合大厂最佳实践
     final currentApiUrl = _apiUrlController.text.trim();
     final currentApiKey = _apiKeyController.text.trim();
+    final currentModel = _modelController.text.trim();
 
     if (currentApiUrl.isEmpty) {
-      SnackBarUtils.showWarning(context, '请先输入API地址');
+      SnackBarUtils.showWarning(
+        context,
+        _text('请先输入 API 地址', 'Enter API URL first'),
+      );
       return;
     }
 
     if (currentApiKey.isEmpty) {
-      SnackBarUtils.showWarning(context, '请先输入API密钥');
+      SnackBarUtils.showWarning(
+        context,
+        _text('请先输入 API 密钥', 'Enter API key first'),
+      );
+      return;
+    }
+
+    if (currentModel.isEmpty) {
+      SnackBarUtils.showWarning(
+        context,
+        _text('请先输入模型名称', 'Enter model name first'),
+      );
       return;
     }
 
     // 显示加载提示
     if (mounted) {
-      SnackBarUtils.showInfo(context, '正在测试连接...');
+      SnackBarUtils.showInfo(
+        context,
+        _text('正在测试连接...', 'Testing connection...'),
+      );
     }
 
     try {
@@ -1179,21 +1092,33 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       final apiService = DeepSeekApiService(
         apiUrl: currentApiUrl,
         apiKey: currentApiKey,
-        model: appConfig.aiModel, // 模型使用当前已选择的
+        model: currentModel,
       );
 
       final (success, error) = await apiService.testConnection();
 
       if (mounted) {
         if (success) {
-          SnackBarUtils.showSuccess(context, 'API连接测试成功！请点击右上角保存配置');
+          SnackBarUtils.showSuccess(
+            context,
+            _text(
+              'API 连接测试成功，请点击右上角保存配置',
+              'API connection succeeded. Save the settings to apply.',
+            ),
+          );
         } else {
-          SnackBarUtils.showError(context, error ?? '连接失败');
+          SnackBarUtils.showError(
+            context,
+            error ?? _text('连接失败', 'Connection failed'),
+          );
         }
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '测试失败: $e');
+        SnackBarUtils.showError(
+          context,
+          '${_text('测试失败', 'Test failed')}: $e',
+        );
       }
     }
   }
@@ -1227,7 +1152,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
@@ -1241,7 +1166,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '快速上手',
+                        'AI 配置说明',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -1266,79 +1191,69 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     children: [
                       _buildFAQItem(
                         context,
-                        question: '🔑 获取 API 密钥',
-                        answer:
-                            '推荐服务商（均兼容 OpenAI API 格式）：\n\n'
-                            '• DeepSeek V3：platform.deepseek.com\n'
-                            '  2025最新版本，性价比之王\n\n'
+                        question: '🔑 API 密钥从哪里来？',
+                        answer: '请到对应 AI 服务商控制台创建 API Key。\n\n'
+                            '常见兼容 OpenAI 格式的服务商包括：\n'
+                            '• DeepSeek：platform.deepseek.com\n'
                             '• 智谱 GLM：open.bigmodel.cn\n'
-                            '  GLM-4-Flash 完全免费 ✨\n\n'
                             '• 通义千问：dashscope.aliyun.com\n'
-                            '  阿里旗舰，Qwen Max 性能强大\n\n'
-                            '• Moonshot (Kimi)：platform.moonshot.cn\n'
-                            '  支持 128K 超长上下文\n\n'
-                            '• OpenAI：platform.openai.com\n'
-                            '  o3-mini/o1 最新推理模型',
+                            '• Moonshot：platform.moonshot.cn\n'
+                            '• OpenAI：platform.openai.com\n\n'
+                            '具体模型名和可用 API 地址以服务商当前文档为准。',
                       ),
                       _buildFAQItem(
                         context,
-                        question: '🎯 推荐配置（2025版）',
+                        question: '🧩 模型名称怎么填？',
                         answer:
-                            '免费首选：GLM-4-Flash\n'
-                            '极致性价比：DeepSeek V3\n'
-                            '最强推理：o3-mini / o1\n'
-                            '国产旗舰：Qwen Max / GLM-4-Plus\n'
-                            '长文本：Kimi (128K)',
+                            '模型名称直接填写服务商文档中的 model 字段，例如 deepseek-chat、gpt-4o、qwen-plus。\n\n'
+                            '“示例”按钮只负责快速填入常见模型和 API 地址，不限制你输入新模型。',
                       ),
                       _buildFAQItem(
                         context,
                         question: '❌ 连接失败？',
-                        answer:
-                            '1. 检查 API 地址格式（需 https://）\n'
+                        answer: '1. 检查 API 地址格式（需 https://）\n'
                             '2. 确认 API 密钥完整复制无误\n'
-                            '3. 确保账户有余额（部分需充值）\n'
-                            '4. OpenAI 需科学上网\n\n'
-                            '使用"测试 API 连接"按钮快速诊断',
+                            '3. 确认模型名和服务商当前文档一致\n'
+                            '4. 检查账户额度、网络和服务商可用状态\n\n'
+                            '可以先用“测试 API 连接”验证当前输入框内容。',
                       ),
                       _buildFAQItem(
                         context,
                         question: '🔧 高级功能',
-                        answer:
-                            '• 自定义模型：支持任意兼容 OpenAI 格式的模型\n'
-                            '• 聚合服务：可配置 OpenRouter 等中转服务\n'
+                        answer: '• 模型输入框：支持任意兼容 OpenAI 格式的模型名\n'
+                            '• 聚合服务：可配置兼容 OpenAI 格式的中转服务\n'
                             '• 自定义提示词：个性化 AI 输出风格\n'
                             '• API 地址可自定义（代理/自建服务）',
                       ),
                       _buildFAQItem(
                         context,
                         question: '🔒 安全说明',
-                        answer:
-                            'API 密钥仅存储在本地设备，不会上传到任何服务器。\n'
+                        answer: 'API 密钥仅存储在本地设备，不会上传到任何服务器。\n'
                             'AI 功能仅在你主动点击时调用，不会自动运行。',
                       ),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.08),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: AppTheme.primaryColor.withOpacity(0.2),
+                            color: AppTheme.primaryColor.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(
                                   Icons.rocket_launch_outlined,
                                   color: AppTheme.primaryColor,
                                   size: 18,
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 Text(
-                                  '新手推荐',
+                                  '配置原则',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -1349,9 +1264,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              '1. GLM-4-Flash（免费）\n'
-                              '2. DeepSeek V3（性价比）\n'
-                              '3. 推理任务用 o3-mini / DeepSeek Reasoner',
+                              '1. 优先按服务商官方文档填写 API 地址和模型名\n'
+                              '2. 保存前先测试连接，避免保存不可用配置\n'
+                              '3. 模型更新很快，应用不强制维护固定列表',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: textColor,
@@ -1450,7 +1365,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizationsSimple.of(context)?.enableCustomPrompts ?? '启用自定义提示词',
+                        AppLocalizationsSimple.of(context)
+                                ?.enableCustomPrompts ??
+                            '启用自定义提示词',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
@@ -1459,7 +1376,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        AppLocalizationsSimple.of(context)?.customPrompts ?? '自定义AI洞察和点评的提示词',
+                        '按功能分别定义 AI 输出规则。关闭开关会暂时停用，清空输入框并保存才会删除。',
                         style: TextStyle(
                           fontSize: 13,
                           color: secondaryColor,
@@ -1473,10 +1390,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   onChanged: (value) {
                     appProvider.updateConfig(
                       appConfig.copyWith(useCustomPrompt: value),
-                  );
-                },
-                activeColor: AppTheme.primaryColor,
-              ),
+                    );
+                  },
+                  activeThumbColor: AppTheme.primaryColor,
+                ),
               ],
             ),
           ),
@@ -1493,7 +1410,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    AppLocalizationsSimple.of(context)?.insightPrompt ?? '洞察提示词',
+                    AppLocalizationsSimple.of(context)?.insightPrompt ??
+                        '洞察提示词',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -1503,17 +1421,18 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const SizedBox(height: 6),
                   // 🎯 大厂标准：明确说明作用范围
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           size: 14,
                           color: AppTheme.primaryColor,
@@ -1521,10 +1440,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            localizations?.insightPromptHint ?? '自定义AI洞察的提示词，留空使用默认提示词',
+                            localizations?.insightPromptHint ??
+                                '自定义AI洞察的提示词，留空使用默认提示词',
                             style: TextStyle(
                               fontSize: 11,
-                              color: textColor.withOpacity(0.7),
+                              color: textColor.withValues(alpha: 0.7),
                               height: 1.3,
                             ),
                           ),
@@ -1538,7 +1458,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     maxLines: 5,
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
-                      hintText: localizations?.insightPromptHint ?? '自定义AI洞察的提示词，留空使用默认提示词',
+                      hintText: localizations?.insightPromptHint ??
+                          '自定义AI洞察的提示词，留空使用默认提示词',
                       hintStyle: TextStyle(color: secondaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1583,17 +1504,18 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const SizedBox(height: 6),
                   // 🎯 大厂标准：明确说明作用范围
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           size: 14,
                           color: AppTheme.primaryColor,
@@ -1601,10 +1523,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            localizations?.reviewPromptHint ?? '自定义AI点评的提示词，留空使用默认提示词',
+                            localizations?.reviewPromptHint ??
+                                '自定义AI点评的提示词，留空使用默认提示词',
                             style: TextStyle(
                               fontSize: 11,
-                              color: textColor.withOpacity(0.7),
+                              color: textColor.withValues(alpha: 0.7),
                               height: 1.3,
                             ),
                           ),
@@ -1618,7 +1541,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     maxLines: 5,
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
-                      hintText: localizations?.reviewPromptHint ?? '自定义AI点评的提示词，留空使用默认提示词',
+                      hintText: localizations?.reviewPromptHint ??
+                          '自定义AI点评的提示词，留空使用默认提示词',
                       hintStyle: TextStyle(color: secondaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1653,7 +1577,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
                   // 续写Prompt
                   Text(
-                    AppLocalizationsSimple.of(context)?.continuationPrompt ?? '续写提示词',
+                    AppLocalizationsSimple.of(context)?.continuationPrompt ??
+                        '续写提示词',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -1663,17 +1588,18 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const SizedBox(height: 6),
                   // 🎯 大厂标准：明确说明作用范围
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           size: 14,
                           color: AppTheme.primaryColor,
@@ -1681,10 +1607,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            localizations?.continuationPromptHint ?? '自定义AI续写的提示词，留空使用默认提示词',
+                            localizations?.continuationPromptHint ??
+                                '自定义AI续写的提示词，留空使用默认提示词',
                             style: TextStyle(
                               fontSize: 11,
-                              color: textColor.withOpacity(0.7),
+                              color: textColor.withValues(alpha: 0.7),
                               height: 1.3,
                             ),
                           ),
@@ -1698,7 +1625,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     maxLines: 5,
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
-                      hintText: localizations?.continuationPromptHint ?? '自定义AI续写的提示词，留空使用默认提示词',
+                      hintText: localizations?.continuationPromptHint ??
+                          '自定义AI续写的提示词，留空使用默认提示词',
                       hintStyle: TextStyle(color: secondaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1733,7 +1661,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
                   // 标签洞察Prompt
                   Text(
-                    AppLocalizationsSimple.of(context)?.tagInsightPrompt ?? '标签洞察提示词',
+                    AppLocalizationsSimple.of(context)?.tagInsightPrompt ??
+                        '标签洞察提示词',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -1743,17 +1672,18 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const SizedBox(height: 6),
                   // 🎯 大厂标准：明确说明作用范围
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           size: 14,
                           color: AppTheme.primaryColor,
@@ -1761,10 +1691,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            localizations?.tagInsightPromptHint ?? '自定义标签洞察的提示词，留空使用默认提示词',
+                            localizations?.tagInsightPromptHint ??
+                                '自定义标签洞察的提示词，留空使用默认提示词',
                             style: TextStyle(
                               fontSize: 11,
-                              color: textColor.withOpacity(0.7),
+                              color: textColor.withValues(alpha: 0.7),
                               height: 1.3,
                             ),
                           ),
@@ -1778,7 +1709,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     maxLines: 5,
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
-                      hintText: localizations?.tagInsightPromptHint ?? '自定义标签洞察的提示词，留空使用默认提示词',
+                      hintText: localizations?.tagInsightPromptHint ??
+                          '自定义标签洞察的提示词，留空使用默认提示词',
                       hintStyle: TextStyle(color: secondaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1813,7 +1745,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
                   // 标签推荐Prompt
                   Text(
-                    AppLocalizationsSimple.of(context)?.tagRecommendationPrompt ?? '标签推荐提示词',
+                    AppLocalizationsSimple.of(context)
+                            ?.tagRecommendationPrompt ??
+                        '标签推荐提示词',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -1823,17 +1757,18 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                   const SizedBox(height: 6),
                   // 🎯 大厂标准：明确说明作用范围
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.08),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline,
                           size: 14,
                           color: AppTheme.primaryColor,
@@ -1841,10 +1776,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            localizations?.tagRecommendationPromptHint ?? '自定义标签推荐的提示词，留空使用默认提示词',
+                            localizations?.tagRecommendationPromptHint ??
+                                '自定义标签推荐的提示词，留空使用默认提示词',
                             style: TextStyle(
                               fontSize: 11,
-                              color: textColor.withOpacity(0.7),
+                              color: textColor.withValues(alpha: 0.7),
                               height: 1.3,
                             ),
                           ),
@@ -1858,7 +1794,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                     maxLines: 5,
                     style: TextStyle(fontSize: 14, color: textColor),
                     decoration: InputDecoration(
-                      hintText: localizations?.tagRecommendationPromptHint ?? '自定义标签推荐的提示词，留空使用默认提示词',
+                      hintText: localizations?.tagRecommendationPromptHint ??
+                          '自定义标签推荐的提示词，留空使用默认提示词',
                       hintStyle: TextStyle(color: secondaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1901,21 +1838,23 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
   // 🔧 清理和验证 API Key（防止编码问题）
   String? _cleanAndValidateApiKey(String apiKey) {
-    if (apiKey.isEmpty) return null;
-    
+    if (apiKey.isEmpty) {
+      return null;
+    }
+
     // 移除所有不可见字符（空格、换行、制表符等）
-    var cleaned = apiKey.replaceAll(RegExp(r'\s'), '');
-    
+    final cleaned = apiKey.replaceAll(RegExp(r'\s'), '');
+
     // 检查是否包含非 ASCII 字符
     if (cleaned.runes.any((rune) => rune > 127)) {
-      throw FormatException('API Key 包含非法字符，请重新复制粘贴');
+      throw const FormatException('API Key 包含非法字符，请重新复制粘贴');
     }
-    
+
     // 检查是否为空
     if (cleaned.isEmpty) {
-      throw FormatException('API Key 不能为空');
+      throw const FormatException('API Key 不能为空');
     }
-    
+
     return cleaned;
   }
 
@@ -1923,6 +1862,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   Future<void> _saveSettings(AppProvider appProvider) async {
     final apiUrl = _apiUrlController.text.trim();
     var apiKey = _apiKeyController.text.trim();
+    final model = _modelController.text.trim();
 
     // 验证输入
     if (appProvider.appConfig.aiEnabled) {
@@ -1934,11 +1874,15 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         SnackBarUtils.showWarning(context, '请输入API密钥');
         return;
       }
-      
+      if (model.isEmpty) {
+        SnackBarUtils.showWarning(context, '请输入模型名称');
+        return;
+      }
+
       // 🔧 清理和验证 API Key
       try {
         apiKey = _cleanAndValidateApiKey(apiKey) ?? '';
-      } catch (e) {
+      } on Object catch (e) {
         SnackBarUtils.showError(context, e.toString());
         return;
       }
@@ -1947,13 +1891,26 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     // 保存配置
     final customInsightPrompt = _customInsightPromptController.text.trim();
     final customReviewPrompt = _customReviewPromptController.text.trim();
-    final customContinuationPrompt = _customContinuationPromptController.text.trim();
-    final customTagInsightPrompt = _customTagInsightPromptController.text.trim();
-    final customTagRecommendationPrompt = _customTagRecommendationPromptController.text.trim();
+    final customContinuationPrompt =
+        _customContinuationPromptController.text.trim();
+    final customTagInsightPrompt =
+        _customTagInsightPromptController.text.trim();
+    final customTagRecommendationPrompt =
+        _customTagRecommendationPromptController.text.trim();
+    final hasCustomPrompt = appProvider.appConfig.useCustomPrompt &&
+        (customInsightPrompt.isNotEmpty ||
+            customReviewPrompt.isNotEmpty ||
+            customContinuationPrompt.isNotEmpty ||
+            customTagInsightPrompt.isNotEmpty ||
+            customTagRecommendationPrompt.isNotEmpty);
 
     final updatedConfig = appProvider.appConfig.copyWith(
       aiApiUrl: apiUrl.isEmpty ? null : apiUrl,
       aiApiKey: apiKey.isEmpty ? null : apiKey,
+      aiModel: model.isEmpty ? appProvider.appConfig.aiModel : model,
+      updateAiApiUrl: true,
+      updateAiApiKey: true,
+      useCustomPrompt: hasCustomPrompt,
       customInsightPrompt:
           customInsightPrompt.isEmpty ? null : customInsightPrompt,
       customReviewPrompt:
@@ -1962,8 +1919,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
           customContinuationPrompt.isEmpty ? null : customContinuationPrompt,
       customTagInsightPrompt:
           customTagInsightPrompt.isEmpty ? null : customTagInsightPrompt,
-      customTagRecommendationPrompt:
-          customTagRecommendationPrompt.isEmpty ? null : customTagRecommendationPrompt,
+      customTagRecommendationPrompt: customTagRecommendationPrompt.isEmpty
+          ? null
+          : customTagRecommendationPrompt,
+      updateCustomInsightPrompt: true,
+      updateCustomReviewPrompt: true,
+      updateCustomContinuationPrompt: true,
+      updateCustomTagInsightPrompt: true,
+      updateCustomTagRecommendationPrompt: true,
     );
 
     await appProvider.updateConfig(updatedConfig);
@@ -1975,366 +1938,5 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       );
       Navigator.of(context).pop();
     }
-  }
-
-  // 🎯 大厂标准：判断是否为预设模型（2025最新版本）
-  bool _isPresetModel(String model) {
-    const presetModels = [
-      // DeepSeek V3系列
-      AppConfig.AI_MODEL_DEEPSEEK,
-      AppConfig.AI_MODEL_DEEPSEEK_REASONER,
-      // OpenAI 2025系列
-      AppConfig.AI_MODEL_O3_MINI,
-      AppConfig.AI_MODEL_O1,
-      AppConfig.AI_MODEL_O1_MINI,
-      AppConfig.AI_MODEL_GPT4O,
-      AppConfig.AI_MODEL_GPT4O_MINI,
-      // 通义千问系列
-      AppConfig.AI_MODEL_QWEN_MAX,
-      AppConfig.AI_MODEL_QWEN_PLUS,
-      AppConfig.AI_MODEL_QWEN_TURBO,
-      // 智谱GLM系列
-      AppConfig.AI_MODEL_GLM_4_FLASH,
-      AppConfig.AI_MODEL_GLM_4_PLUS,
-      AppConfig.AI_MODEL_GLM_4_AIR,
-      // Moonshot
-      AppConfig.AI_MODEL_MOONSHOT,
-    ];
-    return presetModels.contains(model);
-  }
-
-  // 🎯 大厂标准：自定义模型选项（渐进式披露）
-  Widget _buildCustomModelOption(
-    BuildContext context,
-    AppProvider appProvider,
-    AppConfig appConfig,
-  ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    final secondaryColor = isDarkMode
-        ? AppTheme.darkTextSecondaryColor
-        : AppTheme.textSecondaryColor;
-    final primaryColor =
-        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
-
-    // 🔍 判断当前是否使用自定义模型
-    final isCustomModel = !_isPresetModel(appConfig.aiModel);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showCustomModelDialog(context, appProvider, appConfig),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          child: Row(
-            children: [
-              // 图标容器
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isCustomModel
-                      ? primaryColor.withOpacity(0.15)
-                      : (isDarkMode
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.black.withOpacity(0.03)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.edit_outlined,
-                  color: isCustomModel ? primaryColor : secondaryColor,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 文本内容
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '自定义模型',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight:
-                            isCustomModel ? FontWeight.w600 : FontWeight.normal,
-                        color: isCustomModel ? primaryColor : textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isCustomModel
-                          ? '当前：${appConfig.aiModel}'
-                          : '输入任意兼容 OpenAI API 的模型',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: secondaryColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              // 箭头或选中图标
-              Icon(
-                isCustomModel ? Icons.check_circle : Icons.chevron_right,
-                color: isCustomModel ? primaryColor : secondaryColor,
-                size: isCustomModel ? 24 : 20,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 🎯 大厂标准：自定义模型输入对话框
-  void _showCustomModelDialog(
-    BuildContext context,
-    AppProvider appProvider,
-    AppConfig appConfig,
-  ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    final primaryColor =
-        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
-
-    // 初始化输入框：如果当前是自定义模型则显示，否则为空
-    final customModelController = TextEditingController(
-      text: _isPresetModel(appConfig.aiModel) ? '' : appConfig.aiModel,
-    );
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: backgroundColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.edit_outlined,
-                color: primaryColor,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              '自定义模型',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 说明文字
-            Text(
-              '输入任意兼容 OpenAI API 格式的模型名称',
-              style: TextStyle(
-                fontSize: 14,
-                color: textColor.withOpacity(0.7),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 输入框
-            TextField(
-              controller: customModelController,
-              autofocus: true,
-              style: TextStyle(color: textColor, fontSize: 15),
-              decoration: InputDecoration(
-                hintText: 'gpt-4o-2024-08-06',
-                hintStyle: TextStyle(
-                  color: textColor.withOpacity(0.4),
-                  fontSize: 14,
-                ),
-                filled: true,
-                fillColor: isDarkMode
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.03),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                prefixIcon: Icon(
-                  Icons.code,
-                  color: textColor.withOpacity(0.5),
-                  size: 20,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 提示信息卡片
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: primaryColor.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    size: 18,
-                    color: primaryColor,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '提示',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: primaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '请确保你的 API 服务商支持该模型，并已正确配置 API 地址',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: textColor.withOpacity(0.7),
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // 示例
-            Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 14,
-                  color: textColor.withOpacity(0.4),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '示例',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: textColor.withOpacity(0.5),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'claude-3-5-sonnet, o1-mini',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: textColor.withOpacity(0.4),
-                      fontFamily: 'monospace',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          // 取消按钮
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: textColor.withOpacity(0.6),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: Text(
-              AppLocalizationsSimple.of(context)?.cancel ?? '取消',
-              style: const TextStyle(fontSize: 15),
-            ),
-          ),
-          // 确定按钮
-          ElevatedButton(
-            onPressed: () {
-              final customModel = customModelController.text.trim();
-              if (customModel.isEmpty) {
-                SnackBarUtils.showWarning(
-                  context,
-                  '请输入模型名称',
-                );
-                return;
-              }
-
-              // 更新配置
-              setState(() {
-                // 自定义模型不自动改变 API URL，让用户自己配置
-              });
-
-              final updatedConfig = appConfig.copyWith(
-                aiModel: customModel,
-              );
-              appProvider.updateConfig(updatedConfig);
-
-              Navigator.of(dialogContext).pop(); // 关闭对话框
-              Navigator.of(context).pop(); // 关闭模型选择器
-
-              SnackBarUtils.showSuccess(
-                context,
-                '已设置自定义模型：$customModel',
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              AppLocalizationsSimple.of(context)?.confirm ?? '确定',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      ),
-    );
   }
 }

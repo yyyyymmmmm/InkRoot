@@ -9,6 +9,19 @@ class ResponsiveUtils {
   // 全局字体缩放因子（可通过用户设置调整）
   static double globalFontScale = 1;
 
+  static const double minAppTextScale = 0.8;
+  static const double maxAppTextScale = 1.3;
+
+  static double clampAppTextScale(double scale) {
+    if (scale < minAppTextScale) {
+      return minAppTextScale;
+    }
+    if (scale > maxAppTextScale) {
+      return maxAppTextScale;
+    }
+    return scale;
+  }
+
   // 获取屏幕类型
   static ScreenType getScreenType(BuildContext context) {
     final width = MediaQuery.of(context).size.width;

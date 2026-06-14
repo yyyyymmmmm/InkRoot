@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// 统一权限管理服务
@@ -25,15 +26,20 @@ class PermissionManager {
 
       if (status.isDenied) {
         // 显示权限说明对话框
-        if (context != null) {
+        if (context != null && context.mounted) {
           final shouldRequest = await _showPermissionDialog(
             context,
-            '麦克风权限',
-            '语音识别功能需要访问麦克风来录制您的语音并转换为文字。',
+            AppLocalizationsSimple.of(context)?.microphonePermissionTitle ??
+                '麦克风权限',
+            AppLocalizationsSimple.of(context)?.microphonePermissionMessage ??
+                '语音识别功能需要访问麦克风来录制您的语音并转换为文字。',
             '🎤',
           );
 
           if (!shouldRequest) {
+            return false;
+          }
+          if (!context.mounted) {
             return false;
           }
         }
@@ -43,18 +49,20 @@ class PermissionManager {
       }
 
       if (status.isPermanentlyDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           await _showSettingsDialog(
             context,
-            '麦克风权限被拒绝',
-            '请在设置中手动开启麦克风权限以使用语音识别功能。',
+            AppLocalizationsSimple.of(context)?.microphonePermissionDenied ??
+                '麦克风权限被拒绝',
+            AppLocalizationsSimple.of(context)?.microphoneSettingsMessage ??
+                '请在设置中手动开启麦克风权限以使用语音识别功能。',
           );
         }
         return false;
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -73,15 +81,20 @@ class PermissionManager {
       }
 
       if (status.isDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           final shouldRequest = await _showPermissionDialog(
             context,
-            '语音识别权限',
-            '应用需要语音识别权限来将您的语音转换为文字。',
+            AppLocalizationsSimple.of(context)?.speechPermissionTitle ??
+                '语音识别权限',
+            AppLocalizationsSimple.of(context)?.speechPermissionMessage ??
+                '语音识别功能需要访问您的麦克风来录制语音并转换为文字。\n\n这将帮助您快速输入笔记内容。',
             '🗣️',
           );
 
           if (!shouldRequest) {
+            return false;
+          }
+          if (!context.mounted) {
             return false;
           }
         }
@@ -91,18 +104,20 @@ class PermissionManager {
       }
 
       if (status.isPermanentlyDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           await _showSettingsDialog(
             context,
-            '语音识别权限被拒绝',
-            '请在设置中手动开启语音识别权限。',
+            AppLocalizationsSimple.of(context)?.speechPermissionDenied ??
+                '语音识别权限被拒绝',
+            AppLocalizationsSimple.of(context)?.speechSettingsMessage ??
+                '请在设置中手动开启语音识别权限。',
           );
         }
         return false;
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -123,15 +138,20 @@ class PermissionManager {
           }
 
           // 显示权限说明对话框
-          if (context != null) {
+          if (context != null && context.mounted) {
             final shouldRequest = await _showPermissionDialog(
               context,
-              '通知权限',
-              '应用需要通知权限来提醒您重要的笔记和待办事项。',
+              AppLocalizationsSimple.of(context)?.notificationPermission ??
+                  '通知权限',
+              AppLocalizationsSimple.of(context)?.permissionInstructions ??
+                  '应用需要通知权限来提醒您重要的笔记和待办事项。',
               '🔔',
             );
 
             if (!shouldRequest) {
+              return false;
+            }
+            if (!context.mounted) {
               return false;
             }
           }
@@ -154,15 +174,20 @@ class PermissionManager {
         }
 
         if (status.isDenied) {
-          if (context != null) {
+          if (context != null && context.mounted) {
             final shouldRequest = await _showPermissionDialog(
               context,
-              '通知权限',
-              '应用需要通知权限来提醒您重要的笔记和待办事项。',
+              AppLocalizationsSimple.of(context)?.notificationPermission ??
+                  '通知权限',
+              AppLocalizationsSimple.of(context)?.permissionInstructions ??
+                  '应用需要通知权限来提醒您重要的笔记和待办事项。',
               '🔔',
             );
 
             if (!shouldRequest) {
+              return false;
+            }
+            if (!context.mounted) {
               return false;
             }
           }
@@ -173,7 +198,7 @@ class PermissionManager {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -188,7 +213,7 @@ class PermissionManager {
       }
 
       if (status.isDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           final shouldRequest = await _showPermissionDialog(
             context,
             '相机权限',
@@ -199,6 +224,9 @@ class PermissionManager {
           if (!shouldRequest) {
             return false;
           }
+          if (!context.mounted) {
+            return false;
+          }
         }
 
         final result = await Permission.camera.request();
@@ -206,7 +234,7 @@ class PermissionManager {
       }
 
       if (status.isPermanentlyDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           await _showSettingsDialog(
             context,
             '相机权限被拒绝',
@@ -217,7 +245,7 @@ class PermissionManager {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -232,7 +260,7 @@ class PermissionManager {
       }
 
       if (status.isDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           final shouldRequest = await _showPermissionDialog(
             context,
             '相册权限',
@@ -243,6 +271,9 @@ class PermissionManager {
           if (!shouldRequest) {
             return false;
           }
+          if (!context.mounted) {
+            return false;
+          }
         }
 
         final result = await Permission.photos.request();
@@ -250,7 +281,7 @@ class PermissionManager {
       }
 
       if (status.isPermanentlyDenied) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           await _showSettingsDialog(
             context,
             '相册权限被拒绝',
@@ -261,7 +292,7 @@ class PermissionManager {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -288,11 +319,11 @@ class PermissionManager {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('取消'),
+              child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('允许'),
+              child: Text(AppLocalizationsSimple.of(context)?.allow ?? '允许'),
             ),
           ],
         ),
@@ -316,23 +347,25 @@ class PermissionManager {
           children: [
             Text(message),
             const SizedBox(height: 12),
-            const Text(
-              '请按以下步骤操作：\n1. 点击"去设置"\n2. 找到相应权限开关\n3. 开启权限后返回应用',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              AppLocalizationsSimple.of(context)?.permissionStepShort ??
+                  '请按以下步骤操作：\n1. 点击"去设置"\n2. 找到相应权限开关\n3. 开启权限后返回应用',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
           ),
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
               await openAppSettings();
             },
-            child: const Text('去设置'),
+            child:
+                Text(AppLocalizationsSimple.of(context)?.goToSettings ?? '去设置'),
           ),
         ],
       ),
@@ -343,6 +376,9 @@ class PermissionManager {
   Future<bool> checkSpeechPermissions(BuildContext? context) async {
     final micPermission = await requestMicrophonePermission(context);
     if (!micPermission) {
+      return false;
+    }
+    if (context != null && !context.mounted) {
       return false;
     }
 

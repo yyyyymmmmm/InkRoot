@@ -22,7 +22,6 @@ class WebDavService {
       config.serverUrl,
       user: config.username,
       password: config.password,
-      debug: false, // 🔇 关闭 WebDAV 详细日志
     );
 
     // 设置超时
@@ -37,12 +36,24 @@ class WebDavService {
       if (_client == null) {
         throw Exception('客户端未初始化');
       }
+      final config = _config;
+      if (config == null) {
+        throw Exception('WebDAV 配置缺失');
+      }
 
       // 尝试列出根目录
       await _client!.readDir('/');
+      final probePath =
+          '${config.fullSyncPath}.inkroot-connection-${DateTime.now().millisecondsSinceEpoch}.txt';
+      await uploadFile(probePath, 'InkRoot WebDAV connection test');
+      try {
+        await deleteFile(probePath);
+      } on Object {
+        // 删除探测文件是清理动作；连接测试只要求目录可写。
+      }
 
       return true;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -54,8 +65,8 @@ class WebDavService {
         throw Exception('客户端未初始化');
       }
 
-      await _client!.mkdir(path);
-    } catch (e) {
+      await _ensureDirectoryExists(path);
+    } on Object catch (e) {
       // 如果文件夹已存在，不抛出异常
       if (!e.toString().contains('405') &&
           !e.toString().contains('already exists')) {
@@ -74,7 +85,7 @@ class WebDavService {
       // 🔧 大厂标准：使用 ping 方法检查文件是否存在（适用于文件和目录）
       // ping 方法会发送 HEAD 请求，比 readDir 更轻量且适用于文件
       await _client!.ping();
-      
+
       // 尝试获取文件/目录的属性信息
       try {
         // 如果是目录（以 / 结尾），使用 readDir
@@ -85,15 +96,15 @@ class WebDavService {
           final parentPath = path.substring(0, path.lastIndexOf('/') + 1);
           final fileName = path.substring(path.lastIndexOf('/') + 1);
           final files = await _client!.readDir(parentPath);
-          
+
           // 检查文件是否在列表中
           return files.any((file) => file.name == fileName);
         }
         return true;
-      } catch (e) {
+      } on Object {
         return false;
       }
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -125,12 +136,12 @@ class WebDavService {
         if (!await exists(currentPath)) {
           await _client!.mkdir(currentPath);
         }
-      } catch (e) {
+      } on Object catch (e) {
         // 如果是405错误（目录已存在），忽略
         if (e.toString().contains('405') ||
             e.toString().contains('already exists')) {
         } else {
-          // 其他错误继续，可能目录已经存在但检测失败
+          rethrow;
         }
       }
     }
@@ -152,7 +163,7 @@ class WebDavService {
       }
 
       await _client!.write(remotePath, bytes);
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -173,7 +184,7 @@ class WebDavService {
       // 转换为 Uint8List
       final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
       await _client!.write(remotePath, uint8List);
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -189,7 +200,7 @@ class WebDavService {
       final content = utf8.decode(bytes);
 
       return content;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -204,7 +215,7 @@ class WebDavService {
       final bytes = await _client!.read(remotePath);
 
       return bytes;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -217,7 +228,7 @@ class WebDavService {
       }
 
       await _client!.remove(remotePath);
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -232,7 +243,7 @@ class WebDavService {
       final list = await _client!.readDir(path);
 
       return list;
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -249,7 +260,7 @@ class WebDavService {
         return list.first;
       }
       return null;
-    } catch (e) {
+    } on Object {
       return null;
     }
   }
@@ -263,7 +274,7 @@ class WebDavService {
 
       await _client!.copy(fromPath, toPath, true);
       await _client!.remove(fromPath);
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }
@@ -280,7 +291,7 @@ class WebDavService {
       }
 
       await _client!.copy(fromPath, toPath, overwrite);
-    } catch (e) {
+    } on Object {
       rethrow;
     }
   }

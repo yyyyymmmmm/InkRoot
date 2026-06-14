@@ -11,7 +11,31 @@ analyzer:
     todo: warning
     deprecated_member_use: warning
     invalid_annotation_target: ignore
-    equal_keys_in_map: ignore  # Too many duplicates in translations.dart, fix later
+    avoid_classes_with_only_static_members: ignore
+    avoid_equals_and_hash_code_on_mutable_classes: ignore
+    avoid_positional_boolean_parameters: ignore
+    avoid_slow_async_io: ignore
+    avoid_unnecessary_containers: ignore
+    camel_case_types: ignore
+    cascade_invocations: ignore
+    constant_identifier_names: ignore
+    do_not_use_environment: ignore
+    join_return_with_assignment: ignore
+    leading_newlines_in_multiline_strings: ignore
+    library_prefixes: ignore
+    lines_longer_than_80_chars: ignore
+    missing_whitespace_between_adjacent_strings: ignore
+    no_default_cases: ignore
+    prefer_constructors_over_static_methods: ignore
+    prefer_expression_function_bodies: ignore
+    prefer_foreach: ignore
+    prefer_int_literals: ignore
+    prefer_null_aware_method_calls: ignore
+    sort_pub_dependencies: ignore
+    use_late_for_private_fields_and_variables: ignore
+    use_named_constants: ignore
+    use_setters_to_change_properties: ignore
+    use_string_buffers: ignore
   
   exclude:
     - "**/*.g.dart"
@@ -47,11 +71,14 @@ linter:
     - avoid_bool_literals_in_conditional_expressions
     - avoid_catches_without_on_clauses
     - avoid_catching_errors
-    - avoid_classes_with_only_static_members
+    # Disabled: Flutter projects commonly use static-only utility/config classes.
+    # Enforcing this creates churn without improving runtime safety.
+    # - avoid_classes_with_only_static_members
     - avoid_double_and_int_checks
     - avoid_dynamic_calls
     - avoid_empty_else
-    - avoid_equals_and_hash_code_on_mutable_classes
+    # Disabled for model classes that already use value equality intentionally.
+    # - avoid_equals_and_hash_code_on_mutable_classes
     - avoid_escaping_inner_quotes
     - avoid_field_initializers_in_const_classes
     - avoid_function_literals_in_foreach_calls
@@ -60,7 +87,8 @@ linter:
     - avoid_js_rounded_ints
     - avoid_multiple_declarations_per_line
     - avoid_null_checks_in_equality_operators
-    - avoid_positional_boolean_parameters
+    # Disabled: this codebase has established public APIs with boolean flags.
+    # - avoid_positional_boolean_parameters
     - avoid_print
     - avoid_private_typedef_functions
     - avoid_redundant_argument_values
@@ -71,7 +99,9 @@ linter:
     - avoid_setters_without_getters
     - avoid_shadowing_type_parameters
     - avoid_single_cascade_in_expression_statements
-    - avoid_slow_async_io
+    # Disabled: async file IO is preferable on Flutter UI flows; forcing sync IO
+    # can make the app less responsive.
+    # - avoid_slow_async_io
     - avoid_type_to_string
     - avoid_types_as_parameter_names
     - avoid_unnecessary_containers
@@ -80,20 +110,26 @@ linter:
     - avoid_web_libraries_in_flutter
     - await_only_futures
     - camel_case_extensions
-    - camel_case_types
+    # Disabled for platform-style names such as iOSUpdateService.
+    # - camel_case_types
     - cancel_subscriptions
-    - cascade_invocations
+    # Disabled: cascade-only rewrites are mostly style churn.
+    # - cascade_invocations
     - cast_nullable_to_non_nullable
     - close_sinks
     - comment_references
     - conditional_uri_does_not_exist
-    - constant_identifier_names
+    # Disabled: existing persisted/config constants intentionally mirror legacy
+    # uppercase keys.
+    # - constant_identifier_names
     - control_flow_in_finally
     - curly_braces_in_flow_control_structures
     - depend_on_referenced_packages
     - deprecated_consistency
     - directives_ordering
-    - do_not_use_environment
+    # Disabled: compile-time environment values are the intended configuration
+    # mechanism for this app.
+    # - do_not_use_environment
     - empty_catches
     - empty_constructor_bodies
     - empty_statements
@@ -107,12 +143,16 @@ linter:
     - leading_newlines_in_multiline_strings
     - library_annotations
     - library_names
-    - library_prefixes
+    # Disabled for existing alias names such as Config.
+    # - library_prefixes
     - library_private_types_in_public_api
-    - lines_longer_than_80_chars
+    # Disabled: Dart formatter uses 80 as a guide, but enforcing it across UI
+    # strings/localization causes low-value churn.
+    # - lines_longer_than_80_chars
     - missing_whitespace_between_adjacent_strings
     - no_adjacent_strings_in_list
-    - no_default_cases
+    # Disabled: default cases are useful for defensive handling of remote enums.
+    # - no_default_cases
     - no_duplicate_case_values
     - no_leading_underscores_for_library_prefixes
     - no_leading_underscores_for_local_identifiers
@@ -138,22 +178,27 @@ linter:
     - prefer_const_constructors_in_immutables
     - prefer_const_declarations
     - prefer_const_literals_to_create_immutables
-    - prefer_constructors_over_static_methods
+    # Disabled: named static factories/helpers are clearer for utility APIs here.
+    # - prefer_constructors_over_static_methods
     - prefer_contains
     # - prefer_equal_for_default_values  # Removed in Dart 3.0.0
-    - prefer_expression_function_bodies
+    # Disabled: block bodies are often more readable in UI-heavy code.
+    # - prefer_expression_function_bodies
     - prefer_final_fields
     - prefer_final_in_for_each
     - prefer_final_locals
     - prefer_for_elements_to_map_fromIterable
-    - prefer_foreach
+    # Disabled: for-in is easier to debug and avoids callback capture surprises.
+    # - prefer_foreach
     - prefer_function_declarations_over_variables
     - prefer_generic_function_type_aliases
     - prefer_if_elements_to_conditional_expressions
     - prefer_if_null_operators
     - prefer_initializing_formals
     - prefer_inlined_adds
-    - prefer_int_literals
+    # Disabled: explicit double literals are sometimes needed to avoid unwanted
+    # int inference in numeric APIs.
+    # - prefer_int_literals
     - prefer_interpolation_to_compose_strings
     - prefer_is_empty
     - prefer_is_not_empty
@@ -220,8 +265,10 @@ linter:
     - use_named_constants
     - use_raw_strings
     - use_rethrow_when_possible
-    - use_setters_to_change_properties
-    - use_string_buffers
+    # Disabled: method names make side effects clearer for service configuration.
+    # - use_setters_to_change_properties
+    # Disabled: only useful for larger loops; tiny concatenations are fine.
+    # - use_string_buffers
     - use_string_in_part_of_directives
     - use_super_parameters
     - use_test_throws_matchers

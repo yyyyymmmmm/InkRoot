@@ -1,26 +1,27 @@
 import 'package:flutter/foundation.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:inkroot/config/app_config.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// 🚀 大厂标准：Sentry监控告警服务
 class SentryMonitoringService {
-  static final SentryMonitoringService _instance =
-      SentryMonitoringService._internal();
   factory SentryMonitoringService() => _instance;
   SentryMonitoringService._internal();
+  static final SentryMonitoringService _instance =
+      SentryMonitoringService._internal();
 
   bool _initialized = false;
 
   /// 初始化Sentry
   Future<void> init({required String dsn}) async {
-    if (_initialized) return;
+    if (_initialized) {
+      return;
+    }
 
     await SentryFlutter.init(
       (options) {
         options
           ..dsn = dsn
           ..tracesSampleRate = AppConfig.sentrySampleRate
-          ..profilesSampleRate = AppConfig.sentryProfilesSampleRate
           ..environment = kReleaseMode ? 'production' : 'development'
           ..release = '${AppConfig.appName}@${AppConfig.appVersion}'
           ..dist = AppConfig.buildNumber.toString()
@@ -38,44 +39,10 @@ class SentryMonitoringService {
     debugPrint('✅ Sentry监控已初始化');
   }
 
-  /// 事件过滤器（发送前）
-  SentryEvent? _beforeSend(SentryEvent event, {Hint? hint}) {
-    // 过滤掉开发环境的某些错误
-    if (!kReleaseMode) {
-      if (event.message?.formatted?.contains('debug') ?? false) {
-        return null; // 不发送
-      }
-    }
-
-    // 添加自定义上下文
-    event = event.copyWith(
-      contexts: event.contexts.copyWith(
-        app: SentryApp(
-          name: 'InkRoot',
-          version: AppConfig.appVersion,
-          build: AppConfig.buildNumber.toString(),
-        ),
-      ),
-    );
-
-    return event;
-  }
-
-  /// 面包屑过滤器
-  Breadcrumb? _beforeBreadcrumb(Breadcrumb breadcrumb, {Hint? hint}) {
-    // 过滤敏感信息
-    if (breadcrumb.data?.containsKey('password') ?? false) {
-      breadcrumb = breadcrumb.copyWith(
-        data: {...breadcrumb.data!}..remove('password'),
-      );
-    }
-    return breadcrumb;
-  }
-
   /// 手动捕获错误
   void captureError(
-    dynamic exception, {
-    dynamic stackTrace,
+    Object exception, {
+    StackTrace? stackTrace,
     String? hint,
     Map<String, dynamic>? extra,
   }) {
@@ -86,7 +53,7 @@ class SentryMonitoringService {
       withScope: (scope) {
         if (extra != null) {
           extra.forEach((key, value) {
-            scope.setExtra(key, value);
+            scope.setContexts(key, value);
           });
         }
       },
@@ -107,7 +74,7 @@ class SentryMonitoringService {
       withScope: (scope) {
         if (extra != null) {
           extra.forEach((key, value) {
-            scope.setExtra(key, value);
+            scope.setContexts(key, value);
           });
         }
       },
@@ -182,9 +149,9 @@ class SentryMonitoringService {
   }
 
   /// 设置额外信息
-  void setExtra(String key, dynamic value) {
+  void setExtra(String key, Object? value) {
     Sentry.configureScope((scope) {
-      scope.setExtra(key, value);
+      scope.setContexts(key, value);
     });
   }
 
@@ -244,7 +211,7 @@ class SentryMonitoringService {
 
     // 如果超过阈值，发送警告
     // 🚀 从配置中心读取性能阈值
-    final thresholds = AppConfig.performanceThresholds;
+    const thresholds = AppConfig.performanceThresholds;
 
     final threshold = thresholds[metricName];
     if (threshold != null && value > threshold) {
@@ -268,4 +235,3 @@ class SentryMonitoringService {
     _initialized = false;
   }
 }
-

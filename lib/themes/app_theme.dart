@@ -42,13 +42,13 @@ class AppTheme {
       [
         BoxShadow(
           color: (shadowColor ?? (isDark ? Colors.black : Colors.black))
-              .withOpacity(isDark ? 0.3 : 0.05),
+              .withValues(alpha: isDark ? 0.3 : 0.05),
           offset: const Offset(2, 2),
           blurRadius: 8,
         ),
         if (!isDark)
           BoxShadow(
-            color: (shadowColor ?? Colors.white).withOpacity(0.05),
+            color: (shadowColor ?? Colors.white).withValues(alpha: 0.05),
             offset: const Offset(-2, -2),
             blurRadius: 8,
           ),
@@ -62,13 +62,13 @@ class AppTheme {
       [
         BoxShadow(
           color: (isDark ? Colors.black : Colors.black)
-              .withOpacity(isDark ? 0.4 : (isPressed ? 0.01 : 0.05)),
+              .withValues(alpha: isDark ? 0.4 : (isPressed ? 0.01 : 0.05)),
           offset: isPressed ? const Offset(1, 1) : const Offset(3, 3),
           blurRadius: isPressed ? 2 : 5,
         ),
         if (!isDark)
           BoxShadow(
-            color: Colors.white.withOpacity(isPressed ? 0.01 : 0.8),
+            color: Colors.white.withValues(alpha: isPressed ? 0.01 : 0.8),
             offset: isPressed ? const Offset(-1, -1) : const Offset(-3, -3),
             blurRadius: isPressed ? 2 : 5,
           ),
@@ -83,13 +83,13 @@ class AppTheme {
       BoxDecoration(
         color: color ??
             (isDark
-                ? darkCardColor.withOpacity(0.7)
-                : Colors.white.withOpacity(0.7)),
+                ? darkCardColor.withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.7)),
         borderRadius: BorderRadius.circular(borderRadius ?? 12),
         boxShadow: [
           BoxShadow(
             color: (isDark ? Colors.black : Colors.black)
-                .withOpacity(isDark ? 0.3 : 0.1),
+                .withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 10,
             spreadRadius: isDark ? 0 : -5,
           ),
@@ -268,7 +268,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return primaryColor.withOpacity(0.4);
+            return primaryColor.withValues(alpha: 0.4);
           }
           return Colors.grey[300];
         }),
@@ -346,7 +346,8 @@ class AppTheme {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           elevation: WidgetStateProperty.all(2),
-          shadowColor: WidgetStateProperty.all(Colors.black.withOpacity(0.3)),
+          shadowColor:
+              WidgetStateProperty.all(Colors.black.withValues(alpha: 0.3)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -417,7 +418,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return primaryColor.withOpacity(0.4);
+            return primaryColor.withValues(alpha: 0.4);
           }
           return Colors.grey[800];
         }),

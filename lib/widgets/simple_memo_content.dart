@@ -1,26 +1,25 @@
-// 简单的Memo内容渲染 - 基于flutter_markdown
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/screens/note_detail_screen.dart';
+import 'package:inkroot/services/memos_resource_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:inkroot/utils/image_cache_manager.dart';
+import 'package:inkroot/utils/image_utils.dart';
+import 'package:inkroot/utils/memos_content_helper.dart';
 import 'package:inkroot/utils/memos_markdown_converter.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:inkroot/utils/text_style_helper.dart';
 import 'package:inkroot/widgets/animated_checkbox.dart';
+import 'package:inkroot/widgets/image_viewer_screen.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 class SimpleMemoContent extends StatefulWidget {
@@ -36,6 +35,7 @@ class SimpleMemoContent extends StatefulWidget {
     this.maxLines, // 可选参数，不设置则显示全部内容
     this.note, // 🎯 可选的note对象（用于交互）
     this.onCheckboxTap, // 🎯 复选框点击回调
+    this.highlightQuery,
   });
   final String content;
   final String? serverUrl;
@@ -45,6 +45,7 @@ class SimpleMemoContent extends StatefulWidget {
   final int? maxLines;
   final Note? note; // 🎯 可选的note对象
   final Function(int todoIndex)? onCheckboxTap; // 🎯 复选框点击回调，传递待办事项索引
+  final String? highlightQuery;
 
   @override
   State<SimpleMemoContent> createState() => _SimpleMemoContentState();
@@ -65,13 +66,17 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
   /// 收起状态下截断内容，只取前 N 行和有限字符，避免全量 Markdown 解析
   String _truncateForPreview(String content, int maxLines) {
     const maxChars = 600; // 6行约100字/行，留余量
-    if (content.length <= maxChars) return content;
-    
+    if (content.length <= maxChars) {
+      return content;
+    }
+
     // 优先按换行截断
     final lines = content.split('\n');
     if (lines.length > maxLines) {
       final preview = lines.take(maxLines + 2).join('\n');
-      return preview.length <= maxChars ? preview : preview.substring(0, maxChars);
+      return preview.length <= maxChars
+          ? preview
+          : preview.substring(0, maxChars);
     }
     return content.substring(0, maxChars);
   }
@@ -140,7 +145,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
 
   // 提取显示文本（Memos 标准：前12字符，清理 Markdown 格式）
   String _extractDisplayText(String content) {
-    if (content.isEmpty) return '(空笔记)';
+    if (content.isEmpty) {
+      return '(空笔记)';
+    }
 
     // 🎯 清理 Markdown 格式标记
     var cleaned = content.trim();
@@ -154,11 +161,6 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
       return '${cleaned.substring(0, 12)}...';
     }
     return cleaned.isNotEmpty ? cleaned : '(空笔记)';
-  }
-
-  // 处理引用点击
-  void _handleReferenceTap(BuildContext context, String referenceContent) {
-    // 这里的引用点击由 CustomLinkBuilder 处理
   }
 
   @override
@@ -188,11 +190,13 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
           data: convertedContent,
           selectable: widget.selectable,
           softLineBreak: true, // 单个换行也生效（符合笔记应用习惯）
-          extensionSet: md.ExtensionSet.gitHubFlavored, // 🎯 启用GitHub风格Markdown（支持待办事项）
+          extensionSet:
+              md.ExtensionSet.gitHubFlavored, // 🎯 启用GitHub风格Markdown（支持待办事项）
+          inlineSyntaxes: [UnderlineSyntax()],
           checkboxBuilder: (value) {
             // 🎯 获取当前复选框的索引
             final currentIndex = _checkboxCounter++;
-            
+
             // 🎯 优雅的动画复选框（参考 Things 3 / Todoist）
             // 包装在 Align 中确保垂直居中对齐
             return Align(
@@ -204,7 +208,8 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                         // 🎯 如果提供了回调，则可交互
                         if (kDebugMode) {
                           debugPrint(
-                              'SimpleMemoContent: 复选框 #$currentIndex 被点击 $value -> $newValue');
+                            'SimpleMemoContent: 复选框 #$currentIndex 被点击 $value -> $newValue',
+                          );
                         }
                         widget.onCheckboxTap?.call(currentIndex);
                       }
@@ -215,12 +220,20 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
             );
           },
           builders: {
-            'a': CustomLinkBuilder(
-              isDarkMode: isDarkMode,
-              onTagTap: widget.onTagTap,
-              onLinkTap: widget.onLinkTap,
-              onReferenceTap: _handleReferenceTap,
-            ),
+            if (widget.highlightQuery?.trim().isNotEmpty ?? false)
+              'p': HighlightParagraphBuilder(
+                query: widget.highlightQuery!.trim(),
+                baseStyle: AppTextStyles.bodyLarge(
+                  context,
+                  height: 1.6,
+                  color: isDarkMode ? const Color(0xFFE4E1DA) : Colors.black87,
+                ),
+                highlightColor: isDarkMode
+                    ? AppTheme.primaryLightColor.withValues(alpha: 0.35)
+                    : AppTheme.primaryLightColor.withValues(alpha: 0.22),
+                textScaler: MediaQuery.textScalerOf(context),
+              ),
+            'u': UnderlineBuilder(),
           },
           onTapText: () {
             // 处理标签点击
@@ -237,6 +250,10 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                 widget.onTagTap?.call(href.substring(1));
                 return;
               }
+              if (href.startsWith('ref:') && href.length > 4) {
+                _handleReferenceNavigation(context, href.substring(4));
+                return;
+              }
               widget.onLinkTap?.call(href);
             }
           },
@@ -245,7 +262,7 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
             p: AppTextStyles.bodyLarge(
               context,
               height: 1.6,
-              color: isDarkMode ? Colors.grey[300] : Colors.black87,
+              color: isDarkMode ? const Color(0xFFE4E1DA) : Colors.black87,
             ),
             code: AppTextStyles.bodyMedium(
               context,
@@ -280,19 +297,27 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
               context,
               fontWeight: FontWeight.bold,
               color: isDarkMode ? Colors.white : Colors.black,
-            ).copyWith(fontSize: ResponsiveUtils.responsiveFontSize(context, 26)),
+            ).copyWith(
+              fontSize: ResponsiveUtils.responsiveFontSize(context, 26),
+            ),
             h2: AppTextStyles.headlineSmall(
               context,
               fontWeight: FontWeight.bold,
               color: isDarkMode ? Colors.white : Colors.black,
-            ).copyWith(fontSize: ResponsiveUtils.responsiveFontSize(context, 22)),
+            ).copyWith(
+              fontSize: ResponsiveUtils.responsiveFontSize(context, 22),
+            ),
             h3: AppTextStyles.titleLarge(
               context,
               fontWeight: FontWeight.w600,
               color: isDarkMode ? Colors.white : Colors.black,
-            ).copyWith(fontSize: ResponsiveUtils.responsiveFontSize(context, 19)),
+            ).copyWith(
+              fontSize: ResponsiveUtils.responsiveFontSize(context, 19),
+            ),
             a: TextStyle(
-              color: isDarkMode ? Colors.blue[300] : Colors.blue[700],
+              color: isDarkMode
+                  ? AppTheme.primaryLightColor
+                  : AppTheme.primaryColor,
               decoration: TextDecoration.none,
               fontWeight: FontWeight.w500,
             ),
@@ -307,14 +332,14 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
             ).copyWith(
               decoration: TextDecoration.lineThrough,
               decorationColor: isDarkMode ? Colors.grey[600] : Colors.grey[400],
-              decorationThickness: 2.0,
+              decorationThickness: 2,
               leadingDistribution: TextLeadingDistribution.even, // 确保垂直居中
             ),
             // 🎯 复选框列表项样式（与正文相同大小，确保垂直对齐）
             checkbox: AppTextStyles.bodyLarge(
               context,
               height: 1.6,
-              color: isDarkMode ? Colors.grey[300] : Colors.black87,
+              color: isDarkMode ? const Color(0xFFE4E1DA) : Colors.black87,
             ).copyWith(
               leadingDistribution: TextLeadingDistribution.even, // 确保垂直居中
             ),
@@ -334,9 +359,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
           final fontSize = ResponsiveUtils.responsiveFontSize(context, 15);
           const lineHeightMultiplier = 1.6; // 与 p 标签的 height 保持一致
           final singleLineHeight = fontSize * lineHeightMultiplier;
-          
+
           // 🔥 修复长URL问题：使用更大的高度余量，避免内容抖动
-          final heightAdjustment = 6; // 增加余量，避免半行文字露出
+          const heightAdjustment = 6; // 增加余量，避免半行文字露出
 
           return Container(
             height: widget.maxLines! * singleLineHeight + heightAdjustment,
@@ -360,12 +385,14 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Theme.of(context).brightness == Brightness.dark
-                              ? AppTheme.darkCardColor.withOpacity(0.0)
-                              : Colors.white.withOpacity(0.0),
-                          Theme.of(context).brightness == Brightness.dark
-                              ? AppTheme.darkCardColor
-                              : Colors.white,
+                          if (Theme.of(context).brightness == Brightness.dark)
+                            AppTheme.darkCardColor.withValues(alpha: 0)
+                          else
+                            Colors.white.withValues(alpha: 0),
+                          if (Theme.of(context).brightness == Brightness.dark)
+                            AppTheme.darkCardColor
+                          else
+                            Colors.white,
                         ],
                       ),
                     ),
@@ -385,7 +412,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
   Widget _buildImage(BuildContext context, Uri uri, bool isDarkMode) {
     final imagePath = uri.toString();
 
-    if (kDebugMode) debugPrint('🖼️ SimpleMemoContent 图片: $imagePath');
+    if (kDebugMode) {
+      debugPrint('🖼️ SimpleMemoContent 图片: $imagePath');
+    }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
 
@@ -394,9 +423,10 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: GestureDetector(
+          onTap: () => _openImageViewer(context, imagePath),
           onLongPress: () {
             // 长按保存图片
-            _showImageSaveDialog(context, imagePath, headers: null);
+            _showImageSaveDialog(context, imagePath);
           },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
@@ -439,7 +469,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '图片加载失败',
+                            AppLocalizationsSimple.of(context)
+                                    ?.imageLoadError ??
+                                '图片加载失败',
                             style: AppTextStyles.bodySmall(
                               context,
                               color: Colors.grey[600],
@@ -458,14 +490,13 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
     }
 
     // 处理Memos服务器资源路径
-    if (imagePath.startsWith('/o/r/') ||
-        imagePath.startsWith('/file/') ||
-        imagePath.startsWith('/resource/')) {
+    if (MemosResourceService.isServerResourcePath(imagePath)) {
       String fullUrl;
       if (appProvider.resourceService != null) {
         fullUrl = appProvider.resourceService!.buildImageUrl(imagePath);
       } else {
-        final baseUrl = widget.serverUrl ?? appProvider.appConfig.memosApiUrl ?? '';
+        final baseUrl =
+            widget.serverUrl ?? appProvider.appConfig.memosApiUrl ?? '';
         fullUrl = baseUrl.isNotEmpty ? '$baseUrl$imagePath' : imagePath;
       }
 
@@ -476,12 +507,14 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
         );
       }
 
-      final headers =
-          token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+      final headers = token != null
+          ? {'Authorization': 'Bearer $token'}
+          : <String, String>{};
 
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: GestureDetector(
+          onTap: () => _openImageViewer(context, imagePath),
           onLongPress: () {
             // 长按保存图片
             _showImageSaveDialog(context, fullUrl, headers: headers);
@@ -505,7 +538,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                 ),
               ),
               errorWidget: (context, url, error) {
-                if (kDebugMode) debugPrint('🖼️ 图片加载错误: $error');
+                if (kDebugMode) {
+                  debugPrint('🖼️ 图片加载错误: $error');
+                }
                 // 离线模式fallback
                 return FutureBuilder<File?>(
                   future: ImageCacheManager.authImageCache
@@ -529,7 +564,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '图片加载失败',
+                            AppLocalizationsSimple.of(context)
+                                    ?.imageLoadError ??
+                                '图片加载失败',
                             style: AppTextStyles.bodySmall(
                               context,
                               color: Colors.grey[600],
@@ -563,9 +600,10 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: GestureDetector(
+          onTap: () => _openImageViewer(context, imagePath),
           onLongPress: () {
             // 长按保存图片（本地文件）
-            _showImageSaveDialog(context, imagePath, headers: null);
+            _showImageSaveDialog(context, imagePath);
           },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
@@ -590,7 +628,8 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '图片路径已失效',
+                        AppLocalizationsSimple.of(context)?.imagePathInvalid ??
+                            '图片路径已失效',
                         style: AppTextStyles.bodySmall(
                           context,
                           color: Colors.grey[600],
@@ -630,8 +669,12 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: GestureDetector(
+              onTap: () => _openImageViewer(context, 'file://$fullPath'),
               onLongPress: () {
-                _showImageSaveDialog(context, 'file://$fullPath', headers: null);
+                _showImageSaveDialog(
+                  context,
+                  'file://$fullPath',
+                );
               },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -640,7 +683,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     if (kDebugMode) {
-                      debugPrint('❌ 相对路径图片加载失败: $error for $imagePath -> $fullPath');
+                      debugPrint(
+                        '❌ 相对路径图片加载失败: $error for $imagePath -> $fullPath',
+                      );
                     }
                     return Container(
                       height: 200,
@@ -656,7 +701,8 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '图片不存在',
+                            AppLocalizationsSimple.of(context)?.imageNotFound ??
+                                '图片不存在',
                             style: AppTextStyles.bodySmall(
                               context,
                               color: Colors.grey[600],
@@ -677,6 +723,27 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
     return const SizedBox();
   }
 
+  void _openImageViewer(BuildContext context, String imagePath) {
+    final imagePaths = MemosContentHelper.extractMarkdownImagePaths(
+      widget.content,
+    );
+    final uniquePaths = <String>[];
+    for (final path in imagePaths) {
+      if (!uniquePaths.contains(path)) {
+        uniquePaths.add(path);
+      }
+    }
+    if (!uniquePaths.contains(imagePath)) {
+      uniquePaths.add(imagePath);
+    }
+
+    ImageViewerScreen.open(
+      context,
+      imagePaths: uniquePaths,
+      initialIndex: uniquePaths.indexOf(imagePath).clamp(0, uniquePaths.length),
+    );
+  }
+
   // 🎯 将相对路径转换为绝对路径
   Future<String> _resolveLocalImagePath(String relativePath) async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -688,313 +755,128 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
     BuildContext context,
     String imageUrl, {
     Map<String, String>? headers,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-        final cardColor = isDarkMode ? const Color(0xFF2C2C2E) : Colors.white;
-        final textColor = isDarkMode ? Colors.white : Colors.black87;
-
-        return Material(
-          color: cardColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 拖动条
-                Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                // 保存按钮
-                ListTile(
-                  leading: const Icon(Icons.download, color: Colors.blue),
-                  title: Text(
-                    '保存图片到相册',
-                    style: TextStyle(color: textColor),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _saveImage(context, imageUrl, headers: headers);
-                  },
-                ),
-                const Divider(height: 1),
-                // 取消按钮
-                ListTile(
-                  leading: const Icon(Icons.close, color: Colors.grey),
-                  title: Text(
-                    '取消',
-                    style: TextStyle(color: textColor),
-                  ),
-                  onTap: () => Navigator.pop(context),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // 保存图片
-  Future<void> _saveImage(
-    BuildContext context,
-    String imageUrl, {
-    Map<String, String>? headers,
-  }) async {
-    // 使用 ImageUtils 的保存功能
-    // 动态导入以避免循环依赖
-    final imageUtils = await Future.microtask(() {
-      // 延迟导入
-      return null;
-    });
-
-    // 直接实现保存逻辑
-    try {
-      // 检查存储权限
-      if (Platform.isAndroid || Platform.isIOS) {
-        Permission permission;
-
-        if (Platform.isAndroid) {
-          // Android 13+ 不需要存储权限，使用 photos 权限
-          final androidInfo = await DeviceInfoPlugin().androidInfo;
-          if (androidInfo.version.sdkInt >= 33) {
-            permission = Permission.photos;
-          } else {
-            permission = Permission.storage;
-          }
-        } else {
-          // iOS 使用 photos 权限
-          permission = Permission.photos;
-        }
-
-        final status = await permission.request();
-        if (!status.isGranted) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('需要存储权限才能保存图片')),
-            );
-          }
-          return;
-        }
-      }
-
-      // 显示加载提示
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('正在保存图片...'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-
-      // 下载图片数据
-      Uint8List? imageBytes;
-
-      // 先尝试从缓存获取
-      final cachedFile = await ImageCacheManager.authImageCache
-          .getFileFromCache(imageUrl)
-          .then((info) => info?.file);
-
-      if (cachedFile != null && await cachedFile.exists()) {
-        imageBytes = await cachedFile.readAsBytes();
-        if (kDebugMode) {
-          debugPrint('📷 从缓存加载图片: ${cachedFile.path}');
-        }
-      } else {
-        // 从网络下载
-        if (kDebugMode) {
-          debugPrint('📷 从网络下载图片: $imageUrl');
-        }
-        final response = await http.get(
-          Uri.parse(imageUrl),
-          headers: headers,
-        );
-
-        if (response.statusCode == 200) {
-          imageBytes = response.bodyBytes;
-        } else {
-          throw Exception('下载图片失败: ${response.statusCode}');
-        }
-      }
-
-      if (imageBytes == null || imageBytes.isEmpty) {
-        throw Exception('图片数据为空');
-      }
-
-      // 保存到相册
-      final result = await ImageGallerySaverPlus.saveImage(
-        imageBytes,
-        quality: 100,
-        name: 'inkroot_${DateTime.now().millisecondsSinceEpoch}',
+  }) =>
+      ImageUtils.showImageSaveDialog(
+        context,
+        imageUrl,
+        headers: headers,
       );
-
-      // 判断保存是否成功
-      final success = result is Map
-          ? (result['isSuccess'] == true || result['filePath'] != null)
-          : result != null;
-
-      if (success) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('图片已保存到相册')),
-          );
-        }
-      } else {
-        throw Exception('保存失败');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('❌ 保存图片失败: $e');
-      }
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存图片失败: ${e.toString()}')),
-        );
-      }
-    }
-  }
-}
-
-// 自定义链接构建器 - 区分标签、引用和普通链接
-class CustomLinkBuilder extends MarkdownElementBuilder {
-  CustomLinkBuilder({
-    required this.isDarkMode,
-    this.onTagTap,
-    this.onLinkTap,
-    this.onReferenceTap,
-  });
-  final bool isDarkMode;
-  final Function(String)? onTagTap;
-  final Function(String)? onLinkTap;
-  final Function(BuildContext, String)? onReferenceTap;
-
-  @override
-  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    final href = element.attributes['href'];
-    final text = element.textContent;
-
-    // 判断类型
-    final isTag = href != null &&
-        href.isNotEmpty &&
-        href.startsWith('#') &&
-        text.startsWith('#');
-    final isReference = href != null && href.startsWith('ref:');
-
-    return Builder(
-      builder: (BuildContext builderContext) => GestureDetector(
-        onTap: () {
-          if (href != null && href.isNotEmpty) {
-            if (isTag && href.length > 1) {
-              onTagTap?.call(href.substring(1));
-            } else if (isReference) {
-              final refContent = href.substring(4); // 移除 'ref:' 前缀
-              _handleReferenceNavigation(builderContext, refContent);
-            } else if (!isTag) {
-              onLinkTap?.call(href);
-            }
-          }
-        },
-        child: Transform.translate(
-          offset: const Offset(0, -1), // 微调垂直位置，使其与文字基线对齐
-          child: Container(
-            padding: (isTag || isReference)
-                ? const EdgeInsets.symmetric(horizontal: 6, vertical: 1)
-                : EdgeInsets.zero,
-            decoration: (isTag || isReference)
-                ? BoxDecoration(
-                    color: isReference
-                        ? (isDarkMode
-                            ? Colors.blue[300]!.withOpacity(0.15)
-                            : Colors.blue[700]!.withOpacity(0.1))
-                        : (isDarkMode
-                            ? AppTheme.primaryColor.withOpacity(0.15)
-                            : AppTheme.primaryColor.withOpacity(0.1)),
-                    borderRadius: BorderRadius.circular(4),
-                    border: isReference
-                        ? Border.all(
-                            color: (isDarkMode
-                                    ? Colors.blue[300]!
-                                    : Colors.blue[700]!)
-                                .withOpacity(0.3),
-                          )
-                        : null,
-                  )
-                : null,
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isReference
-                    ? (isDarkMode ? Colors.blue[400] : Colors.blue[600])
-                    : (isTag
-                        ? (isDarkMode
-                            ? AppTheme.primaryColor.withOpacity(0.9)
-                            : AppTheme.primaryColor)
-                        : (isDarkMode
-                            ? Colors.blue[300]
-                            : Colors.blue[700])),
-                decoration: TextDecoration.none,
-                fontWeight: (isTag || isReference) ? FontWeight.w500 : FontWeight.normal,
-                fontSize: 13,
-                height: 1.0, // 设置行高为1.0，确保与正文对齐
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // 处理引用导航（直接使用ID跳转）
   void _handleReferenceNavigation(BuildContext context, String noteId) {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-
-    // 🔍 调试：打印所有笔记ID和查找的ID
-    debugPrint('🔍 查找笔记ID: $noteId');
-    debugPrint('📋 现有笔记数量: ${appProvider.notes.length}');
-    if (appProvider.notes.length < 10) {
-      debugPrint('📋 所有笔记ID: ${appProvider.notes.map((n) => n.id).join(", ")}');
-    } else {
-      debugPrint(
-        '📋 前10个笔记ID: ${appProvider.notes.take(10).map((n) => n.id).join(", ")}',
-      );
-    }
-
-    // 验证笔记是否存在
     final noteExists = appProvider.notes.any((note) => note.id == noteId);
-    debugPrint('✅ 笔记存在: $noteExists');
 
     if (!noteExists) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('引用的笔记不存在或已被删除 (ID: $noteId)'),
+          content: Text(
+            AppLocalizationsSimple.of(context)?.referenceNoteMissing(noteId) ??
+                '引用的笔记不存在或已被删除 (ID: $noteId)',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
       return;
     }
 
-    // 直接用ID跳转到笔记详情
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (ctx) => NoteDetailScreen(noteId: noteId),
       ),
     );
+  }
+}
+
+class UnderlineBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) =>
+      RichText(
+        text: TextSpan(
+          text: element.textContent,
+          style: (preferredStyle ?? const TextStyle()).copyWith(
+            decoration: TextDecoration.combine([
+              preferredStyle?.decoration ?? TextDecoration.none,
+              TextDecoration.underline,
+            ]),
+          ),
+        ),
+      );
+}
+
+class HighlightParagraphBuilder extends MarkdownElementBuilder {
+  HighlightParagraphBuilder({
+    required this.query,
+    required this.baseStyle,
+    required this.highlightColor,
+    required this.textScaler,
+  });
+
+  final String query;
+  final TextStyle baseStyle;
+  final Color highlightColor;
+  final TextScaler textScaler;
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final text = element.textContent;
+    final children = element.children ?? const <md.Node>[];
+    final hasInlineElements = children.any((node) => node is md.Element);
+    if (text.isEmpty || query.isEmpty || hasInlineElements) {
+      return null;
+    }
+
+    final style = preferredStyle ?? baseStyle;
+    final spans = _highlightSpans(text, style);
+    if (spans.length == 1) {
+      return null;
+    }
+
+    return RichText(
+      text: TextSpan(style: style, children: spans),
+      textScaler: textScaler,
+    );
+  }
+
+  List<TextSpan> _highlightSpans(String text, TextStyle style) {
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+    final spans = <TextSpan>[];
+    var cursor = 0;
+
+    while (cursor < text.length) {
+      final index = lowerText.indexOf(lowerQuery, cursor);
+      if (index < 0) {
+        spans.add(TextSpan(text: text.substring(cursor), style: style));
+        break;
+      }
+      if (index > cursor) {
+        spans.add(TextSpan(text: text.substring(cursor, index), style: style));
+      }
+      final end = index + query.length;
+      spans.add(
+        TextSpan(
+          text: text.substring(index, end),
+          style: style.copyWith(
+            backgroundColor: highlightColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+      cursor = end;
+    }
+
+    return spans.isEmpty ? [TextSpan(text: text, style: style)] : spans;
+  }
+}
+
+class UnderlineSyntax extends md.InlineSyntax {
+  UnderlineSyntax() : super(r'<u>(.*?)<\/u>', startCharacter: 60);
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('u', match.group(1) ?? ''));
+    return true;
   }
 }

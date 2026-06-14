@@ -653,14 +653,14 @@ If you can't find a solution here:
    ```
 
 2. **Search Issues**: Look for similar issues
-   - [InkRoot Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
+   - [InkRoot Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
    - [Flutter Issues](https://github.com/flutter/flutter/issues)
    - [Stack Overflow](https://stackoverflow.com/questions/tagged/flutter)
 
 3. **Ask for Help**:
    - 📧 Email: inkroot2025@gmail.com
-   - 💬 [GitHub Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
-   - 🐛 [Report Bug](https://github.com/yyyyymmmmm/IntRoot/issues/new)
+   - 💬 [GitHub Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
+   - 🐛 [Report Bug](https://github.com/yyyyymmmmm/InkRoot/issues/new)
 
 4. **Provide Information**:
    - Flutter version (`flutter --version`)

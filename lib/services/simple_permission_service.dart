@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// 简化的权限服务
@@ -22,12 +23,16 @@ class SimplePermissionService {
       if (context != null) {
         final shouldRequest = await _showPermissionDialog(
           context,
-          '语音识别权限',
-          '语音识别功能需要访问您的麦克风来录制语音并转换为文字。\n\n这将帮助您快速输入笔记内容。',
+          AppLocalizationsSimple.of(context)?.speechPermissionTitle ?? '语音识别权限',
+          AppLocalizationsSimple.of(context)?.speechPermissionMessage ??
+              '语音识别功能需要访问您的麦克风来录制语音并转换为文字。\n\n这将帮助您快速输入笔记内容。',
           '🎤',
         );
 
         if (!shouldRequest) {
+          return false;
+        }
+        if (!context.mounted) {
           return false;
         }
       }
@@ -39,11 +44,13 @@ class SimplePermissionService {
         final micResult = await Permission.microphone.request();
 
         if (!micResult.isGranted) {
-          if (context != null) {
+          if (context != null && context.mounted) {
             await _showSettingsDialog(
               context,
-              '麦克风权限被拒绝',
-              '语音识别功能需要麦克风权限。请在设置中手动开启麦克风权限。',
+              AppLocalizationsSimple.of(context)?.microphonePermissionDenied ??
+                  '麦克风权限被拒绝',
+              AppLocalizationsSimple.of(context)?.microphoneSettingsMessage ??
+                  '请在设置中手动开启麦克风权限以使用语音识别功能。',
             );
           }
           return false;
@@ -58,11 +65,13 @@ class SimplePermissionService {
           final speechResult = await Permission.speech.request();
 
           if (!speechResult.isGranted) {
-            if (context != null) {
+            if (context != null && context.mounted) {
               await _showSettingsDialog(
                 context,
-                '语音识别权限被拒绝',
-                '语音识别功能需要语音识别权限。请在设置中手动开启语音识别权限。',
+                AppLocalizationsSimple.of(context)?.speechPermissionDenied ??
+                    '语音识别权限被拒绝',
+                AppLocalizationsSimple.of(context)?.speechSettingsMessage ??
+                    '请在设置中手动开启语音识别权限。',
               );
             }
             return false;
@@ -71,7 +80,7 @@ class SimplePermissionService {
       }
 
       return true;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -83,12 +92,16 @@ class SimplePermissionService {
       if (context != null) {
         final shouldRequest = await _showPermissionDialog(
           context,
-          '通知权限',
-          '应用需要通知权限来提醒您重要的笔记和待办事项。\n\n这将帮助您不错过重要的提醒。',
+          AppLocalizationsSimple.of(context)?.notificationPermission ?? '通知权限',
+          AppLocalizationsSimple.of(context)?.permissionInstructions ??
+              '应用需要通知权限来提醒您重要的笔记和待办事项。\n\n这将帮助您不错过重要的提醒。',
           '🔔',
         );
 
         if (!shouldRequest) {
+          return false;
+        }
+        if (!context.mounted) {
           return false;
         }
       }
@@ -116,11 +129,13 @@ class SimplePermissionService {
           );
 
           if (granted != true) {
-            if (context != null) {
+            if (context != null && context.mounted) {
               await _showSettingsDialog(
                 context,
-                '通知权限被拒绝',
-                '通知功能需要通知权限。请在设置中手动开启通知权限。',
+                AppLocalizationsSimple.of(context)?.permissionRequired ??
+                    '通知权限被拒绝',
+                AppLocalizationsSimple.of(context)?.permissionInstructions ??
+                    '通知功能需要通知权限。请在设置中手动开启通知权限。',
               );
             }
             return false;
@@ -136,11 +151,13 @@ class SimplePermissionService {
           final notificationResult = await Permission.notification.request();
 
           if (!notificationResult.isGranted) {
-            if (context != null) {
+            if (context != null && context.mounted) {
               await _showSettingsDialog(
                 context,
-                '通知权限被拒绝',
-                '通知功能需要通知权限。请在设置中手动开启通知权限。',
+                AppLocalizationsSimple.of(context)?.permissionRequired ??
+                    '通知权限被拒绝',
+                AppLocalizationsSimple.of(context)?.permissionInstructions ??
+                    '通知功能需要通知权限。请在设置中手动开启通知权限。',
               );
             }
             return false;
@@ -151,7 +168,7 @@ class SimplePermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -183,12 +200,13 @@ class SimplePermissionService {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  '💡 提示：授权后可以正常使用相关功能',
-                  style: TextStyle(fontSize: 12, color: Colors.blue),
+                child: Text(
+                  AppLocalizationsSimple.of(context)?.permissionTip ??
+                      '💡 提示：授权后可以正常使用相关功能',
+                  style: const TextStyle(fontSize: 12, color: Colors.blue),
                 ),
               ),
             ],
@@ -196,11 +214,15 @@ class SimplePermissionService {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('暂不授权'),
+              child: Text(
+                AppLocalizationsSimple.of(context)?.denyPermission ?? '暂不授权',
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('立即授权'),
+              child: Text(
+                AppLocalizationsSimple.of(context)?.authorizeNow ?? '立即授权',
+              ),
             ),
           ],
         ),
@@ -227,20 +249,22 @@ class SimplePermissionService {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '操作步骤：',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    AppLocalizationsSimple.of(context)?.permissionStepTitle ??
+                        '操作步骤：',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    '1. 点击"去设置"按钮\n2. 找到相应权限开关\n3. 开启权限后返回应用\n4. 重新尝试使用功能',
-                    style: TextStyle(fontSize: 12),
+                    AppLocalizationsSimple.of(context)?.permissionStepGeneral ??
+                        '1. 点击"去设置"按钮\n2. 找到相应权限开关\n3. 开启权限后返回应用\n4. 重新尝试使用功能',
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
@@ -250,14 +274,15 @@ class SimplePermissionService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
               await openAppSettings();
             },
-            child: const Text('去设置'),
+            child:
+                Text(AppLocalizationsSimple.of(context)?.goToSettings ?? '去设置'),
           ),
         ],
       ),

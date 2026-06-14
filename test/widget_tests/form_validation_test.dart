@@ -9,20 +9,32 @@ import 'package:flutter_test/flutter_test.dart';
 // ─── 仿照 login_screen.dart 的验证逻辑 ───────────────────────────────────────
 
 String? _validateUsername(String? value) {
-  if (value == null || value.isEmpty) return '请输入用户名';
-  if (value.length < 2) return '用户名太短了，至少需要 2 个字符';
-  if (value.length > 64) return '用户名太长了，最多 64 个字符';
+  if (value == null || value.isEmpty) {
+    return '请输入用户名';
+  }
+  if (value.length < 2) {
+    return '用户名太短了，至少需要 2 个字符';
+  }
+  if (value.length > 64) {
+    return '用户名太长了，最多 64 个字符';
+  }
   return null;
 }
 
 String? _validatePassword(String? value) {
-  if (value == null || value.isEmpty) return '请输入密码';
-  if (value.length < 6) return '密码太短了，至少需要 6 位';
+  if (value == null || value.isEmpty) {
+    return '请输入密码';
+  }
+  if (value.length < 6) {
+    return '密码太短了，至少需要 6 位';
+  }
   return null;
 }
 
 String? _validateServerUrl(String? value) {
-  if (value == null || value.isEmpty) return '请输入服务器地址';
+  if (value == null || value.isEmpty) {
+    return '请输入服务器地址';
+  }
   if (!value.startsWith('http://') && !value.startsWith('https://')) {
     return '地址格式不对，需要以 https:// 开头';
   }
@@ -47,40 +59,38 @@ class _TestLoginFormState extends State<_TestLoginForm> {
   final _urlCtrl = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          TextFormField(
-            key: const Key('usernameField'),
-            controller: _userCtrl,
-            validator: _validateUsername,
-          ),
-          TextFormField(
-            key: const Key('passwordField'),
-            controller: _passCtrl,
-            validator: _validatePassword,
-            obscureText: true,
-          ),
-          TextFormField(
-            key: const Key('serverUrlField'),
-            controller: _urlCtrl,
-            validator: _validateServerUrl,
-          ),
-          ElevatedButton(
-            key: const Key('submitBtn'),
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                widget.onSubmit();
-              }
-            },
-            child: const Text('登录'),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            TextFormField(
+              key: const Key('usernameField'),
+              controller: _userCtrl,
+              validator: _validateUsername,
+            ),
+            TextFormField(
+              key: const Key('passwordField'),
+              controller: _passCtrl,
+              validator: _validatePassword,
+              obscureText: true,
+            ),
+            TextFormField(
+              key: const Key('serverUrlField'),
+              controller: _urlCtrl,
+              validator: _validateServerUrl,
+            ),
+            ElevatedButton(
+              key: const Key('submitBtn'),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  widget.onSubmit();
+                }
+              },
+              child: const Text('登录'),
+            ),
+          ],
+        ),
+      );
 
   @override
   void dispose() {
@@ -94,7 +104,7 @@ class _TestLoginFormState extends State<_TestLoginForm> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void main() {
-  Widget _wrap(Widget child) => MaterialApp(
+  Widget wrap(Widget child) => MaterialApp(
         home: Scaffold(body: SingleChildScrollView(child: child)),
       );
 
@@ -161,7 +171,7 @@ void main() {
     testWidgets('FV-12 空表单提交时显示错误，不触发回调', (tester) async {
       var submitted = false;
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () => submitted = true)),
+        wrap(_TestLoginForm(onSubmit: () => submitted = true)),
       );
 
       await tester.tap(find.byKey(const Key('submitBtn')));
@@ -173,7 +183,7 @@ void main() {
 
     testWidgets('FV-13 用户名字段空时显示提示语', (tester) async {
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () {})),
+        wrap(_TestLoginForm(onSubmit: () {})),
       );
       await tester.tap(find.byKey(const Key('submitBtn')));
       await tester.pumpAndSettle();
@@ -184,15 +194,18 @@ void main() {
     testWidgets('FV-14 正确填写表单后回调被触发', (tester) async {
       var submitted = false;
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () => submitted = true)),
+        wrap(_TestLoginForm(onSubmit: () => submitted = true)),
       );
 
+      await tester.enterText(find.byKey(const Key('usernameField')), 'alice');
       await tester.enterText(
-          find.byKey(const Key('usernameField')), 'alice');
+        find.byKey(const Key('passwordField')),
+        'password123',
+      );
       await tester.enterText(
-          find.byKey(const Key('passwordField')), 'password123');
-      await tester.enterText(
-          find.byKey(const Key('serverUrlField')), 'https://memos.example.com');
+        find.byKey(const Key('serverUrlField')),
+        'https://memos.example.com',
+      );
 
       await tester.tap(find.byKey(const Key('submitBtn')));
       await tester.pumpAndSettle();
@@ -202,14 +215,15 @@ void main() {
 
     testWidgets('FV-15 密码字段过短时显示错误提示', (tester) async {
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () {})),
+        wrap(_TestLoginForm(onSubmit: () {})),
       );
 
-      await tester.enterText(
-          find.byKey(const Key('usernameField')), 'alice');
+      await tester.enterText(find.byKey(const Key('usernameField')), 'alice');
       await tester.enterText(find.byKey(const Key('passwordField')), '123');
       await tester.enterText(
-          find.byKey(const Key('serverUrlField')), 'https://memos.example.com');
+        find.byKey(const Key('serverUrlField')),
+        'https://memos.example.com',
+      );
 
       await tester.tap(find.byKey(const Key('submitBtn')));
       await tester.pumpAndSettle();
@@ -219,15 +233,18 @@ void main() {
 
     testWidgets('FV-16 服务器地址无协议头时显示格式错误', (tester) async {
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () {})),
+        wrap(_TestLoginForm(onSubmit: () {})),
       );
 
+      await tester.enterText(find.byKey(const Key('usernameField')), 'alice');
       await tester.enterText(
-          find.byKey(const Key('usernameField')), 'alice');
+        find.byKey(const Key('passwordField')),
+        'password123',
+      );
       await tester.enterText(
-          find.byKey(const Key('passwordField')), 'password123');
-      await tester.enterText(
-          find.byKey(const Key('serverUrlField')), 'memos.example.com');
+        find.byKey(const Key('serverUrlField')),
+        'memos.example.com',
+      );
 
       await tester.tap(find.byKey(const Key('submitBtn')));
       await tester.pumpAndSettle();
@@ -239,23 +256,21 @@ void main() {
   group('UI 响应性 — 错误消息可读性', () {
     testWidgets('FV-17 错误消息使用中文且无技术术语', (tester) async {
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () {})),
+        wrap(_TestLoginForm(onSubmit: () {})),
       );
 
       await tester.tap(find.byKey(const Key('submitBtn')));
       await tester.pumpAndSettle();
 
       // 验证错误消息使用中文，而非英文技术词汇
-      final allText = tester.allWidgets
-          .whereType<Text>()
-          .map((t) => t.data ?? '')
-          .join();
+      final allText =
+          tester.allWidgets.whereType<Text>().map((t) => t.data ?? '').join();
       expect(allText, contains('请输入'));
     });
 
     testWidgets('FV-18 多个错误同时显示', (tester) async {
       await tester.pumpWidget(
-        _wrap(_TestLoginForm(onSubmit: () {})),
+        wrap(_TestLoginForm(onSubmit: () {})),
       );
 
       await tester.tap(find.byKey(const Key('submitBtn')));

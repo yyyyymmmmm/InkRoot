@@ -4,9 +4,21 @@ import 'package:inkroot/l10n/app_localizations_simple.dart';
 /// 侧边栏菜单项枚举
 enum SidebarMenuItem {
   allNotes('all_notes', '全部笔记', '/', Icons.grid_view_rounded, false), // 不可隐藏
-  randomReview('random_review', '随机回顾', '/random-review', Icons.shuffle_rounded, true),
+  randomReview(
+    'random_review',
+    '随机回顾',
+    '/random-review',
+    Icons.shuffle_rounded,
+    true,
+  ),
   allTags('all_tags', '全部标签', '/tags', Icons.local_offer_outlined, true),
-  knowledgeGraph('knowledge_graph', '知识图谱', '/knowledge-graph', Icons.account_tree_rounded, true),
+  knowledgeGraph(
+    'knowledge_graph',
+    '知识图谱',
+    '/knowledge-graph',
+    Icons.account_tree_rounded,
+    true,
+  ),
   help('help', '帮助中心', '/help', Icons.help_outline_rounded, true),
   settings('settings', '设置', '/settings', Icons.settings_outlined, true);
 
@@ -23,7 +35,7 @@ enum SidebarMenuItem {
   final String path;
   final dynamic icon; // IconData
   final bool canHide; // 是否可以隐藏
-  
+
   /// 获取国际化的标签文本
   String getLocalizedLabel(BuildContext context) {
     final l10n = AppLocalizationsSimple.of(context);
@@ -44,11 +56,11 @@ enum SidebarMenuItem {
         return label;
     }
   }
-  
+
   static SidebarMenuItem? fromId(String id) {
     try {
       return SidebarMenuItem.values.firstWhere((item) => item.id == id);
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }
@@ -61,34 +73,19 @@ class SidebarConfig {
     this.showProfile = true,
     List<String>? visibleItems,
     List<String>? itemOrder,
-  }) : visibleItems = visibleItems ?? _defaultVisibleItems(),
-       itemOrder = itemOrder ?? _defaultItemOrder();
-
-  final bool showHeatmap; // 是否显示活动记录
-  final bool showProfile; // 是否显示个人中心
-  final List<String> visibleItems; // 可见的菜单项ID列表
-  final List<String> itemOrder; // 菜单项排序（ID列表）
-
-  /// 默认可见菜单项
-  static List<String> _defaultVisibleItems() {
-    return SidebarMenuItem.values.map((item) => item.id).toList();
-  }
-
-  /// 默认排序
-  static List<String> _defaultItemOrder() {
-    return SidebarMenuItem.values.map((item) => item.id).toList();
-  }
+  })  : visibleItems = visibleItems ?? _defaultVisibleItems(),
+        itemOrder = itemOrder ?? _defaultItemOrder();
 
   /// 从JSON创建
   factory SidebarConfig.fromJson(Map<String, dynamic> json) {
     // 🎯 加载保存的配置
-    List<String>? savedVisibleItems = (json['visibleItems'] as List<dynamic>?)
+    final savedVisibleItems = (json['visibleItems'] as List<dynamic>?)
         ?.map((e) => e.toString())
         .toList();
-    List<String>? savedItemOrder = (json['itemOrder'] as List<dynamic>?)
+    final savedItemOrder = (json['itemOrder'] as List<dynamic>?)
         ?.map((e) => e.toString())
         .toList();
-    
+
     // 🎯 迁移逻辑：确保新增的菜单项（如 settings）被添加到旧配置中
     if (savedVisibleItems != null) {
       final allItemIds = SidebarMenuItem.values.map((item) => item.id).toList();
@@ -99,7 +96,7 @@ class SidebarConfig {
         }
       }
     }
-    
+
     if (savedItemOrder != null) {
       final allItemIds = SidebarMenuItem.values.map((item) => item.id).toList();
       for (final itemId in allItemIds) {
@@ -109,7 +106,7 @@ class SidebarConfig {
         }
       }
     }
-    
+
     return SidebarConfig(
       showHeatmap: json['showHeatmap'] ?? true,
       showProfile: json['showProfile'] ?? true,
@@ -118,15 +115,26 @@ class SidebarConfig {
     );
   }
 
+  final bool showHeatmap; // 是否显示活动记录
+  final bool showProfile; // 是否显示个人中心
+  final List<String> visibleItems; // 可见的菜单项ID列表
+  final List<String> itemOrder; // 菜单项排序（ID列表）
+
+  /// 默认可见菜单项
+  static List<String> _defaultVisibleItems() =>
+      SidebarMenuItem.values.map((item) => item.id).toList();
+
+  /// 默认排序
+  static List<String> _defaultItemOrder() =>
+      SidebarMenuItem.values.map((item) => item.id).toList();
+
   /// 转换为JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'showHeatmap': showHeatmap,
-      'showProfile': showProfile,
-      'visibleItems': visibleItems,
-      'itemOrder': itemOrder,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'showHeatmap': showHeatmap,
+        'showProfile': showProfile,
+        'visibleItems': visibleItems,
+        'itemOrder': itemOrder,
+      };
 
   /// 复制并修改
   SidebarConfig copyWith({
@@ -134,24 +142,21 @@ class SidebarConfig {
     bool? showProfile,
     List<String>? visibleItems,
     List<String>? itemOrder,
-  }) {
-    return SidebarConfig(
-      showHeatmap: showHeatmap ?? this.showHeatmap,
-      showProfile: showProfile ?? this.showProfile,
-      visibleItems: visibleItems ?? this.visibleItems,
-      itemOrder: itemOrder ?? this.itemOrder,
-    );
-  }
+  }) =>
+      SidebarConfig(
+        showHeatmap: showHeatmap ?? this.showHeatmap,
+        showProfile: showProfile ?? this.showProfile,
+        visibleItems: visibleItems ?? this.visibleItems,
+        itemOrder: itemOrder ?? this.itemOrder,
+      );
 
   /// 检查菜单项是否可见
-  bool isItemVisible(String itemId) {
-    return visibleItems.contains(itemId);
-  }
+  bool isItemVisible(String itemId) => visibleItems.contains(itemId);
 
   /// 获取排序后的可见菜单项
   List<SidebarMenuItem> getOrderedVisibleItems() {
     final items = <SidebarMenuItem>[];
-    
+
     // 按照 itemOrder 的顺序添加可见的菜单项
     for (final itemId in itemOrder) {
       if (visibleItems.contains(itemId)) {
@@ -161,7 +166,7 @@ class SidebarConfig {
         }
       }
     }
-    
+
     // 添加任何在 visibleItems 中但不在 itemOrder 中的项
     for (final itemId in visibleItems) {
       if (!itemOrder.contains(itemId)) {
@@ -171,8 +176,7 @@ class SidebarConfig {
         }
       }
     }
-    
+
     return items;
   }
 }
-

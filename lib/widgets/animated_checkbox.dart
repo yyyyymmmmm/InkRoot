@@ -34,7 +34,7 @@ class _AnimatedCheckboxState extends State<AnimatedCheckbox>
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+    _scaleAnimation = Tween<double>(begin: 1, end: 0.9).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
@@ -72,15 +72,13 @@ class _AnimatedCheckboxState extends State<AnimatedCheckbox>
     final isInteractive = widget.onChanged != null;
 
     // 🎨 主流待办软件的配色方案
-    final Color borderColor = widget.value
+    final borderColor = widget.value
         ? AppTheme.primaryColor
         : (isDark ? Colors.grey[600]! : Colors.grey[400]!);
 
-    final Color fillColor = widget.value
-        ? AppTheme.primaryColor
-        : Colors.transparent;
+    final fillColor = widget.value ? AppTheme.primaryColor : Colors.transparent;
 
-    final Color checkColor = Colors.white;
+    const checkColor = Colors.white;
 
     return GestureDetector(
       onTap: isInteractive
@@ -104,13 +102,13 @@ class _AnimatedCheckboxState extends State<AnimatedCheckbox>
               borderRadius: BorderRadius.circular(widget.borderRadius),
               border: Border.all(
                 color: borderColor,
-                width: 2.0,
+                width: 2,
               ),
               // 🎯 已完成时添加微妙的阴影（Things 3 风格）
               boxShadow: widget.value
                   ? [
                       BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.3),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -133,4 +131,3 @@ class _AnimatedCheckboxState extends State<AnimatedCheckbox>
     );
   }
 }
-

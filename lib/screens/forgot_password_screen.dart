@@ -16,7 +16,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _serverController = TextEditingController();
   final _usernameController = TextEditingController();
-  final bool _isLoading = false;
 
   @override
   void initState() {
@@ -103,18 +102,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor =
         isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey.shade50;
-    final cardColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
     final textColor =
         isDarkMode ? AppTheme.darkTextPrimaryColor : Colors.black87;
     final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
     final accentColor = isDarkMode ? AppTheme.primaryLightColor : Colors.teal;
-    final shadowColor = isDarkMode
-        ? Colors.black.withOpacity(0.2)
-        : Colors.black.withOpacity(0.05);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -187,10 +181,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 20),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.1),
+                          color: accentColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: accentColor.withOpacity(0.3),
+                            color: accentColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -259,7 +253,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               borderRadius: BorderRadius.circular(25),
                             ),
                             disabledBackgroundColor:
-                                accentColor.withOpacity(0.6),
+                                accentColor.withValues(alpha: 0.6),
                           ),
                           child: Text(
                             AppLocalizationsSimple.of(context)?.learnMore ??
@@ -310,58 +304,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String labelText,
-    required Color cardColor,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color shadowColor,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-    TextInputAction? textInputAction,
-    bool obscureText = false,
-    Widget? suffixIcon,
-  }) {
-    final screenSize = MediaQuery.of(context).size;
-
-    return Container(
-      width: screenSize.width * 0.8,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: labelText,
-          labelStyle: TextStyle(color: secondaryTextColor),
-          border: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 8),
-          suffixIcon: suffixIcon,
-        ),
-        style: TextStyle(fontSize: 14, color: textColor),
-        keyboardType: keyboardType,
-        textInputAction: textInputAction,
-        obscureText: obscureText,
-        validator: validator,
       ),
     );
   }

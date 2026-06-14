@@ -21,16 +21,18 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: Text(
           AppLocalizationsSimple.of(context)?.aboutUs ?? '关于我们',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
@@ -53,7 +55,7 @@ class AboutScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF2C9678).withOpacity(0.2),
+                    color: const Color(0xFF2C9678).withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -90,7 +92,7 @@ class AboutScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                              color: Colors.black.withValues(alpha: 0.15),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -148,7 +150,7 @@ class AboutScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -219,7 +221,7 @@ class AboutScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -373,7 +375,7 @@ class AboutScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -511,7 +513,7 @@ class AboutScreen extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -550,7 +552,7 @@ class AboutScreen extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -580,7 +582,7 @@ class AboutScreen extends StatelessWidget {
                           .textTheme
                           .bodyMedium
                           ?.color
-                          ?.withOpacity(0.7),
+                          ?.withValues(alpha: 0.7),
                     ),
                   ),
                 ],

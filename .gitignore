@@ -107,5 +107,14 @@ inkroot.cn_pxTAf.tar.gz
 # Signing keys and certificates (NEVER commit these!)
 key/
 *.keystore
+*.jks
+*.p12
+*.p8
+*.mobileprovision
+*.cer
+*.der
+*.pem
+*.private_key
+android/inkroot-new-release.keystore
 inkroot-new-release.keystore
 android/key.properties

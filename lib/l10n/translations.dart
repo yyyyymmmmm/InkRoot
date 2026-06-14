@@ -14,14 +14,11 @@ class Translations {
     'tags': {'zh': '标签', 'en': 'Tags'},
     'search': {'zh': '搜索', 'en': 'Search'},
     'add': {'zh': '添加', 'en': 'Add'},
-    'edit': {'zh': '编辑', 'en': 'Edit'},
     'delete': {'zh': '删除', 'en': 'Delete'},
-    'cancel': {'zh': '取消', 'en': 'Cancel'},
     'confirm': {'zh': '确认', 'en': 'Confirm'},
     'save': {'zh': '保存', 'en': 'Save'},
     'back': {'zh': '返回', 'en': 'Back'},
     'done': {'zh': '完成', 'en': 'Done'},
-    'close': {'zh': '关闭', 'en': 'Close'},
     'submit': {'zh': '提交', 'en': 'Submit'},
 
     // ===== 侧边栏 =====
@@ -45,31 +42,34 @@ class Translations {
     'todayWords': {'zh': '今日字数', 'en': 'Today Words'},
     'todayNewNotes': {'zh': '新增笔记', 'en': 'New Notes'},
     'todayNewTags': {'zh': '新增标签', 'en': 'New Tags'},
-    'featureMenu': {'zh': '功能菜单', 'en': 'Feature Menu'},
     'functionMenu': {'zh': '功能菜单', 'en': 'Function Menu'},
 
     // ===== 笔记相关 =====
     'createNote': {'zh': '创建笔记', 'en': 'Create Note'},
-    'editNote': {'zh': '编辑笔记', 'en': 'Edit Note'},
-    'deleteNote': {'zh': '删除笔记', 'en': 'Delete Note'},
-    'pinNote': {'zh': '置顶笔记', 'en': 'Pin Note'},
-    'unpinNote': {'zh': '取消置顶', 'en': 'Unpin Note'},
-    'pinned': {'zh': '已置顶', 'en': 'Pinned'},
-    'unpinned': {'zh': '已取消置顶', 'en': 'Unpinned'},
-    'shareNote': {'zh': '分享笔记', 'en': 'Share Note'},
     'copyNote': {'zh': '复制笔记', 'en': 'Copy Note'},
     'noteContent': {'zh': '笔记内容', 'en': 'Note Content'},
     'emptyNote': {'zh': '空笔记', 'en': 'Empty Note'},
-    'searchNotes': {'zh': '搜索笔记', 'en': 'Search Notes'},
-
-    // ===== 排序 =====
-    'sortBy': {'zh': '排序', 'en': 'Sort By'},
+    'searchResultsCount': {
+      'zh': '找到 {count} 条结果',
+      'en': '{count} results',
+    },
+    'noSearchResults': {
+      'zh': '没有找到相关笔记',
+      'en': 'No matching notes',
+    },
     'sortNewest': {'zh': '最新', 'en': 'Newest'},
     'sortOldest': {'zh': '最旧', 'en': 'Oldest'},
     'sortUpdated': {'zh': '最近更新', 'en': 'Recently Updated'},
 
     // ===== 设置 =====
     'settings': {'zh': '设置', 'en': 'Settings'},
+    'settingsAccountAndConnection': {
+      'zh': '账户与连接',
+      'en': 'Account & Connection',
+    },
+    'settingsGeneral': {'zh': '通用', 'en': 'General'},
+    'settingsDataManagement': {'zh': '数据管理', 'en': 'Data Management'},
+    'settingsSupport': {'zh': '支持', 'en': 'Support'},
     'generalSettings': {'zh': '通用设置', 'en': 'General'},
     'accountSettings': {'zh': '账户设置', 'en': 'Account'},
     'privacySettings': {'zh': '隐私设置', 'en': 'Privacy'},
@@ -88,11 +88,6 @@ class Translations {
     'aiSettings': {'zh': 'AI设置', 'en': 'AI Settings'},
     'advancedSettings': {'zh': '高级设置', 'en': 'Advanced'},
     'feedback': {'zh': '反馈', 'en': 'Feedback'},
-    'importExport': {'zh': '导入导出', 'en': 'Import/Export'},
-
-    // ===== 同步 =====
-    'syncing': {'zh': '同步中...', 'en': 'Syncing...'},
-    'syncSuccess': {'zh': '同步成功', 'en': 'Sync Success'},
     'syncFailed': {'zh': '同步失败', 'en': 'Sync Failed'},
     'lastSync': {'zh': '上次同步', 'en': 'Last Sync'},
     'syncNow': {'zh': '立即同步', 'en': 'Sync Now'},
@@ -100,19 +95,12 @@ class Translations {
     // ===== 时间 =====
     'today': {'zh': '今天', 'en': 'Today'},
     'yesterday': {'zh': '昨天', 'en': 'Yesterday'},
-    'thisWeek': {'zh': '本周', 'en': 'This Week'},
-    'thisMonth': {'zh': '本月', 'en': 'This Month'},
-
-    // ===== 提示信息 =====
-    'loading': {'zh': '加载中...', 'en': 'Loading...'},
     'noData': {'zh': '暂无数据', 'en': 'No Data'},
     'networkError': {'zh': '网络错误', 'en': 'Network Error'},
     'operationSuccess': {'zh': '操作成功', 'en': 'Success'},
-    'operationFailed': {'zh': '操作失败', 'en': 'Failed'},
     'success': {'zh': '成功', 'en': 'Success'},
     'failed': {'zh': '失败', 'en': 'Failed'},
     'updateSuccess': {'zh': '更新成功', 'en': 'Update Success'},
-    'updateFailed': {'zh': '更新失败', 'en': 'Update Failed'},
 
     // ===== 删除确认 =====
     'deleteConfirmTitle': {'zh': '确认删除', 'en': 'Confirm Delete'},
@@ -124,13 +112,10 @@ class Translations {
     'register': {'zh': '注册', 'en': 'Register'},
     'username': {'zh': '用户名', 'en': 'Username'},
     'password': {'zh': '密码', 'en': 'Password'},
-    'confirmPassword': {'zh': '确认密码', 'en': 'Confirm Password'},
     'email': {'zh': '邮箱', 'en': 'Email'},
-    'forgotPassword': {'zh': '找回密码', 'en': 'Forgot Password'},
     'serverUrl': {'zh': '服务器地址', 'en': 'Server URL'},
     'loginButton': {'zh': '登录', 'en': 'Login'},
     'logoutButton': {'zh': '退出登录', 'en': 'Logout'},
-    'registerNow': {'zh': '立即注册', 'en': 'Register Now'},
     'localMode': {'zh': '本地运行', 'en': 'Local Mode'},
     'logoutConfirm': {'zh': '确认退出', 'en': 'Confirm Logout'},
     'logoutMessage': {'zh': '确定要退出登录吗？', 'en': 'Are you sure to logout?'},
@@ -144,21 +129,15 @@ class Translations {
     'languageSystem': {'zh': '跟随系统', 'en': 'Follow System'},
     'languageChineseSimplified': {'zh': '简体中文', 'en': 'Simplified Chinese'},
     'languageEnglish': {'zh': '英语', 'en': 'English'},
-
-    // ===== 服务器连接 =====
-    'serverConnection': {'zh': '服务器连接', 'en': 'Server Connection'},
     'connectionStatus': {'zh': '连接状态', 'en': 'Connection Status'},
-    'connected': {'zh': '已连接', 'en': 'Connected'},
     'disconnected': {'zh': '未连接', 'en': 'Disconnected'},
     'diagnosing': {'zh': '诊断中...', 'en': 'Diagnosing...'},
     'connectionDiagnosis': {'zh': '连接诊断', 'en': 'Connection Diagnosis'},
     'connectionSettings': {'zh': '连接设置', 'en': 'Connection Settings'},
-    'connectionLog': {'zh': '连接日志', 'en': 'Connection Log'},
     'saveChanges': {'zh': '保存更改', 'en': 'Save Changes'},
 
     // ===== 账户信息 =====
     'nickname': {'zh': '昵称', 'en': 'Nickname'},
-    'bio': {'zh': '个人简介', 'en': 'Bio'},
     'changePassword': {'zh': '修改密码', 'en': 'Change Password'},
     'oldPassword': {'zh': '旧密码', 'en': 'Old Password'},
     'newPassword': {'zh': '新密码', 'en': 'New Password'},
@@ -168,7 +147,6 @@ class Translations {
     'importRestore': {'zh': '导入恢复', 'en': 'Import & Restore'},
     'backupInfo': {'zh': '备份信息', 'en': 'Backup Info'},
     'lastBackup': {'zh': '最后备份', 'en': 'Last Backup'},
-    'neverBackedUp': {'zh': '从未备份', 'en': 'Never Backed Up'},
     'backupSize': {'zh': '备份大小', 'en': 'Backup Size'},
     'exportOptions': {'zh': '导出选项', 'en': 'Export Options'},
     'exportFormat': {'zh': '导出格式', 'en': 'Export Format'},
@@ -177,13 +155,10 @@ class Translations {
       'zh': '导出时包含笔记中的图片',
       'en': 'Include images in notes when exporting',
     },
-    'includeTags': {'zh': '包含标签', 'en': 'Include Tags'},
     'encryptBackup': {'zh': '加密备份', 'en': 'Encrypt Backup'},
     'encryptionOptions': {'zh': '加密选项', 'en': 'Encryption Options'},
     'encryptionPassword': {'zh': '加密密码', 'en': 'Encryption Password'},
-    'importHistory': {'zh': '导入历史', 'en': 'Import History'},
     'startExport': {'zh': '开始导出', 'en': 'Start Export'},
-    'startImport': {'zh': '开始导入', 'en': 'Start Import'},
     'export': {'zh': '导出', 'en': 'Export'},
     'import': {'zh': '导入', 'en': 'Import'},
 
@@ -203,35 +178,25 @@ class Translations {
 
     // ===== 反馈 =====
     'feedbackType': {'zh': '反馈类型', 'en': 'Feedback Type'},
-    'featureSuggestion': {'zh': '功能建议', 'en': 'Feature Suggestion'},
     'bugReport': {'zh': '问题反馈', 'en': 'Bug Report'},
-    'uiOptimization': {'zh': 'UI优化', 'en': 'UI Optimization'},
-    'performanceIssue': {'zh': '性能问题', 'en': 'Performance Issue'},
-    'other': {'zh': '其他', 'en': 'Other'},
-    'contactInfo': {'zh': '联系方式', 'en': 'Contact Info'},
     'feedbackContent': {'zh': '反馈内容', 'en': 'Feedback Content'},
     'submitFeedback': {'zh': '提交反馈', 'en': 'Submit Feedback'},
-    'feedbackSuccess': {'zh': '反馈提交成功', 'en': 'Feedback Submitted'},
 
     // ===== 其他通知 =====
     'updatingFailed': {'zh': '更新失败', 'en': 'Update Failed'},
     'cannotOpenLink': {'zh': '无法打开链接', 'en': 'Cannot Open Link'},
-    'linkError': {'zh': '链接错误', 'en': 'Link Error'},
     'copiedToClipboard': {'zh': '已复制到剪贴板', 'en': 'Copied to Clipboard'},
     'deletingNote': {'zh': '正在删除笔记...', 'en': 'Deleting Note...'},
-    'noteDeleted': {'zh': '笔记已删除', 'en': 'Note Deleted'},
     'noteRestored': {'zh': '笔记已恢复', 'en': 'Note Restored'},
     'undo': {'zh': '撤销', 'en': 'Undo'},
-    'deleteFailed': {'zh': '删除失败', 'en': 'Delete Failed'},
     'showAll': {'zh': '显示全部', 'en': 'Show All'},
-    'unknown': {'zh': 'Unknown', 'en': 'Unknown'},
 
     // ===== AI设置 =====
     'aiFeatures': {'zh': 'AI功能', 'en': 'AI Features'},
     'apiConfiguration': {'zh': 'API配置', 'en': 'API Configuration'},
     'aiModel': {'zh': 'AI模型', 'en': 'AI Model'},
-    'modelSelection': {'zh': '模型选择', 'en': 'Model Selection'},
-    'selectModel': {'zh': '选择AI模型', 'en': 'Select AI Model'},
+    'modelSelection': {'zh': '模型名称', 'en': 'Model Name'},
+    'selectModel': {'zh': '常用模型示例', 'en': 'Common Model Examples'},
     'domesticModels': {'zh': '国产大模型', 'en': 'Domestic Models'},
     'apiAddress': {'zh': 'API地址', 'en': 'API Address'},
     'apiKey': {'zh': 'API密钥', 'en': 'API Key'},
@@ -241,14 +206,13 @@ class Translations {
     'aboutUs': {'zh': '关于我们', 'en': 'About Us'},
     'version': {'zh': '版本', 'en': 'Version'},
     'team': {'zh': '团队', 'en': 'Team'},
-    'contactUs': {'zh': '联系我们', 'en': 'Contact Us'},
     'helpCenter': {'zh': '帮助中心', 'en': 'Help Center'},
     'gettingStarted': {'zh': '开始使用', 'en': 'Getting Started'},
     'quickGuide': {'zh': '快速指南', 'en': 'Quick Guide'},
     'noteFeatures': {'zh': '笔记功能', 'en': 'Note Features'},
     'tagFeatures': {'zh': '标签功能', 'en': 'Tag Features'},
+    'formatEditing': {'zh': '格式编辑', 'en': 'Formatting'},
     'commonQuestions': {'zh': '常见问题', 'en': 'Common Questions'},
-    'faq': {'zh': '常见问题', 'en': 'FAQ'},
 
     // ===== 标签相关 =====
     'searchTags': {'zh': '搜索标签...', 'en': 'Search tags...'},
@@ -284,19 +248,9 @@ class Translations {
     'databaseSize': {'zh': '数据库大小', 'en': 'Database Size'},
     'cacheSize': {'zh': '缓存大小', 'en': 'Cache Size'},
     'imagesCount': {'zh': '图片数量', 'en': 'Images Count'},
-    'dataStatistics': {'zh': '数据统计', 'en': 'Data Statistics'},
     'refreshData': {'zh': '刷新数据', 'en': 'Refresh Data'},
-    'cleanupOperations': {'zh': '清理操作', 'en': 'Cleanup Operations'},
-    'cleanCache': {'zh': '清理缓存', 'en': 'Clean Cache'},
     'allNotesCleanedSuccess': {'zh': '所有笔记已清理', 'en': 'All Notes Cleaned'},
     'cleanAllNotes': {'zh': '清理所有笔记', 'en': 'Clean All Notes'},
-    'cleanUnusedImages': {'zh': '清理未使用图片', 'en': 'Clean Unused Images'},
-    'cleanImportExportHistory': {
-      'zh': '清理导入导出历史',
-      'en': 'Clean Import/Export History',
-    },
-    'advancedOperations': {'zh': '高级操作', 'en': 'Advanced Operations'},
-    'resetAppSettings': {'zh': '重置应用设置', 'en': 'Reset App Settings'},
 
     // ===== 主页空状态 =====
     'noNotesYet': {'zh': '还没有笔记', 'en': 'No notes yet'},
@@ -382,7 +336,10 @@ class Translations {
     // ===== 活跃度 =====
     'activityLevel': {'zh': '活跃度', 'en': 'Activity'},
     'unreadNotifications': {'zh': '条未读', 'en': 'unread'},
-    'unreadNotificationsCount': {'zh': '{count}条未读信息', 'en': '{count} unread messages'},
+    'unreadNotificationsCount': {
+      'zh': '{count}条未读信息',
+      'en': '{count} unread messages',
+    },
 
     // ===== 通用对话框 =====
     'featureInDevelopment': {
@@ -394,14 +351,10 @@ class Translations {
 
     // ===== 账户信息页面 =====
     'localUser': {'zh': '本地用户', 'en': 'Local User'},
-    'createdTime': {'zh': '创建时间', 'en': 'Created'},
     'createdTimeLabel': {'zh': '创建时间：', 'en': 'Created: '},
-    'unknown': {'zh': '未知', 'en': 'Unknown'},
     'nicknameNotSet': {'zh': '未设置昵称', 'en': 'Nickname not set'},
     'emailNotSet': {'zh': '未设置邮箱', 'en': 'Email not set'},
     'basicInfo': {'zh': '基本信息', 'en': 'Basic Info'},
-    'modifyNickname': {'zh': '修改昵称', 'en': 'Edit Nickname'},
-    'modifyEmail': {'zh': '修改邮箱', 'en': 'Edit Email'},
     'modifyPassword': {'zh': '修改密码', 'en': 'Change Password'},
     'syncPersonalInfo': {'zh': '立即同步', 'en': 'Sync Personal Info Now'},
     'syncPersonalInfoDesc': {
@@ -411,10 +364,6 @@ class Translations {
     'logoutDesc': {
       'zh': '退出当前账号并返回登录页',
       'en': 'Logout and return to login page',
-    },
-    'notLoggedInOrAPINotInitialized': {
-      'zh': '未登录或API服务未初始化',
-      'en': 'Not logged in or API not initialized',
     },
     'welcomeToInkRootShort': {'zh': '欢迎使用 InkRoot', 'en': 'Welcome to InkRoot'},
     'loginToUnlockFeatures': {
@@ -440,9 +389,6 @@ class Translations {
       'zh': '注册即表示同意用户协议和隐私政策',
       'en': 'By registering, you agree to the Terms and Privacy Policy',
     },
-
-    // ===== 服务器连接页面 =====
-    'connected': {'zh': '已连接', 'en': 'Connected'},
     'connectionNormal': {
       'zh': '服务器连接正常，数据同步正常',
       'en': 'Server connection is normal',
@@ -458,7 +404,6 @@ class Translations {
     'lastSyncTime': {'zh': '上次同步', 'en': 'Last Sync'},
     'syncNowButton': {'zh': '立即同步', 'en': 'Sync Now'},
     'syncing': {'zh': '同步中...', 'en': 'Syncing...'},
-    'serverAddress': {'zh': '服务器地址', 'en': 'Server Address'},
     'enterServerAddress': {'zh': '请输入服务器地址', 'en': 'Enter server address'},
     'portNumber': {'zh': '端口号', 'en': 'Port Number'},
     'enterPortNumber': {'zh': '请输入端口号', 'en': 'Enter port number'},
@@ -544,12 +489,14 @@ class Translations {
     },
     'backupTip': {
       'zh': '💡 提示：建议定期备份数据，以防数据丢失。导入数据前请仔细检查文件格式。',
-      'en': '💡 Tip: Regular backups recommended. Please verify file format before importing.',
+      'en':
+          '💡 Tip: Regular backups recommended. Please verify file format before importing.',
     },
     'browserExtension': {'zh': 'Memos 浏览器插件', 'en': 'Memos Browser Extension'},
     'browserExtensionDescription': {
       'zh': '社区开发的浏览器扩展，支持 Chrome/Edge，可快速保存网页内容到 Memos',
-      'en': 'Community-developed browser extension for Chrome/Edge to save web content to Memos',
+      'en':
+          'Community-developed browser extension for Chrome/Edge to save web content to Memos',
     },
     'exportTab': {'zh': '导出备份', 'en': 'Export'},
     'importTab': {'zh': '导入历史', 'en': 'Import'},
@@ -589,16 +536,6 @@ class Translations {
     'getAPIKey': {'zh': '获取API密钥', 'en': 'Get API Key'},
     'aiModelTitle': {'zh': 'AI模型', 'en': 'AI Model'},
     'modelSelectionTitle': {'zh': '模型选择', 'en': 'Model Selection'},
-
-    // ===== 数据清理页面补充 =====
-    'cleanCacheDescription': {
-      'zh': '缓存片段文档数据，不会影响笔记',
-      'en': 'Clear cache, notes will not be affected',
-    },
-    'cleanUnusedImagesDescription': {
-      'zh': '删除未关联到笔记的图片文件',
-      'en': 'Delete images not linked to notes',
-    },
     'resetAppSettingsDescription': {
       'zh': '恢复所有设置为默认状态，不会删除笔记数据',
       'en': 'Reset all settings, notes will not be deleted',
@@ -613,9 +550,7 @@ class Translations {
     'all': {'zh': '全部', 'en': 'All'},
     'days': {'zh': '天', 'en': 'days'},
     'items': {'zh': '条', 'en': ''},
-    'characterCount': {'zh': '字数统计', 'en': 'Character Count'},
     'lastEdited': {'zh': '最后编辑', 'en': 'Last Edited'},
-    'copyContent': {'zh': '复制内容', 'en': 'Copy Content'},
     'itemsNote': {'zh': '条笔记', 'en': 'notes'},
 
     // ===== 反馈页面补充 =====
@@ -641,9 +576,6 @@ class Translations {
     // ===== 通用计量单位 =====
     'dayUnit': {'zh': '天', 'en': 'day(s)'},
     'noteUnit': {'zh': '条', 'en': ''},
-
-    // ===== 时间相对表达 =====
-    'justNow': {'zh': '刚刚', 'en': 'Just now'},
     'minutesAgo': {'zh': '分钟前', 'en': 'minutes ago'},
     'hoursAgo': {'zh': '小时前', 'en': 'hours ago'},
     'daysAgo': {'zh': '天前', 'en': 'days ago'},
@@ -653,7 +585,6 @@ class Translations {
     // ===== 导出导入补充 =====
     'exportSuccess': {'zh': '导出成功', 'en': 'Export Success'},
     'importSuccess': {'zh': '导入成功', 'en': 'Import Success'},
-    'exporting': {'zh': '导出中...', 'en': 'Exporting...'},
     'importing': {'zh': '导入中...', 'en': 'Importing...'},
     'exportComplete': {'zh': '导出完成', 'en': 'Export Complete'},
     'importComplete': {'zh': '导入完成', 'en': 'Import Complete'},
@@ -666,7 +597,8 @@ class Translations {
     // ===== 服务器信息页面 =====
     'serverInfoReadOnlyNotice': {
       'zh': '此页面仅用于查看服务器连接状态和同步日志\n服务器设置请在登录页面配置',
-      'en': 'This page is for viewing server connection status and sync logs only\nPlease configure server settings on the login page',
+      'en':
+          'This page is for viewing server connection status and sync logs only\nPlease configure server settings on the login page',
     },
     'connectionInfoReadOnly': {
       'zh': '连接信息（只读）',
@@ -686,7 +618,8 @@ class Translations {
     },
     'modifyServerSettingsHint': {
       'zh': '要修改服务器设置，请退出登录后在登录页面配置',
-      'en': 'To modify server settings, please logout and configure on the login page',
+      'en':
+          'To modify server settings, please logout and configure on the login page',
     },
     'connectionLog': {
       'zh': '连接日志',
@@ -730,13 +663,7 @@ class Translations {
       'en': 'Cleared {count} notifications',
     },
     'clearFailed': {'zh': '清除失败', 'en': 'Clear failed'},
-    'updateNow': {'zh': '立即更新', 'en': 'Update Now'},
     'viewDetails': {'zh': '查看详情', 'en': 'View Details'},
-
-    // ===== 服务器连接页面 =====
-    'notSynced': {'zh': '未同步', 'en': 'Not synced'},
-    'connectionAbnormal': {'zh': '连接异常', 'en': 'Connection abnormal'},
-    'timeout': {'zh': '超时', 'en': 'Timeout'},
     'serverResponseError': {'zh': '服务器响应错误', 'en': 'Server response error'},
     'syncWarning': {
       'zh': '同步警告: 距离上次同步已超过{hours}小时',
@@ -781,7 +708,6 @@ class Translations {
       'zh': '解析服务器地址...',
       'en': 'Parsing server address...',
     },
-    'serverAddress': {'zh': '服务器地址', 'en': 'Server address'},
     'protocol': {'zh': '协议', 'en': 'Protocol'},
     'parseServerAddressFailed': {
       'zh': '解析服务器地址失败',
@@ -814,7 +740,6 @@ class Translations {
     'youCan': {'zh': '您可以：', 'en': 'You can:'},
     'shareBackupFile': {'zh': '分享备份文件', 'en': 'Share backup file'},
     'saveToDevice': {'zh': '保存到设备', 'en': 'Save to device'},
-    'share': {'zh': '分享', 'en': 'Share'},
     'shareFailed': {'zh': '分享失败: 文件不存在', 'en': 'Share failed: File not found'},
     'successfullyImported': {'zh': '成功导入', 'en': 'Successfully imported'},
     'selectExportMethod': {'zh': '选择导出方式', 'en': 'Select Export Method'},
@@ -838,10 +763,7 @@ class Translations {
     'crossPlatform': {'zh': '跨平台支持', 'en': 'Cross-Platform'},
     'perfectCompatibility': {'zh': '完美兼容', 'en': 'Perfect Compatibility'},
     'dataSecurity': {'zh': '数据安全', 'en': 'Data Security'},
-    'markdownSupport': {'zh': 'Markdown支持', 'en': 'Markdown Support'},
     'smartTags': {'zh': '智能标签', 'en': 'Smart Tags'},
-    'fullTextSearch': {'zh': '全文搜索', 'en': 'Full-Text Search'},
-    'dataStatistics': {'zh': '数据统计', 'en': 'Data Statistics'},
     'appArchitecture': {'zh': '应用架构', 'en': 'App Architecture'},
     'platformSupport': {'zh': '平台支持', 'en': 'Platform Support'},
     'firstTimeUse': {'zh': '初次使用', 'en': 'First-Time Use'},
@@ -913,9 +835,6 @@ class Translations {
     'dataExport': {'zh': '数据导出', 'en': 'Data Export'},
     'imageManagement': {'zh': '图片管理', 'en': 'Image Management'},
     'privateDeployment': {'zh': '私有化部署', 'en': 'Private Deployment'},
-
-    // ===== 用户协议页面 =====
-    'userAgreement': {'zh': '用户协议', 'en': 'User Agreement'},
     'lastUpdated': {
       'zh': '最后更新日期：{year}年{month}月{day}日',
       'en': 'Last Updated: {month}/{day}/{year}',
@@ -1055,7 +974,6 @@ class Translations {
           'Memos server does not currently support online password reset.\n\nIf you forgot your password, please:\n\n1. Contact the server administrator to reset your password\n2. Or reset through the server backend management interface\n3. If it is a self-hosted server, you can modify it directly through the database',
     },
     'backToLogin': {'zh': '返回登录', 'en': 'Back to Login'},
-    'rememberPassword': {'zh': '想起密码了？', 'en': 'Remember your password?'},
     'learnMore': {'zh': '了解详情', 'en': 'Learn More'},
 
     // ===== 导入导出页面补充 =====
@@ -1080,7 +998,6 @@ class Translations {
       'zh': '导入操作可能会影响现有数据，建议先备份当前数据',
       'en': 'Import may affect existing data, backup recommended',
     },
-    'importOptions': {'zh': '导入选项', 'en': 'Import Options'},
     'overwriteExistingNotes': {
       'zh': '覆盖现有笔记',
       'en': 'Overwrite Existing Notes',
@@ -1098,7 +1015,6 @@ class Translations {
     'refreshImportHistory': {'zh': '刷新导入历史', 'en': 'Refresh Import History'},
     'noImportHistory': {'zh': '暂无导入历史记录', 'en': 'No import history'},
     'setPassword': {'zh': '设置密码', 'en': 'Set Password'},
-    'confirmPassword': {'zh': '确认密码', 'en': 'Confirm Password'},
     'rememberPasswordWarning': {
       'zh': '请记住您的密码，如果忘记将无法恢复备份数据',
       'en': 'Remember your password, lost passwords cannot be recovered',
@@ -1172,6 +1088,16 @@ class Translations {
     'initializingServerConnection': {
       'zh': '初始化服务器连接页面...',
       'en': 'Initializing server connection page...',
+    },
+    'loggedInStatusDetected': {
+      'zh': '检测到已登录状态',
+      'en': 'Logged-in status detected',
+    },
+    'currentServer': {'zh': '当前服务器', 'en': 'Current server'},
+    'usingProtocol': {'zh': '使用协议', 'en': 'Protocol'},
+    'parseServerUrlFailed': {
+      'zh': '解析服务器 URL 失败',
+      'en': 'Failed to parse server URL',
     },
 
     // ===== 登录页面 =====
@@ -1394,15 +1320,12 @@ class Translations {
     'unableToOpenLink': {'zh': '无法打开链接', 'en': 'Unable to open link'},
     'linkError': {'zh': '链接错误', 'en': 'Link error'},
     'reviewCopied': {'zh': '点评内容已复制', 'en': 'Review content copied'},
-    'copyReview': {'zh': '复制点评', 'en': 'Copy Review'},
-    'close': {'zh': '关闭', 'en': 'Close'},
     'noteUpdated': {'zh': '笔记已更新', 'en': 'Note updated'},
     'noteActions': {'zh': '笔记操作', 'en': 'Note Actions'},
     'selectAction': {
       'zh': '选择您要执行的操作',
       'en': 'Select the action you want to perform',
     },
-    'share': {'zh': '分享', 'en': 'Share'},
     'edit': {'zh': '编辑', 'en': 'Edit'},
     'pinNote': {'zh': '置顶', 'en': 'Pin'},
     'unpinNote': {'zh': '取消置顶', 'en': 'Unpin'},
@@ -1411,7 +1334,6 @@ class Translations {
     'deleteNote': {'zh': '删除', 'en': 'Delete'},
     'copyContent': {'zh': '复制内容', 'en': 'Copy Content'},
     'viewHistory': {'zh': '查看历史', 'en': 'View History'},
-    'setReminder': {'zh': '设置提醒', 'en': 'Set Reminder'},
     'aiReview': {'zh': 'AI点评', 'en': 'AI Review'},
     'aiReviewSubtitle': {'zh': 'AI Review', 'en': 'AI Review'},
     'exportAsImage': {'zh': '导出图片', 'en': 'Export as Image'},
@@ -1423,9 +1345,6 @@ class Translations {
       'en':
           'Are you sure you want to delete this note? This action cannot be undone.',
     },
-
-    // ===== 账户信息页面 =====
-    'unknown': {'zh': '未知', 'en': 'Unknown'},
     'notLoggedInOrAPINotInitialized': {
       'zh': '未登录或API服务未初始化',
       'en': 'Not logged in or API service not initialized',
@@ -1446,7 +1365,6 @@ class Translations {
       'zh': '所有API版本更新失败',
       'en': 'All API versions failed to update',
     },
-    'userInfoEmpty': {'zh': '用户信息为空', 'en': 'User information is empty'},
     'cannotGetUsername': {'zh': '无法获取用户名', 'en': 'Cannot get username'},
     'allPasswordUpdateFailed': {
       'zh': '所有API版本密码更新失败',
@@ -1473,34 +1391,52 @@ class Translations {
     'expectedNextRelease': {'zh': '预计下个版本发布', 'en': 'Expected in next release'},
     'connectInkRootBot': {'zh': '连接 InkRoot_Bot', 'en': 'Connect InkRoot_Bot'},
     'telegramBotDialogContent': {
-      'zh': '在 Telegram 中搜索 @InkRoot_Bot，连接机器人后即可发送消息自动创建笔记。支持 Markdown 格式，实时同步到 InkRoot 应用。',
-      'en': 'Search @InkRoot_Bot in Telegram, connect the bot to automatically create notes from messages. Supports Markdown format, syncs to InkRoot in real-time.',
+      'zh':
+          '在 Telegram 中搜索 @InkRoot_Bot，连接机器人后即可发送消息自动创建笔记。支持 Markdown 格式，实时同步到 InkRoot 应用。',
+      'en':
+          'Search @InkRoot_Bot in Telegram, connect the bot to automatically create notes from messages. Supports Markdown format, syncs to InkRoot in real-time.',
     },
     'voiceToTextDialogContent': {
       'zh': '在笔记编辑器中点击麦克风按钮即可开始语音识别。支持离线识别，无需联网。识别过程中可随时暂停和继续，文字将自动插入到编辑器中。',
-      'en': 'Click the microphone button in the note editor to start voice recognition. Supports offline recognition, no internet required. You can pause and resume anytime, text will be automatically inserted.',
+      'en':
+          'Click the microphone button in the note editor to start voice recognition. Supports offline recognition, no internet required. You can pause and resume anytime, text will be automatically inserted.',
     },
-    
+
     // AI 智能助手
     'aiSmartAssistant': {'zh': 'AI 智能助手', 'en': 'AI Smart Assistant'},
     'aiSmartAssistantDesc': {
       'zh': '相关笔记推荐、智能续写、标签生成、内容摘要',
       'en': 'Related notes, smart writing, tags, summaries',
     },
-    'aiAssistantFeatures': {'zh': 'AI 智能助手包含以下功能：', 'en': 'AI Smart Assistant includes:'},
+    'aiAssistantFeatures': {
+      'zh': 'AI 智能助手包含以下功能：',
+      'en': 'AI Smart Assistant includes:',
+    },
     'relatedNotesRecommend': {'zh': '📌 相关笔记推荐', 'en': '📌 Related Notes'},
-    'relatedNotesDesc': {'zh': '基于笔记内容智能推荐相关笔记', 'en': 'Intelligently recommend related notes'},
+    'relatedNotesDesc': {
+      'zh': '基于笔记内容智能推荐相关笔记',
+      'en': 'Intelligently recommend related notes',
+    },
     'smartContinueWriting': {'zh': '✍️ 智能续写', 'en': '✍️ Smart Writing'},
-    'smartContinueWritingDesc': {'zh': '根据上下文智能续写笔记内容', 'en': 'Continue writing based on context'},
+    'smartContinueWritingDesc': {
+      'zh': '根据上下文智能续写笔记内容',
+      'en': 'Continue writing based on context',
+    },
     'tagGeneration': {'zh': '🏷️ 标签生成', 'en': '🏷️ Tag Generation'},
-    'tagGenerationDesc': {'zh': '自动分析笔记内容生成相关标签', 'en': 'Auto generate tags from content'},
+    'tagGenerationDesc': {
+      'zh': '自动分析笔记内容生成相关标签',
+      'en': 'Auto generate tags from content',
+    },
     'contentSummary': {'zh': '📝 内容摘要', 'en': '📝 Content Summary'},
-    'contentSummaryDesc': {'zh': '快速生成笔记内容摘要', 'en': 'Quickly generate note summaries'},
+    'contentSummaryDesc': {
+      'zh': '快速生成笔记内容摘要',
+      'en': 'Quickly generate note summaries',
+    },
     'aiAssistantTip': {
       'zh': '💡 提示：在笔记详情页点击右下角魔法棒图标即可使用',
       'en': '💡 Tip: Click the magic wand icon in note details',
     },
-    
+
     // 笔记批注
     'noteAnnotation': {'zh': '笔记批注', 'en': 'Note Annotations'},
     'noteAnnotationDesc': {
@@ -1534,7 +1470,8 @@ class Translations {
     },
     'annotationWarning': {
       'zh': '⚠️ 功能暂时不稳定，请自行斟酌使用。批注数据仅保存在本地，不会同步到服务器。',
-      'en': '⚠️ Feature is unstable. Annotations are local only, not synced to server.',
+      'en':
+          '⚠️ Feature is unstable. Annotations are local only, not synced to server.',
     },
     'annotationUsageTip': {
       'zh': '💡 使用方法：在笔记列表或详情页点击批注图标 🟠 即可查看和管理批注',
@@ -1617,7 +1554,6 @@ class Translations {
     'recognizing': {'zh': '识别中', 'en': 'Recognizing'},
     'tapToStop': {'zh': '点击停止', 'en': 'Tap to stop'},
     'saveFailed': {'zh': '保存失败', 'en': 'Save failed'},
-    'loadFailed': {'zh': '加载失败', 'en': 'Load failed'},
     'selectImageFailed': {'zh': '选择图片失败', 'en': 'Failed to select image'},
     'noteNotFound': {'zh': '找不到要引用的笔记', 'en': 'Referenced note not found'},
     'referenceInserted': {
@@ -1628,38 +1564,13 @@ class Translations {
       'zh': '引用关系已创建',
       'en': 'Reference created successfully',
     },
-    'createReferenceFailed': {
-      'zh': '创建引用关系失败',
-      'en': 'Failed to create reference',
-    },
-    'referenceFailed': {'zh': '引用失败', 'en': 'Reference failed'},
     'needMicPermission': {
       'zh': '需要麦克风权限才能使用语音识别',
       'en': 'Microphone permission required for speech recognition',
     },
-
-    // ===== NoteCard Widget =====
-    'cannotDisplayImage': {'zh': '无法显示图片', 'en': 'Cannot display image'},
     'pinned': {'zh': '置顶', 'en': 'Pinned'},
     'unpinned': {'zh': '取消置顶', 'en': 'Unpinned'},
-    'referenceDetails': {'zh': '引用详情', 'en': 'Reference Details'},
-    'viewReferenceRelations': {'zh': '查看笔记引用关系', 'en': 'View note references'},
-
-    // ===== Widget通用文本 =====
-    'pleaseEnableNotificationFirst': {
-      'zh': '请先开启通知权限才能设置提醒',
-      'en': 'Please enable notification permission first to set reminders',
-    },
-    'setReminderFailed': {
-      'zh': '设置提醒失败，请稍后重试',
-      'en': 'Failed to set reminder, please try again later',
-    },
-    'needNotificationPermission': {
-      'zh': '需要开启通知权限',
-      'en': 'Notification permission required',
-    },
     'later': {'zh': '稍后', 'en': 'Later'},
-    'batteryOptimization': {'zh': '电池优化', 'en': 'Battery Optimization'},
 
     // ===== 权限引导对话框 =====
     'permissionsReady': {'zh': '✅ 权限已就绪', 'en': '✅ Permissions Ready'},
@@ -1701,13 +1612,7 @@ class Translations {
     'pinAction': {'zh': '置顶', 'en': 'Pin'},
     'unpinAction': {'zh': '取消置顶', 'en': 'Unpin'},
     'deleteAction': {'zh': '删除', 'en': 'Delete'},
-
-    // ===== 分享功能 =====
-    'shareNote': {'zh': '分享笔记', 'en': 'Share Note'},
-    'shareLink': {'zh': '分享链接', 'en': 'Share Link'},
-    'generateShareLink': {'zh': '生成分享链接', 'en': 'Generate share link'},
-    'shareImage': {'zh': '分享图片', 'en': 'Share Image'},
-    'generateImageShare': {'zh': '生成图片分享', 'en': 'Generate image share'},
+    'noteCreatedSuccess': {'zh': '笔记已创建', 'en': 'Note created'},
     'quickActions': {'zh': '快捷操作', 'en': 'Quick Actions'},
     'copyNoteContent': {
       'zh': '复制笔记内容到剪贴板',
@@ -1752,8 +1657,6 @@ class Translations {
           'Unknown error occurred while generating share link, please try again later',
     },
     'setReminderTime': {'zh': '设置提醒时间', 'en': 'Set Reminder Time'},
-    'setNoteReminderTime': {'zh': '设定笔记提醒时间', 'en': 'Set note reminder time'},
-    'shareSettings': {'zh': '分享设置', 'en': 'Share Settings'},
     'customizeShareContent': {
       'zh': '自定义分享内容和选项',
       'en': 'Customize share content and options',
@@ -1768,29 +1671,28 @@ class Translations {
     'fillScreen': {'zh': '填满屏幕', 'en': 'Fill Screen'},
     'loadingHDImage': {'zh': '正在加载高清原图...', 'en': 'Loading HD image...'},
     'imageLoadError': {'zh': '无法加载图片', 'en': 'Failed to load image'},
-    'networkFailedNoCache': {'zh': '网络连接失败且无缓存', 'en': 'Network failed and no cache'},
-    'authFailedNoCache': {'zh': '认证失败且无缓存', 'en': 'Auth failed and no cache'},
-    'unsupportedImageFormat': {'zh': '不支持的图片格式', 'en': 'Unsupported image format'},
     'cannotDisplayImage': {'zh': '无法显示图片', 'en': 'Cannot display image'},
     'allImagesCount': {'zh': '全部图片 ({count})', 'en': 'All Images ({count})'},
     'timeUpdateFailed': {'zh': '时间更新失败', 'en': 'Time Update Failed'},
-    'detailedInfo': {'zh': '详细信息', 'en': 'Detailed Info'},
     'viewCreationTime': {
       'zh': '查看创建时间详细信息',
       'en': 'View creation time details',
     },
-    'appSettings': {'zh': '应用设置', 'en': 'App Settings'},
-    'modifyReminderTime': {'zh': '修改提醒时间', 'en': 'Modify Reminder Time'},
-    'cancelReminder': {'zh': '取消提醒', 'en': 'Cancel Reminder'},
-    'referenceCreated': {'zh': '引用关系已创建', 'en': 'Reference created'},
-    'linkCopied': {'zh': '链接已复制到剪贴板', 'en': 'Link copied to clipboard'},
-    'copyLink': {'zh': '复制链接', 'en': 'Copy Link'},
     'share': {'zh': '分享', 'en': 'Share'},
     'cancel': {'zh': '取消', 'en': 'Cancel'},
     'saveAndShare': {'zh': '保存并分享', 'en': 'Save and Share'},
     'generatingShareLink': {
       'zh': '正在生成分享链接...',
       'en': 'Generating share link...',
+    },
+    'reviewCopiedShort': {'zh': '✨ 点评已复制', 'en': '✨ Review copied'},
+    'aiReviewCompleted': {'zh': '✨ AI点评完成！', 'en': '✨ AI review ready!'},
+    'aiReviewTitle': {'zh': '给你的点评', 'en': 'Your Review'},
+    'aiReadingNote': {'zh': 'AI正在阅读笔记...', 'en': 'AI is reading...'},
+    'aiAnalyzing': {'zh': 'AI正在分析中...', 'en': 'AI is analyzing...'},
+    'startInsightWithCount': {
+      'zh': '开始洞察 ({count} 条笔记)',
+      'en': 'Start Insight ({count} notes)',
     },
     'copyReview': {'zh': '复制点评', 'en': 'Copy Review'},
     'close': {'zh': '关闭', 'en': 'Close'},
@@ -1816,6 +1718,10 @@ class Translations {
 
     // ===== 版本更新 =====
     'newVersionAvailable': {'zh': '发现新版本', 'en': 'New Version Available'},
+    'latestVersion': {
+      'zh': '最新版本：{version}',
+      'en': 'Latest version: {version}',
+    },
     'updateAvailableMessage': {
       'zh': '墨鸣笔记有新版本可用，建议立即更新以体验新功能！',
       'en':
@@ -1823,6 +1729,7 @@ class Translations {
     },
     'updateNotes': {'zh': '更新内容：', 'en': "What's New:"},
     'remindMeLater': {'zh': '稍后再说', 'en': 'Remind Me Later'},
+    'goToUpdate': {'zh': '前往更新', 'en': 'Update'},
     'updateNow': {'zh': '立即更新', 'en': 'Update Now'},
 
     // ===== 分享相关 =====
@@ -1842,7 +1749,6 @@ class Translations {
     'fromOldToNew': {'zh': '从旧到新', 'en': 'Oldest to Newest'},
     'filterNotes': {'zh': '筛选笔记', 'en': 'Filter Notes'},
     'totalWordCount': {'zh': '总字数', 'en': 'Total Words'},
-    'tagCount': {'zh': '标签数', 'en': 'Tag Count'},
 
     // ===== 登录状态 =====
     'online': {'zh': '在线', 'en': 'Online'},
@@ -1872,6 +1778,7 @@ class Translations {
       'en': 'AI-generated deep analysis for you',
     },
     'allTime': {'zh': '全部', 'en': 'All Time'},
+    'openInNewWindow': {'zh': '在新窗口打开', 'en': 'Open in New Window'},
 
     // ===== 权限和设置提示 =====
     'permissionRequired': {
@@ -1931,13 +1838,10 @@ class Translations {
       'zh': '查看创建时间等信息',
       'en': 'View creation time and other info',
     },
-    'reminderSet': {'zh': '提醒已设置', 'en': 'Reminder Set'},
-    'setReminder': {'zh': '设置提醒', 'en': 'Set Reminder'},
     'clickToModifyReminder': {
       'zh': '点击修改或取消提醒',
       'en': 'Click to modify or cancel reminder',
     },
-    'setNoteReminderTime': {'zh': '设置笔记提醒时间', 'en': 'Set note reminder time'},
     'shareSettings': {'zh': '分享设置', 'en': 'Share Settings'},
     'manageNoteVisibility': {'zh': '管理笔记可见性', 'en': 'Manage note visibility'},
     'createdTime': {'zh': '创建时间', 'en': 'Created Time'},
@@ -1972,21 +1876,15 @@ class Translations {
       'zh': '先创建一些笔记再来建立引用关系',
       'en': 'Create some notes first before adding references',
     },
-    'tryOtherKeywords': {'zh': '试试其他关键词', 'en': 'Try other keywords'},
 
     // ===== NoteCard相关 =====
     'expand': {'zh': '展开', 'en': 'Expand'},
     'collapse': {'zh': '收起', 'en': 'Collapse'},
     'fullText': {'zh': '全文', 'en': 'Full'},
-    'reminderCancelled': {'zh': '已取消提醒', 'en': 'Reminder cancelled'},
     'cancelFailed': {'zh': '取消失败', 'en': 'Cancel failed'},
     'pleaseEnableNotificationFirst': {
       'zh': '请先开启通知权限才能设置提醒',
       'en': 'Please enable notification permission first',
-    },
-    'setReminderFailed': {
-      'zh': '设置提醒失败，请稍后重试',
-      'en': 'Failed to set reminder, please try again',
     },
     'needNotificationPermission': {
       'zh': '需要开启通知权限',
@@ -2059,6 +1957,115 @@ class Translations {
       'zh': '请输入新的邮箱地址',
       'en': 'Please enter new email address',
     },
+    'userInfoSyncFailed': {'zh': '同步失败', 'en': 'Sync failed'},
+    'resourceServiceNotInitialized': {
+      'zh': '资源服务未初始化',
+      'en': 'Resource service is not initialized',
+    },
+    'uploadedAvatarUrlMissing': {
+      'zh': '无法获取上传的头像URL',
+      'en': 'Unable to get uploaded avatar URL',
+    },
+    'uploadAvatarFailed': {
+      'zh': '上传头像失败',
+      'en': 'Failed to upload avatar',
+    },
+    'emailUpdateSuccess': {
+      'zh': '邮箱更新成功',
+      'en': 'Email updated successfully',
+    },
+    'emailUpdateFailed': {
+      'zh': '邮箱更新失败',
+      'en': 'Failed to update email',
+    },
+    'currentPasswordLabel': {'zh': '当前密码', 'en': 'Current password'},
+    'enterCurrentPassword': {
+      'zh': '请输入当前密码',
+      'en': 'Please enter current password',
+    },
+    'enterNewPassword': {
+      'zh': '请输入新密码',
+      'en': 'Please enter new password',
+    },
+    'enterNewPasswordWithMin': {
+      'zh': '请输入新密码（至少3位）',
+      'en': 'Please enter new password (at least 3 characters)',
+    },
+    'confirmNewPassword': {'zh': '确认新密码', 'en': 'Confirm new password'},
+    'enterNewPasswordAgain': {
+      'zh': '请再次输入新密码',
+      'en': 'Please enter new password again',
+    },
+    'newPasswordTooShort': {
+      'zh': '新密码至少需要3位',
+      'en': 'New password must be at least 3 characters',
+    },
+    'newPasswordMismatch': {
+      'zh': '两次输入的新密码不一致',
+      'en': 'The new passwords do not match',
+    },
+    'newPasswordSameAsCurrent': {
+      'zh': '新密码不能与当前密码相同',
+      'en': 'New password cannot be the same as current password',
+    },
+    'passwordUpdateSuccessRelogin': {
+      'zh': '密码修改成功，请重新登录',
+      'en': 'Password updated. Please log in again.',
+    },
+    'passwordUpdateFailedCheckCurrent': {
+      'zh': '密码修改失败，请检查当前密码是否正确',
+      'en': 'Failed to update password. Please check the current password.',
+    },
+    'passwordUpdateFailed': {
+      'zh': '密码修改失败',
+      'en': 'Failed to update password',
+    },
+    'routeErrorTitle': {'zh': '错误', 'en': 'Error'},
+    'invalidTagName': {'zh': '标签名称无效', 'en': 'Invalid tag name'},
+    'pageLoadFailed': {'zh': '页面加载失败', 'en': 'Failed to load page'},
+    'pageNotFound': {'zh': '页面未找到', 'en': 'Page not found'},
+    'pageLost': {'zh': '哎呀，页面走丢了!', 'en': 'This page is missing.'},
+    'requestPath': {'zh': '请求路径: {path}', 'en': 'Request path: {path}'},
+    'saveImageToGallery': {
+      'zh': '保存图片到相册',
+      'en': 'Save image to Photos',
+    },
+    'storagePermissionRequiredForImage': {
+      'zh': '需要存储权限才能保存图片',
+      'en': 'Storage permission is required to save images',
+    },
+    'imageSavedToGallery': {
+      'zh': '图片已保存到相册',
+      'en': 'Image saved to Photos',
+    },
+    'imageSavedToDevice': {
+      'zh': '图片已保存到设备',
+      'en': 'Image saved to device',
+    },
+    'saveImageFailed': {'zh': '保存图片失败', 'en': 'Failed to save image'},
+    'downloadImageFailed': {
+      'zh': '下载图片失败',
+      'en': 'Failed to download image',
+    },
+    'imageDataEmpty': {'zh': '图片数据为空', 'en': 'Image data is empty'},
+    'imagePathInvalid': {
+      'zh': '图片路径已失效',
+      'en': 'Image path is no longer valid',
+    },
+    'imageNotFound': {'zh': '图片不存在', 'en': 'Image not found'},
+    'referenceNoteMissing': {
+      'zh': '引用的笔记不存在或已被删除 (ID: {id})',
+      'en': 'The referenced note does not exist or was deleted (ID: {id})',
+    },
+    'discardEditTitle': {'zh': '放弃本次编辑？', 'en': 'Discard this edit?'},
+    'unsavedChangesMessage': {
+      'zh': '当前修改尚未保存。',
+      'en': 'Your changes have not been saved.',
+    },
+    'discard': {'zh': '放弃', 'en': 'Discard'},
+    'addLink': {'zh': '添加链接', 'en': 'Add link'},
+    'displayText': {'zh': '显示文字', 'en': 'Display text'},
+    'linkAddress': {'zh': '链接地址', 'en': 'Link URL'},
 
     // ===== SnackBarUtils相关 =====
     'networkConnectionFailed': {
@@ -2181,6 +2188,11 @@ class Translations {
       'zh': '请先开启通知权限才能设置提醒',
       'en': 'Please enable notification permission first',
     },
+    'desktopReminderUnsupported': {
+      'zh': '当前桌面系统暂不支持系统级定时提醒，请在手机或 macOS 上设置',
+      'en':
+          'System scheduled reminders are not supported on this desktop platform yet. Set reminders on mobile or macOS.',
+    },
     'reminderTimeMustBeFuture': {
       'zh': '提醒时间必须在未来',
       'en': 'Reminder time must be in the future',
@@ -2254,11 +2266,13 @@ class Translations {
     },
     'flomoImportStep2': {
       'zh': '2. 导出后会得到一个包含 HTML 文件和 file 目录的文件夹',
-      'en': '2. You will get a folder containing HTML files and a file directory',
+      'en':
+          '2. You will get a folder containing HTML files and a file directory',
     },
     'flomoImportStep3': {
       'zh': '3. 📁 将整个导出文件夹保存到"文件"App中（iCloud Drive或本地）',
-      'en': '3. 📁 Save the entire export folder to Files app (iCloud Drive or local)',
+      'en':
+          '3. 📁 Save the entire export folder to Files app (iCloud Drive or local)',
     },
     'flomoImportStep4': {
       'zh': '4. 点击下方"选择Flomo导出文件夹"按钮',
@@ -2270,7 +2284,8 @@ class Translations {
     },
     'flomoExportWarning': {
       'zh': 'Flomo 每 7 天只能导出一次，请妥善保管导出的文件',
-      'en': 'Flomo can only export once every 7 days, please keep the exported files safe',
+      'en':
+          'Flomo can only export once every 7 days, please keep the exported files safe',
     },
     'selectFile': {'zh': '选择文件', 'en': 'Select File'},
     'selectFlomoExportFolder': {
@@ -2459,7 +2474,7 @@ class Translations {
       'zh': '尝试使用其他关键词搜索',
       'en': 'Try other keywords',
     },
-    
+
     // ===== 标签页面 =====
     'noTagsYet': {'zh': '还没有任何标签', 'en': 'No tags yet'},
     'noMatchingTags': {'zh': '未找到匹配的标签', 'en': 'No matching tags'},
@@ -2471,9 +2486,12 @@ class Translations {
     'expandAll': {'zh': '展开所有', 'en': 'Expand All'},
     'collapseAll': {'zh': '收起所有', 'en': 'Collapse All'},
     'expandAllTags': {'zh': '展开全部', 'en': 'Expand All'},
-    'expandAllTagsWithCount': {'zh': '展开全部 ({count}个标签)', 'en': 'Expand All ({count} tags)'},
+    'expandAllTagsWithCount': {
+      'zh': '展开全部 ({count}个标签)',
+      'en': 'Expand All ({count} tags)',
+    },
     'startWriting': {'zh': '开始写笔记', 'en': 'Start Writing'},
-    
+
     // ===== 标签页面使用提示 =====
     'createTagByTyping': {
       'zh': '在笔记中输入 #标签名 创建标签',
@@ -2491,7 +2509,7 @@ class Translations {
       'zh': '点击标签查看所有相关笔记',
       'en': 'Click tags to view related notes',
     },
-    
+
     // ===== WebDAV设置页面 =====
     'custom': {'zh': '自定义', 'en': 'Custom'},
     'passwordAppSpecific': {
@@ -2506,14 +2524,14 @@ class Translations {
       'zh': '💡 点击右上角 ? 查看如何获取',
       'en': '💡 Tap ? for instructions',
     },
-    
+
     // ===== 偏好设置页面 =====
     'sidebarCustomization': {'zh': '侧边栏', 'en': 'Sidebar'},
     'adjustMenuDisplay': {
       'zh': '调整菜单显示与排序',
       'en': 'Adjust menu display and sorting',
     },
-    
+
     // ===== 侧边栏自定义页面 =====
     'customizeSidebar': {'zh': '自定义侧边栏', 'en': 'Customize Sidebar'},
     'headerComponents': {'zh': '头部组件', 'en': 'Header Components'},
@@ -2534,14 +2552,18 @@ class Translations {
     },
     'confirmResetSidebar': {
       'zh': '确定要恢复侧边栏的默认设置吗？\n\n这将重置所有菜单项的显示状态和排序。',
-      'en': 'Reset sidebar to default settings?\n\nThis will reset all menu item visibility and sorting.',
+      'en':
+          'Reset sidebar to default settings?\n\nThis will reset all menu item visibility and sorting.',
     },
     'defaultHome': {'zh': '默认首页', 'en': 'Default Home'},
     'allNotesIsDefaultHome': {
       'zh': '💡 "全部笔记"是默认首页，无法隐藏或移动',
       'en': '💡 "All Notes" is the default home, cannot be hidden or moved',
     },
-    'restoreDefaultSettings': {'zh': '恢复默认设置', 'en': 'Restore Default Settings'},
+    'restoreDefaultSettings': {
+      'zh': '恢复默认设置',
+      'en': 'Restore Default Settings',
+    },
     'profileOrSettingsRequired': {
       'zh': '个人中心和设置至少保留一个',
       'en': 'Keep at least Profile or Settings visible',
@@ -2554,6 +2576,299 @@ class Translations {
       'zh': '侧边栏配置已保存',
       'en': 'Sidebar config saved',
     },
+
+    // ===== 通用弹窗与操作 =====
+    'reset': {'zh': '重置', 'en': 'Reset'},
+    'allow': {'zh': '允许', 'en': 'Allow'},
+    'denyPermission': {'zh': '暂不授权', 'en': 'Not now'},
+    'authorizeNow': {'zh': '立即授权', 'en': 'Allow now'},
+    'permissionTip': {
+      'zh': '💡 提示：授权后可以正常使用相关功能',
+      'en': '💡 Tip: Grant permission to use related features',
+    },
+    'permissionStepTitle': {'zh': '操作步骤：', 'en': 'Steps:'},
+    'permissionStepGeneral': {
+      'zh': '1. 点击"去设置"按钮\n2. 找到相应权限开关\n3. 开启权限后返回应用\n4. 重新尝试使用功能',
+      'en':
+          '1. Tap "Go to Settings"\n2. Find the related permission\n3. Enable it and return to the app\n4. Try again',
+    },
+    'permissionStepShort': {
+      'zh': '请按以下步骤操作：\n1. 点击"去设置"\n2. 找到相应权限开关\n3. 开启权限后返回应用',
+      'en':
+          'Please follow these steps:\n1. Tap "Go to Settings"\n2. Find the related permission\n3. Enable it and return to the app',
+    },
+    'permissionStepSpeech': {
+      'zh': '1. 点击"去设置"按钮\n2. 找到"麦克风"和"语音识别"\n3. 开启权限开关\n4. 返回应用重试',
+      'en':
+          '1. Tap "Go to Settings"\n2. Find "Microphone" and "Speech Recognition"\n3. Enable permissions\n4. Return and try again',
+    },
+    'permissionStepNotification': {
+      'zh': '1. 点击"去设置"按钮\n2. 找到"通知"权限\n3. 开启权限开关\n4. 返回应用重试',
+      'en':
+          '1. Tap "Go to Settings"\n2. Find "Notifications"\n3. Enable permission\n4. Return and try again',
+    },
+
+    // ===== 图片操作 =====
+    'imageActionsTitle': {'zh': '图片操作', 'en': 'Image Actions'},
+    'saveToGallery': {'zh': '保存到相册', 'en': 'Save to Photos'},
+    'saveAction': {'zh': '保存', 'en': 'Save'},
+    'preparingShareImage': {
+      'zh': '准备分享图片...',
+      'en': 'Preparing image...',
+    },
+    'imageShareText': {
+      'zh': '来自 InkRoot 的图片分享',
+      'en': 'Image shared from InkRoot',
+    },
+    'cannotGetImageFile': {
+      'zh': '无法获取图片文件',
+      'en': 'Cannot get image file',
+    },
+    'shareImageFailed': {
+      'zh': '分享图片失败',
+      'en': 'Failed to share image',
+    },
+    'savingFailed': {'zh': '保存失败', 'en': 'Save failed'},
+
+    // ===== 标签配色 =====
+    'tagColorTitle': {'zh': '标签配色', 'en': 'Tag Color'},
+    'previewEffect': {'zh': '预览效果', 'en': 'Preview'},
+    'presetColors': {'zh': '预设配色', 'en': 'Presets'},
+    'selectPreset': {'zh': '选择预设', 'en': 'Presets'},
+    'customColor': {'zh': '自定义', 'en': 'Custom'},
+    'backgroundColor': {'zh': '背景色', 'en': 'Background'},
+    'textColor': {'zh': '文字色', 'en': 'Text'},
+
+    // ===== 个性化页面 =====
+    'personalization': {'zh': '个性化', 'en': 'Personalization'},
+    'clearDataTooltip': {'zh': '清除数据', 'en': 'Clear data'},
+    'clearAllDataTitle': {'zh': '清除所有数据', 'en': 'Clear all data'},
+    'clearLearningPreferencesMessage': {
+      'zh': '确定要清除所有学习偏好数据吗？这将重置个性化推荐。',
+      'en':
+          'Clear all learning preference data? This will reset personalized recommendations.',
+    },
+    'allDataCleared': {'zh': '已清除所有数据', 'en': 'All data cleared'},
+    'noDataYet': {'zh': '暂无数据', 'en': 'No Data Yet'},
+    'personalizationEmptyHint': {
+      'zh': '开始使用 AI 相关笔记后，这里会生成你的个性化画像',
+      'en':
+          'Start using AI-powered related notes to build your personalization profile',
+    },
+    'usageStats': {'zh': '使用统计', 'en': 'Usage Stats'},
+    'totalClicks': {'zh': '总点击', 'en': 'Clicks'},
+    'averageDuration': {'zh': '平均时长', 'en': 'Avg Duration'},
+    'topTags': {'zh': '高频标签', 'en': 'Top Tags'},
+    'relationTypes': {'zh': '关系类型', 'en': 'Relation Types'},
+    'recentActivity': {'zh': '最近活动', 'en': 'Recent Activity'},
+    'relationContinue': {'zh': '📚 延续学习', 'en': '📚 Continue'},
+    'relationComplement': {'zh': '🧩 补充知识', 'en': '🧩 Complement'},
+    'relationCompare': {'zh': '🔄 对比分析', 'en': '🔄 Compare'},
+    'relationQa': {'zh': '❓ 问答', 'en': '❓ Q&A'},
+    'relationPractice': {'zh': '🎯 实践', 'en': '🎯 Practice'},
+
+    // ===== 性能看板 =====
+    'performanceMonitoring': {'zh': '性能监控', 'en': 'Performance'},
+    'performanceMetrics': {'zh': '性能指标', 'en': 'Metrics'},
+    'currentFps': {'zh': '当前FPS', 'en': 'Current FPS'},
+    'logStats': {'zh': '日志统计', 'en': 'Logs'},
+    'errorCount': {'zh': '错误', 'en': 'Errors'},
+    'warningCount': {'zh': '警告', 'en': 'Warnings'},
+    'totalCount': {'zh': '总计', 'en': 'Total'},
+    'recentErrors': {'zh': '最近错误:', 'en': 'Recent errors:'},
+    'tracing': {'zh': '链路追踪', 'en': 'Tracing'},
+    'recentOperationCount': {
+      'zh': '最近操作: {count}个',
+      'en': 'Recent operations: {count}',
+    },
+    'metricAppLaunch': {'zh': '应用启动', 'en': 'App Launch'},
+    'metricPageLoad': {'zh': '页面加载', 'en': 'Page Load'},
+    'metricNetworkRequest': {'zh': '网络请求', 'en': 'Network Request'},
+    'metricDatabaseQuery': {'zh': '数据库查询', 'en': 'Database Query'},
+    'metricImageLoad': {'zh': '图片加载', 'en': 'Image Load'},
+
+    // ===== 语音识别 =====
+    'speechPermissionTitle': {'zh': '语音识别权限', 'en': 'Speech Permission'},
+    'speechPermissionMessage': {
+      'zh': '语音识别功能需要访问您的麦克风来录制语音并转换为文字。\n\n这将帮助您快速输入笔记内容。',
+      'en':
+          'Speech recognition needs microphone access to record speech and convert it to text.\n\nThis helps you quickly enter note content.',
+    },
+    'microphonePermissionTitle': {'zh': '麦克风权限', 'en': 'Microphone Permission'},
+    'microphonePermissionDenied': {
+      'zh': '麦克风权限被拒绝',
+      'en': 'Microphone permission denied',
+    },
+    'microphonePermissionMessage': {
+      'zh': '语音识别功能需要访问麦克风来录制您的语音并转换为文字。',
+      'en':
+          'Speech recognition needs microphone access to record your voice and convert it to text.',
+    },
+    'microphoneSettingsMessage': {
+      'zh': '请在设置中手动开启麦克风权限以使用语音识别功能。',
+      'en':
+          'Please enable microphone permission in Settings to use speech recognition.',
+    },
+    'speechPermissionDenied': {
+      'zh': '语音识别权限被拒绝',
+      'en': 'Speech recognition permission denied',
+    },
+    'speechSettingsMessage': {
+      'zh': '请在设置中手动开启语音识别权限。',
+      'en': 'Please enable speech recognition permission in Settings.',
+    },
+    'speechPermissionRequiredTitle': {
+      'zh': '需要麦克风权限',
+      'en': 'Microphone Permission Required',
+    },
+    'speechPermissionRequiredMessage': {
+      'zh': '语音识别功能需要麦克风和语音识别权限。',
+      'en':
+          'Speech recognition requires microphone and speech recognition permissions.',
+    },
+    'speechRecognitionUnavailable': {
+      'zh': '语音识别不可用',
+      'en': 'Speech Recognition Unavailable',
+    },
+    'localSpeechUnavailable': {
+      'zh': '本地语音识别功能暂时不可用。',
+      'en': 'Local speech recognition is temporarily unavailable.',
+    },
+    'speechUnavailableReasons': {
+      'zh': '• Android: 缺少 Google 服务\n• iOS: 系统版本过低\n• 网络连接问题',
+      'en':
+          '• Android: Google services are missing\n• iOS: System version is too old\n• Network connection issue',
+    },
+    'suggestion': {'zh': '💡 建议', 'en': '💡 Suggestion'},
+    'cloudSpeechSuggestion': {
+      'zh': '您可以使用云端语音识别功能（百度语音），识别准确率更高。',
+      'en':
+          'You can use cloud speech recognition for higher recognition accuracy.',
+    },
+    'useCloudRecognition': {
+      'zh': '使用云端识别',
+      'en': 'Use Cloud Recognition',
+    },
+    'cloudRecognitionNotConfigured': {
+      'zh': '云端识别未配置',
+      'en': 'Cloud Recognition Not Configured',
+    },
+    'baiduSpeechNotConfigured': {
+      'zh': '百度语音识别 API 尚未配置。',
+      'en': 'Baidu Speech Recognition API is not configured.',
+    },
+
+    // ===== Flomo 导入 =====
+    'htmlFileNotFoundTitle': {
+      'zh': '未找到HTML文件',
+      'en': 'HTML file not found',
+    },
+    'htmlFileNotFoundMessage': {
+      'zh':
+          '在选择的文件夹中未找到HTML文件。\n\n这可能是Android文件访问权限问题。\n\n建议：请直接选择HTML文件而不是文件夹。',
+      'en':
+          'No HTML file was found in the selected folder.\n\nThis may be caused by Android file access permissions.\n\nSuggestion: Select the HTML file directly instead of a folder.',
+    },
+    'selectHtmlFile': {'zh': '选择HTML文件', 'en': 'Select HTML File'},
+
+    // ===== 本地备份保存 =====
+    'errorTitle': {'zh': '错误', 'en': 'Error'},
+    'chooseSaveLocation': {'zh': '选择保存位置', 'en': 'Choose Save Location'},
+    'userCancelledSave': {'zh': '用户取消保存', 'en': 'Save cancelled'},
+    'fileSaveFailed': {'zh': '文件保存失败', 'en': 'Failed to save file'},
+    'saveToAppDirectoryFailed': {
+      'zh': '保存到应用目录失败',
+      'en': 'Failed to save to app directory',
+    },
+    'backupShareSubject': {'zh': 'InkRoot-墨鸣笔记备份', 'en': 'InkRoot Backup'},
+    'backupShareText': {
+      'zh': '墨鸣笔记导出备份：{fileName}',
+      'en': 'InkRoot backup export: {fileName}',
+    },
+    'fileSharedToSave': {
+      'zh': '文件已通过分享发送，您可以选择保存到文件管理器',
+      'en': 'File shared. You can save it to a file manager.',
+    },
+    'localSaveSuccessTitle': {'zh': '保存成功', 'en': 'Saved'},
+    'fileSavedTo': {'zh': '文件已成功保存到：', 'en': 'File saved to:'},
+    'findFileInManager': {
+      'zh': '您可以在文件管理器中找到该文件。',
+      'en': 'You can find this file in your file manager.',
+    },
+    'fileSavedTitle': {'zh': '文件已保存', 'en': 'File Saved'},
+    'fileSavedToPrivateDirectory': {
+      'zh': '文件已保存到应用私有目录：{fileName}',
+      'en': 'File saved to the app private directory: {fileName}',
+    },
+    'androidSaveLimitHint': {
+      'zh': '由于Android系统限制，建议您通过分享将文件保存到可访问的位置。',
+      'en':
+          'Due to Android system restrictions, use Share to save the file to an accessible location.',
+    },
+    'shareNow': {'zh': '立即分享', 'en': 'Share Now'},
+    'localSaveFailedTitle': {
+      'zh': '本地保存失败',
+      'en': 'Local Save Failed',
+    },
+    'localSaveFailedMessage': {
+      'zh': '无法将文件保存到本地存储。是否改用分享方式，您可以通过分享选择保存位置？',
+      'en':
+          'Unable to save the file locally. Use Share instead so you can choose a save location?',
+    },
+    'shareSave': {'zh': '分享保存', 'en': 'Share to Save'},
+
+    // ===== WebDAV 操作反馈 =====
+    'invalidServerAddress': {
+      'zh': '服务器地址格式不正确',
+      'en': 'Invalid server address',
+    },
+    'webdavHttpsRequired': {
+      'zh': '请使用 https://。仅 localhost、127.0.0.1 和内网地址允许 http://',
+      'en':
+          'Use https://. http:// is allowed only for localhost and private LAN addresses.',
+    },
+    'syncPathMustStartWithSlash': {
+      'zh': '同步路径必须以 / 开头',
+      'en': 'Sync path must start with /',
+    },
+    'connectionTestSuccess': {
+      'zh': '连接测试成功',
+      'en': 'Connection test succeeded',
+    },
+    'connectionTestFailed': {
+      'zh': '连接测试失败，请检查配置',
+      'en': 'Connection test failed. Check your settings.',
+    },
+    'testFailed': {'zh': '测试失败', 'en': 'Test failed'},
+    'backupCompleted': {'zh': '备份完成', 'en': 'Backup completed'},
+    'restoreCompleted': {'zh': '恢复完成', 'en': 'Restore completed'},
+    'backupFailed': {'zh': '备份失败', 'en': 'Backup failed'},
+    'restoreFailed': {'zh': '恢复失败', 'en': 'Restore failed'},
+    'backupServiceUnavailable': {
+      'zh': '备份服务未初始化',
+      'en': 'Backup service is not ready',
+    },
+    'restoreServiceUnavailable': {
+      'zh': '恢复服务未初始化',
+      'en': 'Restore service is not ready',
+    },
+    'imagesBackupAttempted': {
+      'zh': '图片：已尝试备份',
+      'en': 'Images: backup attempted',
+    },
+    'webdavResourcesUploaded': {
+      'zh': '资源：{count} 个',
+      'en': 'Resources: {count}',
+    },
+    'webdavBackupNotesCount': {
+      'zh': '笔记：{count} 条',
+      'en': 'Notes: {count}',
+    },
+    'restoredNotesCount': {
+      'zh': '已恢复：{count} 条笔记',
+      'en': 'Restored: {count} notes',
+    },
+    'errorsCount': {'zh': '错误：{count}', 'en': 'Errors: {count}'},
   };
 
   /// 获取翻译文本

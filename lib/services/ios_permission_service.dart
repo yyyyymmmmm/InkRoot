@@ -61,7 +61,7 @@ class IOSPermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -84,7 +84,7 @@ class IOSPermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -115,7 +115,7 @@ class IOSPermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -134,7 +134,7 @@ class IOSPermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -153,7 +153,7 @@ class IOSPermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -172,7 +172,7 @@ class IOSPermissionService {
       }
 
       return false;
-    } catch (e) {
+    } on Object {
       return false;
     }
   }
@@ -184,6 +184,8 @@ class IOSPermissionService {
   Future<void> openAppSettings() async {
     try {
       await Permission.camera.request();
-    } catch (e) {}
+    } on Object catch (_) {
+      // Opening/requesting system permission can fail on restricted devices.
+    }
   }
 }

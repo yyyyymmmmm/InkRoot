@@ -19,14 +19,14 @@ void main() {
     });
 
     test('TAG-03 URL 中的 # 不被提取', () {
-      final tags = extractTagsFromContent(
-          'https://example.com/page#anchor 是一个链接');
+      final tags =
+          extractTagsFromContent('https://example.com/page#anchor 是一个链接');
       expect(tags, isEmpty);
     });
 
     test('TAG-04 URL 内 # 和文本标签共存时正确区分', () {
-      final tags = extractTagsFromContent(
-          '看链接 https://example.com#section 和标签 #笔记');
+      final tags =
+          extractTagsFromContent('看链接 https://example.com#section 和标签 #笔记');
       expect(tags, contains('笔记'));
       expect(tags, isNot(contains('section')));
     });
@@ -56,8 +56,6 @@ void main() {
   group('isTagInUrl', () {
     test('TAG-09 标签在 URL 内返回 true', () {
       const line = 'https://example.com/page#anchor';
-      final urlRegex = RegExp(r'[a-zA-Z]+://[^\s\)]+');
-      final urlMatch = urlRegex.firstMatch(line)!;
       // anchor 的 # 在 url 范围内
       final hashIdx = line.indexOf('#');
       final result = isTagInUrl(line, hashIdx, line.length);

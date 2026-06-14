@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an improvement for InkRoot.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What user workflow is currently hard or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the expected behavior from a user's point of view.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Editor
+        - Sync
+        - Backup / restore
+        - Import / export
+        - AI
+        - Settings
+        - Cross-platform
+        - Other
+    validations:
+      required: true

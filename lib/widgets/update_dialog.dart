@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/announcement_model.dart';
+import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:inkroot/utils/text_style_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -127,14 +131,14 @@ class _UpdateDialogState extends State<UpdateDialog>
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  accentColor.withOpacity(0.8),
+                                  accentColor.withValues(alpha: 0.8),
                                   accentColor,
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: accentColor.withOpacity(0.3),
+                                  color: accentColor.withValues(alpha: 0.3),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -178,7 +182,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: accentColor.withOpacity(0.1),
+                                    color: accentColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -215,7 +219,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                                 decoration: BoxDecoration(
                                   color: isDarkMode
                                       ? Colors.grey.shade800
-                                          .withOpacity(0.3)
+                                          .withValues(alpha: 0.3)
                                       : Colors.grey.shade50,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -294,7 +298,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: accentColor.withOpacity(0.05),
+                              color: accentColor.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Column(
@@ -401,7 +405,7 @@ class _UpdateDialogState extends State<UpdateDialog>
                                         foregroundColor: Colors.white,
                                         elevation: _isDownloading ? 0 : 2,
                                         shadowColor:
-                                            accentColor.withOpacity(0.3),
+                                            accentColor.withValues(alpha: 0.3),
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(12),
@@ -511,7 +515,7 @@ class _UpdateDialogState extends State<UpdateDialog>
     });
 
     // 启动进度动画
-    _progressAnimationController.forward();
+    unawaited(_progressAnimationController.forward());
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -536,12 +540,10 @@ class _UpdateDialogState extends State<UpdateDialog>
           // 重置进度动画
           _progressAnimationController.reset();
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('下载完成！请安装更新包'),
-              backgroundColor: Colors.teal,
-              behavior: SnackBarBehavior.floating,
-            ),
+          SnackBarUtils.showSuccess(
+            context,
+            AppLocalizationsSimple.of(context)?.downloadComplete ??
+                '下载完成！请安装更新包',
           );
 
           if (!widget.versionInfo.forceUpdate) {
@@ -551,7 +553,7 @@ class _UpdateDialogState extends State<UpdateDialog>
       } else {
         throw Exception('下载失败：HTTP ${response.statusCode}');
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('UpdateDialog: 下载异常 - $e');
       if (mounted) {
         setState(() {
@@ -562,12 +564,10 @@ class _UpdateDialogState extends State<UpdateDialog>
         // 重置进度动画
         _progressAnimationController.reset();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('下载失败：$e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+        final l10n = AppLocalizationsSimple.of(context);
+        SnackBarUtils.showError(
+          context,
+          '${l10n?.downloadFailed ?? '下载失败'}: $e',
         );
       }
     }
@@ -584,20 +584,20 @@ class _UpdateDialogState extends State<UpdateDialog>
             await launchUrl(uri, mode: LaunchMode.externalApplication);
 
         if (launched && !widget.versionInfo.forceUpdate) {
-          Navigator.pop(context);
+          if (mounted) {
+            Navigator.pop(context);
+          }
         }
       } else {
         throw Exception('无法打开链接');
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('UpdateDialog: 打开链接异常 - $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('打开链接失败：$e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+        final l10n = AppLocalizationsSimple.of(context);
+        SnackBarUtils.showError(
+          context,
+          '${l10n?.openLinkFailed ?? '打开链接失败'}: $e',
         );
       }
     }

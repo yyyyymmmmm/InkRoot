@@ -39,8 +39,10 @@ class ApiServiceFactory {
             Uri.parse('$url$path'),
             headers: {'Accept': 'application/json'},
           );
-          if (response.statusCode == 200) return;
-        } catch (_) {}
+          if (response.statusCode == 200) {
+            return;
+          }
+        } on Object catch (_) {}
       }
 
       throw ApiError('SERVER_ERROR', '无法识别 Memos 服务器，请确认地址正确');
@@ -67,8 +69,10 @@ class ApiServiceFactory {
               '2. 服务器是否响应过慢');
     } on FormatException {
       throw ApiError('INVALID_URL', '无效的服务器地址格式');
-    } catch (e) {
-      if (e is ApiError) rethrow;
+    } on Object catch (e) {
+      if (e is ApiError) {
+        rethrow;
+      }
       throw ApiError('UNKNOWN', '未知错误: $e');
     }
   }
@@ -114,17 +118,23 @@ class ApiServiceFactory {
 
       try {
         final data = jsonDecode(response.body);
-        if (data == null) throw ApiError('INVALID_RESPONSE', '服务器响应格式错误');
-      } catch (e) {
-        if (e is ApiError) rethrow;
+        if (data == null) {
+          throw ApiError('INVALID_RESPONSE', '服务器响应格式错误');
+        }
+      } on Object catch (e) {
+        if (e is ApiError) {
+          rethrow;
+        }
         throw ApiError('INVALID_RESPONSE', '服务器响应格式错误');
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (retryCount < _maxRetries && e is! ApiError) {
         await Future.delayed(Duration(seconds: 1 * (retryCount + 1)));
         return validateToken(baseUrl, token, retryCount: retryCount + 1);
       }
-      if (e is ApiError) rethrow;
+      if (e is ApiError) {
+        rethrow;
+      }
       throw ApiError('UNKNOWN', '验证Token失败: $e');
     }
   }
@@ -153,7 +163,7 @@ class ApiServiceFactory {
       await service.getMemos(pageSize: 1);
 
       return service;
-    } catch (e) {
+    } on Object catch (e) {
       if (retryCount < _maxRetries && e is! ApiError) {
         // 延迟后重试
         await Future.delayed(Duration(seconds: 1 * (retryCount + 1)));
@@ -163,7 +173,9 @@ class ApiServiceFactory {
           retryCount: retryCount + 1,
         );
       }
-      if (e is ApiError) rethrow;
+      if (e is ApiError) {
+        rethrow;
+      }
       throw ApiError('UNKNOWN', '创建API服务失败: $e');
     }
   }
@@ -171,18 +183,20 @@ class ApiServiceFactory {
   /// 规范化API URL
   static String normalizeApiUrl(String url) {
     try {
+      var normalizedUrl = url;
       // 确保URL以http://或https://开头
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://$url';
+      if (!normalizedUrl.startsWith('http://') &&
+          !normalizedUrl.startsWith('https://')) {
+        normalizedUrl = 'https://$normalizedUrl';
       }
 
       // 移除末尾的斜杠
-      while (url.endsWith('/')) {
-        url = url.substring(0, url.length - 1);
+      while (normalizedUrl.endsWith('/')) {
+        normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1);
       }
 
-      return url;
-    } catch (e) {
+      return normalizedUrl;
+    } on Object {
       throw ApiError('INVALID_URL', '无效的服务器地址格式');
     }
   }

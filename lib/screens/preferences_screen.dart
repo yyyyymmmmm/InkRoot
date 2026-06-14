@@ -33,10 +33,12 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
         title: Text(
           l10n?.preferences ?? '偏好设置',
           style: TextStyle(
@@ -150,7 +152,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     AppConfig appConfig,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -194,7 +197,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -208,7 +212,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.2)
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
                         : primaryColorWithOpacity,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -264,7 +268,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     AppConfig appConfig,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -309,7 +314,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -323,7 +329,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.2)
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
                         : primaryColorWithOpacity,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -372,52 +378,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  // 构建下拉项
-  DropdownMenuItem<String> _buildDropdownItem(
-    String label,
-    String value,
-    bool isDarkMode,
-    Color iconColor,
-  ) {
-    final selectedColor = isDarkMode ? Colors.white : AppTheme.primaryColor;
-    final isSelected =
-        value == Provider.of<AppProvider>(context).appConfig.themeSelection;
-
-    return DropdownMenuItem<String>(
-      value: value,
-      child: Row(
-        children: [
-          if (value == AppConfig.THEME_SYSTEM)
-            Icon(
-              Icons.brightness_auto,
-              size: 20,
-              color: isSelected ? iconColor : null,
-            )
-          else if (value == AppConfig.THEME_LIGHT)
-            Icon(
-              Icons.wb_sunny_outlined,
-              size: 20,
-              color: isSelected ? iconColor : null,
-            )
-          else
-            Icon(
-              Icons.nights_stay_outlined,
-              size: 20,
-              color: isSelected ? iconColor : null,
-            ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? selectedColor : null,
-              fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // 构建分区标题
   Widget _buildSectionHeader(BuildContext context, String title) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -448,7 +408,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     required ValueChanged<bool> onChanged,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -470,7 +431,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -483,7 +444,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               height: 40,
               decoration: BoxDecoration(
                 color: isDarkMode
-                    ? AppTheme.primaryColor.withOpacity(0.2)
+                    ? AppTheme.primaryColor.withValues(alpha: 0.2)
                     : primaryColorWithOpacity,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -520,7 +481,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: iconColor,
+              activeThumbColor: iconColor,
             ),
           ],
         ),
@@ -566,9 +527,13 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     final isSelected =
                         appConfig.syncInterval == interval * 60; // 转换为秒
                     return ChoiceChip(
-                      label: Text('$interval分钟'),
+                      label: Text(
+                        AppLocalizationsSimple.of(context)
+                                ?.minutesFormat(interval) ??
+                            '$interval分钟',
+                      ),
                       selected: isSelected,
-                      selectedColor: primaryColor.withOpacity(0.2),
+                      selectedColor: primaryColor.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
                         color: isSelected
                             ? primaryColor
@@ -721,7 +686,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   ) {
     final l10n = AppLocalizationsSimple.of(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -757,7 +723,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -771,7 +738,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.2)
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
                         : primaryColorWithOpacity,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -816,65 +783,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // 构建可见性下拉项
-  DropdownMenuItem<String> _buildVisibilityDropdownItem(
-    String label,
-    String value,
-    bool isDarkMode,
-    Color iconColor,
-  ) {
-    final isSelected = value ==
-        Provider.of<AppProvider>(context).appConfig.defaultNoteVisibility;
-    final selectedColor = isDarkMode ? Colors.white : AppTheme.primaryColor;
-
-    return DropdownMenuItem<String>(
-      value: value,
-      child: Row(
-        children: [
-          Icon(
-            value == AppConfig.VISIBILITY_PRIVATE
-                ? Icons.lock_outline
-                : Icons.public_outlined,
-            size: 18,
-            color: isSelected
-                ? iconColor
-                : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected
-                        ? (isDarkMode
-                            ? Colors.white
-                            : AppTheme.textPrimaryColor)
-                        : null,
-                  ),
-                ),
-                Text(
-                  value == AppConfig.VISIBILITY_PRIVATE
-                      ? '仅自己可见'
-                      : '任何人都可通过链接访问',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -929,7 +837,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -945,7 +853,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1067,8 +975,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor.withOpacity(0.15)
-                      : primaryColor.withOpacity(0.05),
+                      ? primaryColor.withValues(alpha: 0.15)
+                      : primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1147,7 +1055,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -1163,7 +1071,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1265,8 +1173,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor.withOpacity(0.15)
-                      : primaryColor.withOpacity(0.05),
+                      ? primaryColor.withValues(alpha: 0.15)
+                      : primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1345,7 +1253,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -1361,7 +1269,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1545,8 +1453,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 height: containerSize,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor.withOpacity(0.15)
-                      : primaryColor.withOpacity(0.05),
+                      ? primaryColor.withValues(alpha: 0.15)
+                      : primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -1639,7 +1547,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   ) {
     final l10n = AppLocalizationsSimple.of(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -1688,7 +1597,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -1780,7 +1690,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -1796,7 +1706,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2018,10 +1928,10 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor.withOpacity(0.15)
+                      ? primaryColor.withValues(alpha: 0.15)
                       : (Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.black.withOpacity(0.03)),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.03)),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -2106,7 +2016,10 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       }
 
       debugPrint('🔤 [PreferencesScreen] 字体家族设置完成: $fontName (实时生效)');
-      SnackBarUtils.showSuccess(context, l10n?.fontChanged(fontName) ?? '字体已切换为$fontName');
+      SnackBarUtils.showSuccess(
+        context,
+        l10n?.fontChanged(fontName) ?? '字体已切换为$fontName',
+      );
     }
   }
 
@@ -2117,7 +2030,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     AppConfig appConfig,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -2130,7 +2044,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     String getCurrentLanguageName() {
       switch (appConfig.locale) {
         case AppConfig.LOCALE_SYSTEM:
-        case null:
           return l10n?.languageSystem ?? '跟随系统';
         case AppConfig.LOCALE_ZH_CN:
           return l10n?.languageChineseSimplified ?? '简体中文';
@@ -2204,7 +2117,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -2218,7 +2132,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.2)
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
                         : primaryColorWithOpacity,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -2270,7 +2184,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   // 构建侧边栏自定义选择器
   Widget _buildSidebarCustomizationSelector(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColorWithOpacity = AppTheme.primaryColor.withOpacity(0.1);
+    final primaryColorWithOpacity =
+        AppTheme.primaryColor.withValues(alpha: 0.1);
     final iconColor =
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final textColor =
@@ -2306,7 +2221,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -2320,7 +2236,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.2)
+                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
                         : primaryColorWithOpacity,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -2337,7 +2253,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizationsSimple.of(context)?.sidebarCustomization ?? '侧边栏',
+                        AppLocalizationsSimple.of(context)
+                                ?.sidebarCustomization ??
+                            '侧边栏',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -2346,7 +2264,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        AppLocalizationsSimple.of(context)?.adjustMenuDisplay ?? '调整菜单显示与排序',
+                        AppLocalizationsSimple.of(context)?.adjustMenuDisplay ??
+                            '调整菜单显示与排序',
                         style: TextStyle(
                           fontSize: 14,
                           color: subTextColor,
@@ -2386,7 +2305,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
         isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
     final l10n = AppLocalizationsSimple.of(context);
 
-    // 定义支持的语言（仅中英文）
+    // 当前正式开放中英文，其它语言需要完整文案和视觉回归后再开放。
     final languages = [
       {
         'icon': Icons.smartphone,
@@ -2420,7 +2339,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   const BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.5 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.5 : 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -2436,7 +2355,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: secondaryColor.withOpacity(0.3),
+                      color: secondaryColor.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2454,7 +2373,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     ),
                   ),
 
-                  // 选项列表（可滚动，支持23种语言）
+                  // 选项列表
                   Flexible(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
@@ -2536,8 +2455,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? primaryColor.withOpacity(0.15)
-                      : primaryColor.withOpacity(0.05),
+                      ? primaryColor.withValues(alpha: 0.15)
+                      : primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -2611,7 +2530,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   String _getLanguageName(String? locale, AppLocalizationsSimple? l10n) {
     switch (locale) {
       case AppConfig.LOCALE_SYSTEM:
-      case null:
         return l10n?.languageSystem ?? '跟随系统';
       case AppConfig.LOCALE_ZH_CN:
         return l10n?.languageChineseSimplified ?? '简体中文';

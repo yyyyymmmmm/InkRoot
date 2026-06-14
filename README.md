@@ -13,17 +13,17 @@
   
   无论是快速捕捉灵感，还是系统性整理思考，墨鸣都助你沉淀积累，厚积薄发。
 
--  [![GitHub release](https://img.shields.io/badge/version-1.0.9-blue.svg)](https://github.com/yyyyymmmmm/IntRoot/releases)
+-  [![GitHub release](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/yyyyymmmmm/InkRoot/releases)
   [![Flutter](https://img.shields.io/badge/Flutter-3.35.5-02569B?logo=flutter)](https://flutter.dev)
-  [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/yyyyymmmmm/IntRoot/blob/master/LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/yyyyymmmmm/IntRoot)
-  [![Downloads](https://img.shields.io/github/downloads/yyyyymmmmm/IntRoot/total.svg)](https://github.com/yyyyymmmmm/IntRoot/releases)
+  [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/yyyyymmmmm/InkRoot/blob/master/LICENSE)
+  [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/yyyyymmmmm/InkRoot)
+  [![Downloads](https://img.shields.io/github/downloads/yyyyymmmmm/InkRoot/total.svg)](https://github.com/yyyyymmmmm/InkRoot/releases)
 
-  [官方网站](https://inkroot.cn) · [下载安装](https://github.com/yyyyymmmmm/IntRoot/releases) · [问题反馈](https://github.com/yyyyymmmmm/IntRoot/issues)
+  [官方网站](https://inkroot.cn) · [下载安装](https://github.com/yyyyymmmmm/InkRoot/releases) · [问题反馈](https://github.com/yyyyymmmmm/InkRoot/issues)
 
   ---
 
-  ## 🎉 最新版本 v1.0.9
+  ## 🎉 最新版本 v1.1.0
   
   ### 🆕 本次更新亮点
   
@@ -31,48 +31,48 @@
   <tr>
     <td width="50%">
       
-  ### 🔄 Notion 数据同步
-  与 Notion 工作区实时同步
+  ### 🧰 工程维护升级
+  接近大厂仓库维护方式
   
-  - 双向同步支持
-  - 自动同步功能
-  - 下拉刷新触发
-  - 灵活字段映射
+  - 新增统一维护 CLI
+  - GitHub Actions 全端构建
+  - PR/Issue 模板
+  - Dependabot 依赖更新
   
     </td>
     <td width="50%">
       
-  ### 📓 Obsidian 集成
-  通过第三方插件双向同步
+  ### 🔐 Android 签名流程
+  Release 签名安全接入
   
-  - 完全兼容 Memos API
-  - 每日笔记自动集成
-  - 支持增量同步
-  - 一键跳转下载
+  - 本地密钥不入库
+  - GitHub Secrets 注入
+  - Debug 构建无需签名
+  - Release 构建自动签名
   
     </td>
   </tr>
   <tr>
     <td>
       
-  ### 📖 微信读书导入
-  批量导入阅读笔记
+  ### 📝 编辑与渲染优化
+  更接近富文本笔记体验
   
-  - 智能识别书籍信息
-  - 自动解析章节结构
-  - 自定义标签设置
-  - 导入前预览检查
+  - 输入时隐藏 Markdown 噪音
+  - 首页保留用户排版
+  - Memos Markdown 渲染增强
+  - 展开逻辑更准确
   
     </td>
     <td>
       
-  ### 📝 批注系统
-  专业级笔记批注功能
+  ### ☁️ 同步与备份增强
+  WebDAV 与 Memos 兼容继续完善
   
-  - 5种批注类型
-  - 批注侧边栏设计
-  - 添加/编辑/删除
-  - 完整国际化支持
+  - WebDAV 图片备份开关
+  - 多版本 Memos API 探测
+  - 同步时间线修正
+  - 备份恢复容错增强
   
     </td>
   </tr>
@@ -157,16 +157,16 @@
   
   ### 🐛 重要修复
   
-  - 🔧 **修复图片路径问题** - 升级后图片不显示（重大修复）
-  - 📝 **修复批注国际化** - 批注对话框显示为方框
-  - 🎨 **修复AI设置国际化** - 自定义提示词显示为方框
-  - 🔗 **修复引用箭头点击** - 引用箭头可点击打开侧边栏
-  - 🏷️ 修复标签解析错误
-  - ☁️ 优化同步冲突处理
+  - 🔧 **修复云配置容错** - 服务端失败态返回字符串时不再触发类型异常
+  - 📝 **修复首页展开判断** - 链接、标签、图片等渲染后短内容不再误显示展开
+  - 🖼️ **优化图片查看器** - 点击退出、原图查看和多图浏览体验更接近系统相册
+  - 🕒 **修复同步时间线** - 普通刷新优先使用服务端时间，离线发布回写保留本地创建时间
+  - ☁️ **增强 WebDAV 备份** - 图片附件备份、递归目录创建、错误提示和进度处理更稳
+  - 🌍 **补齐部分国际化** - 帮助页、备份、WebDAV、提醒等页面文案继续收敛到 i18n
   
   <div align="center">
   
-  **[📥 下载最新版本](https://github.com/yyyyymmmmm/IntRoot/releases/latest)** · **[📋 完整更新日志](CHANGELOG.md)**
+  **[📥 下载最新版本](https://github.com/yyyyymmmmm/InkRoot/releases/latest)** · **[📋 完整更新日志](CHANGELOG.md)**
   
   </div>
 
@@ -515,36 +515,35 @@ InkRoot 支持两种使用模式，根据需求选择：
 
 #### ☁️ 模式二：云端同步模式（可选）
 
-**需要 Memos 服务器，支持多设备同步！**
+**需要 Memos 服务器，支持多设备同步。**
 
-**⚠️ 重要：仅支持 Memos v0.21.0**
+**版本兼容：已支持 Memos v0.21.x 到 v0.28.x 的主要 API 差异，并会自动探测服务器版本。**
 
 **选项A: 使用 Docker 部署 Memos（推荐）**
 
 ```bash
-# 必须使用 0.21.0 版本
 docker run -d \
   --name memos \
   --publish 5230:5230 \
   --volume ~/.memos/:/var/opt/memos \
-  neosmemo/memos:0.21.0
+  neosmemo/memos:latest
 ```
 
 **版本要求说明：**
-- ✅ **仅支持版本**：Memos v0.21.0（必须使用此版本）
-- ❌ **不支持**：Memos v0.20.x 及以下（API 不兼容）
-- ❌ **不支持**：Memos v0.22.0 及以上（API 可能不兼容）
-- 📌 **强烈建议**：使用 v0.21.0 以确保完全兼容
+- ✅ **已适配**：v0.21.x、v0.22-v0.25、v0.26+、v0.27/v0.28 的主要登录、笔记、引用、附件接口差异
+- ⚠️ **不建议**：v0.20.x 及以下，API 差异较大
+- 📌 **建议**：新部署优先使用较新的稳定版；已有 v0.21.x 服务可继续使用
+- 🧪 **说明**：不同 Memos 版本能力不同，例如附件、引用、链接等功能会按服务端能力降级
 
 **选项B: 下载 Memos 二进制文件**
 
-前往 [Memos Releases](https://github.com/usememos/memos/releases/tag/v0.21.0) 下载 v0.21.0 版本。
+前往 [Memos Releases](https://github.com/usememos/memos/releases) 下载需要的稳定版本。
 
 **选项C: 使用官方演示服务器（仅测试用）**
 
 ```
 服务器地址: https://memos.didichou.site
-版本: v0.21.0
+版本: 以实际服务端为准
 注意：演示服务器数据可能会被定期清理，不建议长期使用
 ```
 
@@ -556,7 +555,7 @@ docker run -d \
 2. 进入「设置」→「服务器信息」
 3. 输入你的 Memos 服务器地址
    - 格式：`http://your-server:5230` 或 `https://your-domain.com`
-   - 确保服务器版本为 v0.21.0
+   - 应用会自动探测 Memos 版本并选择对应 API
 4. 注册新账号或登录现有账号
 
 **如果选择本地模式，跳过此步骤！**
@@ -673,42 +672,39 @@ docker run -d \
 #### 克隆仓库
 
 ```bash
-git clone https://github.com/yyyyymmmmm/IntRoot.git
-cd IntRoot
+git clone https://github.com/yyyyymmmmm/InkRoot.git
+cd InkRoot
 ```
 
-#### 安装依赖
+#### 统一维护 CLI
 
 ```bash
-flutter pub get
+dart tool/inkroot.dart doctor
+dart tool/inkroot.dart verify
 ```
 
 #### 构建 Android APK
 
 ```bash
-# 构建通用 APK（包含所有架构，体积较大）
-flutter build apk --release
+# Debug APK（无需签名）
+dart tool/inkroot.dart build android-debug
 
-# 构建分架构 APK（推荐，每个文件约 24MB）
-flutter build apk --split-per-abi --release
-
-# 构建 App Bundle（用于上传 Google Play）
-flutter build appbundle --release
+# Release APK（需要 android/key.properties 和 keystore）
+dart tool/inkroot.dart build android-release
 ```
 
 构建完成后，APK 文件位于：`build/app/outputs/flutter-apk/`
 
+Android 签名文件不进入 Git。详细流程见 [维护指南](docs/MAINTENANCE.md)。
+
 #### 构建 iOS IPA
 
 ```bash
-# 安装 CocoaPods 依赖
-cd ios && pod install && cd ..
+# iOS 模拟器构建（无需签名）
+dart tool/inkroot.dart build ios-sim
 
-# 构建 iOS（需要 Apple 开发者账号）
-flutter build ios --release
-
-# 构建 IPA（需要配置签名）
-flutter build ipa --release
+# 未签名 IPA（真机分发仍需额外签名/安装工具）
+dart tool/inkroot.dart build ios-unsigned-ipa
 ```
 
 构建完成后，IPA 文件位于：`build/ios/ipa/`
@@ -716,12 +712,11 @@ flutter build ipa --release
 #### 构建 macOS DMG
 
 ```bash
-# 方法1: 使用自动化脚本（推荐）
-./scripts/dmg/build_release.sh
+# 方法1: 使用统一 CLI
+dart tool/inkroot.dart build macos-debug
 
-# 方法2: 手动构建
-flutter build macos --release
-./scripts/dmg/create_ultimate_dmg.sh
+# 方法2: 创建 DMG
+./scripts/dmg/build_release.sh
 ```
 
 构建完成后，DMG 文件位于项目根目录：`InkRoot-版本号-Installer.dmg`
@@ -731,20 +726,29 @@ flutter build macos --release
 #### 构建 Windows 安装包
 
 ```bash
-# 方法1: 使用构建脚本（推荐）
-scripts\windows\build_windows.bat
+# 方法1: 使用统一 CLI
+dart tool/inkroot.dart build windows-debug
 
-# 方法2: 手动构建
-flutter build windows --release
+# 方法2: 使用构建脚本
+scripts\windows\build_windows.bat
 ```
 
 构建完成后，可执行文件位于：`build\windows\x64\runner\Release\inkroot.exe`
 
 **详细说明**：参考 [Windows 构建指南](scripts/windows/README.md)
 
+#### 构建 Linux / Web
+
+```bash
+dart tool/inkroot.dart build linux-debug
+dart tool/inkroot.dart build web-release
+```
+
+完整维护和 CI 说明见 [维护指南](docs/MAINTENANCE.md)。
+
 ### 方式二：下载预编译版本
 
-访问 [Releases 页面](https://github.com/yyyyymmmmm/IntRoot/releases) 下载最新版本。
+访问 [Releases 页面](https://github.com/yyyyymmmmm/InkRoot/releases) 下载最新版本。
 
 **⚠️ 安装提示**：
 - Android 安装时可能提示"未知来源"或"风险应用"，这是正常现象
@@ -777,7 +781,7 @@ flutter build windows --release
 ### 项目结构
 
 ```
-IntRoot/
+InkRoot/
 ├── android/                    # Android 原生代码
 │   ├── app/
 │   │   ├── src/main/
@@ -811,7 +815,7 @@ IntRoot/
 │   │   └── translations.dart             # 翻译工具
 │   │
 │   ├── models/                 # 数据模型（12个文件）
-│   │   ├── annotation_model.dart          # 批注模型 ⭐ v1.0.9新增
+│   │   ├── annotation_model.dart          # 批注模型
 │   │   ├── announcement_model.dart        # 公告模型
 │   │   ├── app_config_model.dart          # 应用配置模型
 │   │   ├── cloud_verification_models.dart # 云验证模型
@@ -846,7 +850,7 @@ IntRoot/
 │   │   ├── local_backup_restore_screen.dart # 本地备份恢复页 🆕
 │   │   ├── login_screen.dart             # 登录页
 │   │   ├── note_detail_screen.dart       # 笔记详情页（核心）
-│   │   ├── notion_settings_screen.dart   # Notion设置页 ⭐ v1.0.9+新增
+│   │   ├── notion_settings_screen.dart   # Notion设置页
 │   │   ├── notifications_screen.dart     # 通知管理页
 │   │   ├── onboarding_screen.dart        # 引导页
 │   │   ├── performance_dashboard_screen.dart # 性能仪表板页
@@ -862,7 +866,7 @@ IntRoot/
 │   │   ├── user_agreement_screen.dart    # 用户协议页
 │   │   ├── user_preferences_screen.dart  # 用户偏好页 🆕
 │   │   ├── webdav_settings_screen.dart   # WebDAV设置页
-│   │   └── weread_import_screen.dart     # 微信读书导入页 ⭐ v1.0.9+新增
+│   │   └── weread_import_screen.dart     # 微信读书导入页
 │   │
 │   ├── services/               # 业务逻辑层（40个文件）
 │   │   ├── ai_enhanced_service.dart      # AI 增强服务
@@ -887,8 +891,8 @@ IntRoot/
 │   │   ├── memos_api_service_fixed.dart  # Memos API 实现
 │   │   ├── memos_resource_service.dart   # Memos资源管理服务
 │   │   ├── note_actions_service.dart     # 笔记操作服务 🆕
-│   │   ├── notion_api_service.dart       # Notion API服务 ⭐ v1.0.9+新增
-│   │   ├── notion_sync_service.dart      # Notion同步服务 ⭐ v1.0.9+新增
+│   │   ├── notion_api_service.dart       # Notion API服务
+│   │   ├── notion_sync_service.dart      # Notion同步服务
 │   │   ├── notification_service.dart     # 通知服务
 │   │   ├── observability_service.dart    # 可观测性服务
 │   │   ├── performance_monitor_service.dart # 性能监控服务
@@ -904,7 +908,7 @@ IntRoot/
 │   │   ├── user_behavior_service.dart    # 用户行为服务 🆕
 │   │   ├── webdav_service.dart           # WebDAV 服务
 │   │   ├── webdav_sync_engine.dart       # WebDAV 同步引擎
-│   │   └── weread_parser.dart            # 微信读书解析服务 ⭐ v1.0.9+新增
+│   │   └── weread_parser.dart            # 微信读书解析服务
 │   │
 │   ├── themes/                 # 主题样式（3个文件）
 │   │   ├── app_theme.dart     # 应用主题定义
@@ -930,7 +934,7 @@ IntRoot/
 │   │
 │   ├── widgets/                # 自定义组件（24个文件）
 │   │   ├── animated_checkbox.dart         # 动画复选框
-│   │   ├── annotations_sidebar.dart       # 批注侧边栏 ⭐ v1.0.9新增
+│   │   ├── annotations_sidebar.dart       # 批注侧边栏
 │   │   ├── cached_avatar.dart             # 缓存头像组件
 │   │   ├── desktop_layout.dart            # 桌面布局
 │   │   ├── heatmap.dart                   # 活跃热力图组件
@@ -944,7 +948,7 @@ IntRoot/
 │   │   ├── permission_guide_dialog.dart   # 权限引导对话框
 │   │   ├── privacy_policy_dialog.dart     # 隐私政策弹窗
 │   │   ├── progress_overlay.dart          # 进度遮罩层
-│   │   ├── references_sidebar.dart        # 引用侧边栏 ⭐ v1.0.9新增
+│   │   ├── references_sidebar.dart        # 引用侧边栏
 │   │   ├── related_notes_bottom_sheet.dart # 相关笔记底部表单
 │   │   ├── saveable_image.dart            # 可保存图片组件
 │   │   ├── share_image_preview_screen.dart # 分享图片预览
@@ -1015,33 +1019,17 @@ IntRoot/
 └── build/                     # 构建产物（不上传Git）
 ```
 
-### 📊 项目统计
+### 📊 维护状态
 
-| 类别 | 文件数量 | v1.0.9+ 新增 | 说明 |
-|------|---------|------------|------|
-| **页面（Screens）** | 33 | +3 ⭐ | 包含所有UI页面（新增Notion/WeRead导入页） |
-| **服务（Services）** | 40 | +4 ⭐ | 业务逻辑层（新增Notion/WeRead服务） |
-| **组件（Widgets）** | 24 | +2 ⭐ | 可复用UI组件（新增批注/引用侧边栏） |
-| **工具（Utils）** | 15 | - | 工具类和辅助函数 |
-| **模型（Models）** | 12 | +1 ⭐ | 数据模型（新增批注模型） |
-| **主题（Themes）** | 3 | - | 主题和样式 |
-| **国际化（L10n）** | 7 | +80条翻译 ⭐ | 多语言支持（Notion/Obsidian/WeRead） |
-| **配置（Config）** | 2 | - | 应用配置 |
-| **路由（Routes）** | 1 | - | 路由配置 |
-| **状态管理（Providers）** | 1 | 增强 ⭐ | 全局状态（集成Notion自动同步） |
-| **总计** | **138** | **+10** | Flutter 核心代码文件 |
-
-**v1.0.9+ 代码统计：**
-- 新增文件：10个（Notion同步、WeRead导入、批注系统等）
-- 修改文件：15+个（app_provider.dart, home_screen.dart, import_export_main_screen.dart等）
-- 新增代码：约3500行
-- 新增国际化：80+条翻译（中英双语）
-- 新增功能：Notion同步、Obsidian集成、微信读书导入、UI文案优化
-```
+- 版本单一真源：`pubspec.yaml`
+- 本地维护入口：`dart tool/inkroot.dart`
+- CI 覆盖：Analyze、Test、Secret Scan、Android、iOS 模拟器、macOS、Windows、Linux、Web
+- 发版说明：见 [维护指南](docs/MAINTENANCE.md)
+- Android 签名：见 [Android 签名说明](scripts/ANDROID_SIGNING.md)
 
 ### 架构设计
 
-InkRoot 采用分层架构设计，确保代码的可维护性和可扩展性。v1.0.9 版本在 v1.0.8 的基础上，新增了专业的批注系统和引用管理功能，同时完善了所有新功能的国际化支持：
+InkRoot 采用分层架构设计，核心代码按 UI、状态管理、业务服务和数据层组织：
 
 ```
 ┌─────────────────────────────────────┐
@@ -1073,42 +1061,6 @@ InkRoot 采用分层架构设计，确保代码的可维护性和可扩展性。
 4. **Service** → 与本地数据库或远程 API 交互
 5. **数据返回** → 更新 Provider 状态 → UI 自动刷新
 
-#### 新特性 (v1.0.8)
-
-- **🌍 完整国际化支持**
-  - 中文/English 双语切换
-  - 所有界面和消息完全国际化
-  - 使用自定义 `translations.dart` 系统管理翻译
-  - 支持动态语言切换，无需重启应用
-  
-- **🏷️ 增强标签系统**
-  - 支持多层级标签（`#父标签/子标签`）
-  - 标签树形展示和折叠
-  - AI 驱动的相关标签推荐
-  - 标签统计和可视化
-  - 标签颜色自定义
-  
-- **📥 Flomo 笔记导入**
-  - 从 Flomo HTML 文件导入笔记
-  - 智能解析内容和标签
-  - 保留原始创建时间
-  - 图片自动迁移和压缩
-  - 智能去重（内容匹配 + 完全匹配）
-  - 使用相对路径存储图片，避免路径失效
-
-- **⚡ 性能优化**
-  - AI 接口调用效率提升 50%
-  - WebDAV 同步性能优化，支持增量同步
-  - 图片压缩优化（1200x1200, 85% 质量）
-  - 项目体积减少 400-600MB
-  
-- **🐛 关键修复**
-  - 修复图片路径问题（iOS 升级后图片不显示）
-  - 改用相对路径存储，动态解析为绝对路径
-  - 修复界面布局溢出问题
-  - 修复标签解析异常
-  - 优化同步冲突处理
-
 ---
 
 ## ⚙️ 配置说明
@@ -1117,9 +1069,9 @@ InkRoot 采用分层架构设计，确保代码的可维护性和可扩展性。
 
 #### 支持的版本
 
-- Memos v0.21.0（仅此版本）
-- API 版本: v1
-- ⚠️ 不支持 v0.20.x 及以下、v0.22.0 及以上
+- Memos API v1
+- 已适配 v0.21.x 到 v0.28.x 的主要 API 差异
+- 不建议使用 v0.20.x 及以下版本
 
 #### 服务器地址格式
 
@@ -1135,22 +1087,12 @@ https://memos.example.com
 
 ### 应用配置文件
 
-主要配置位于 `lib/config/app_config.dart`:
+主要配置位于 `lib/config/app_config.dart`。运行时版本号来自打包元数据，也就是 `pubspec.yaml` 中的 `version` 字段：
 
 ```dart
 class AppConfig {
-  // 应用基本信息
-  static const String appName = 'InkRoot';
-  static const String appVersion = '1.0.5';
-  static const String packageName = 'com.didichou.inkroot';
-  
-  // 官方服务器配置
-  static const String officialMemosServer = 'https://memos.didichou.site';
-  
-  // 反馈与支持
-  static const String supportEmail = 'inkroot2025@gmail.com';
-  static const String officialWebsite = 'https://inkroot.cn/';
-  static const String githubRepo = 'https://github.com/yyyyymmmmm/IntRoot';
+  static String get appVersion => AppInfoService.version;
+  static String get buildNumber => AppInfoService.buildNumber;
 }
 ```
 
@@ -1205,8 +1147,8 @@ flutter doctor
 #### 2. 克隆项目
 
 ```bash
-git clone https://github.com/yyyyymmmmm/IntRoot.git
-cd IntRoot
+git clone https://github.com/yyyyymmmmm/InkRoot.git
+cd InkRoot
 ```
 
 #### 3. 安装依赖
@@ -1703,7 +1645,7 @@ test('should parse markdown todo items', () {
 - ✅ **Markdown 支持** - 完整语法支持，代码高亮、表格、任务列表
 - ✅ **待办事项** - 交互式任务列表，点击切换状态（v1.0.7）
 - ✅ **本地模式** - 无需服务器，开箱即用
-- ✅ **云端同步** - Memos v0.21.0 对接，实时同步
+- ✅ **云端同步** - 适配 Memos 多版本 API，支持实时同步
 - ✅ **WebDAV 同步** - 支持 WebDAV 服务器同步
 - ✅ **离线编辑** - 离线可用，自动同步
 
@@ -1838,8 +1780,8 @@ test('should parse markdown todo items', () {
 
 我们非常重视社区的声音！
 
-- 💬 **功能建议**：[GitHub Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
-- 🐛 **Bug 反馈**：[GitHub Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
+- 💬 **功能建议**：[GitHub Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
+- 🐛 **Bug 反馈**：[GitHub Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
 - 📧 **直接联系**：[inkroot2025@gmail.com](mailto:inkroot2025@gmail.com)
 
 **你的每一个建议都可能成为下一个版本的功能！** 🚀
@@ -1931,9 +1873,9 @@ SOFTWARE.
 
 - **开发者邮箱**: [inkroot2025@gmail.com](mailto:inkroot2025@gmail.com)
 - **官方网站**: [https://inkroot.cn](https://inkroot.cn)
-- **GitHub 仓库**: [https://github.com/yyyyymmmmm/IntRoot](https://github.com/yyyyymmmmm/IntRoot)
-- **问题反馈**: [GitHub Issues](https://github.com/yyyyymmmmm/IntRoot/issues)
-- **功能建议**: [GitHub Discussions](https://github.com/yyyyymmmmm/IntRoot/discussions)
+- **GitHub 仓库**: [https://github.com/yyyyymmmmm/InkRoot](https://github.com/yyyyymmmmm/InkRoot)
+- **问题反馈**: [GitHub Issues](https://github.com/yyyyymmmmm/InkRoot/issues)
+- **功能建议**: [GitHub Discussions](https://github.com/yyyyymmmmm/InkRoot/discussions)
 
 ---
 
@@ -1980,7 +1922,7 @@ SOFTWARE.
 
 ## 📈 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yyyyymmmmm/IntRoot&type=Date)](https://star-history.com/#yyyyymmmmm/IntRoot&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=yyyyymmmmm/InkRoot&type=Date)](https://star-history.com/#yyyyymmmmm/InkRoot&Date)
 
 ---
 

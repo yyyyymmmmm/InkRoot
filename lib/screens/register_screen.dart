@@ -9,7 +9,6 @@ import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -106,12 +105,12 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _loadSavedServerInfo() async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    
+
     // 🎯 大厂标准：加载服务器选择偏好（跨页面共享）
     final prefsService = appProvider.preferencesService;
     final useCustomServer = await prefsService.getUseCustomServer();
     final customServerUrl = await prefsService.getCustomServerUrl();
-    
+
     debugPrint('RegisterScreen: 使用自定义服务器: $useCustomServer');
     debugPrint('RegisterScreen: 自定义服务器地址: $customServerUrl');
 
@@ -122,20 +121,20 @@ class _RegisterScreenState extends State<RegisterScreen>
           : AppConfig.officialMemosServer;
     });
   }
-  
+
   // 🎯 大厂标准：处理服务器选择变化（实时同步到SharedPreferences）
   Future<void> _onServerTypeChanged(bool useCustom) async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final prefsService = appProvider.preferencesService;
-    
+
     if (useCustom) {
       // 切换到自定义：显示之前保存的自定义地址，如果没有则清空
       final savedCustomUrl = await prefsService.getCustomServerUrl();
       setState(() {
         _useCustomServer = true;
-        _serverController.text = (savedCustomUrl != null && 
-                savedCustomUrl != AppConfig.officialMemosServer) 
-            ? savedCustomUrl 
+        _serverController.text = (savedCustomUrl != null &&
+                savedCustomUrl != AppConfig.officialMemosServer)
+            ? savedCustomUrl
             : ''; // 清空输入框，让用户输入
       });
     } else {
@@ -146,80 +145,36 @@ class _RegisterScreenState extends State<RegisterScreen>
       });
       await prefsService.saveCustomServerUrl(AppConfig.officialMemosServer);
     }
-    
+
     // 保存选择到SharedPreferences，实现跨页面同步
     await prefsService.saveUseCustomServer(useCustom);
-    
+
     debugPrint('RegisterScreen: 服务器选择已更改: ${useCustom ? "自定义" : "官方"}');
   }
-  
+
   // 🎯 大厂标准：处理自定义服务器地址变化
   Future<void> _onCustomServerUrlChanged(String url) async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final prefsService = appProvider.preferencesService;
-    
+
     // 保存到SharedPreferences，实现跨页面同步
     await prefsService.saveCustomServerUrl(url);
-    
+
     debugPrint('RegisterScreen: 自定义服务器地址已更新: $url');
   }
 
-  /// 打开隐私政策网页
-  Future<void> _openPrivacyPolicy() async {
-    try {
-      final uri = Uri.parse(AppConfig.privacyPolicyUrl);
-      // 使用外部浏览器打开，更稳定
-      final canLaunch = await canLaunchUrl(uri);
-      debugPrint('RegisterScreen: 尝试打开隐私政策 - $uri, canLaunch: $canLaunch');
-      
-      if (canLaunch) {
-        final launched = await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication, // 使用外部浏览器
-        );
-        debugPrint('RegisterScreen: 隐私政策打开结果: $launched');
-      } else {
-        if (mounted) {
-          SnackBarUtils.showError(context, '无法打开隐私政策页面，请检查网络连接');
-        }
-      }
-    } catch (e) {
-      debugPrint('RegisterScreen: 打开隐私政策失败: $e');
-      if (mounted) {
-        SnackBarUtils.showError(context, '打开隐私政策失败: $e');
-      }
-    }
+  void _openPrivacyPolicy() {
+    context.push('/privacy-policy-detail');
   }
 
-  /// 打开用户协议网页
-  Future<void> _openUserAgreement() async {
-    try {
-      final uri = Uri.parse(AppConfig.userAgreementUrl);
-      // 使用外部浏览器打开，更稳定
-      final canLaunch = await canLaunchUrl(uri);
-      debugPrint('RegisterScreen: 尝试打开用户协议 - $uri, canLaunch: $canLaunch');
-      
-      if (canLaunch) {
-        final launched = await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication, // 使用外部浏览器
-        );
-        debugPrint('RegisterScreen: 用户协议打开结果: $launched');
-      } else {
-        if (mounted) {
-          SnackBarUtils.showError(context, '无法打开用户协议页面，请检查网络连接');
-        }
-      }
-    } catch (e) {
-      debugPrint('RegisterScreen: 打开用户协议失败: $e');
-      if (mounted) {
-        SnackBarUtils.showError(context, '打开用户协议失败: $e');
-      }
-    }
+  void _openUserAgreement() {
+    context.push('/user-agreement');
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     if (!_agreedToTerms) {
       SnackBarUtils.showWarning(
@@ -266,7 +221,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           onRetry: _register,
         );
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         SnackBarUtils.showNetworkError(
           context,
@@ -284,14 +239,9 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final l10n = AppLocalizationsSimple.of(context);
 
     // 🎨 符合现有主题的配色方案
     const primaryColor = AppTheme.primaryColor;
-    const primaryLight = AppTheme.primaryLightColor;
-    const primaryDark = AppTheme.primaryDarkColor;
 
     final surfaceColor =
         isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor;
@@ -306,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ? AppTheme.darkTextSecondaryColor
         : AppTheme.textSecondaryColor;
 
-    final accentGlow = primaryColor.withOpacity(0.1);
+    final accentGlow = primaryColor.withValues(alpha: 0.1);
 
     return Scaffold(
       backgroundColor: surfaceColor,
@@ -495,7 +445,6 @@ class _RegisterScreenState extends State<RegisterScreen>
             constraints: const BoxConstraints(maxWidth: 1000),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // 左侧装饰区域
                 Expanded(
@@ -506,7 +455,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        AppLocalizationsSimple.of(context)?.createAccount ?? '创建账户',
+                        AppLocalizationsSimple.of(context)?.createAccount ??
+                            '创建账户',
                         style: TextStyle(
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -515,7 +465,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        AppLocalizationsSimple.of(context)?.startYourCreativeJourney ?? '开启您的创作之旅',
+                        AppLocalizationsSimple.of(context)
+                                ?.startYourCreativeJourney ??
+                            '开启您的创作之旅',
                         style: TextStyle(
                           fontSize: 20,
                           color: textSecondary,
@@ -589,7 +541,6 @@ class _RegisterScreenState extends State<RegisterScreen>
           child: Padding(
             padding: const EdgeInsets.all(48),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // 左侧信息区域
                 Expanded(
@@ -709,8 +660,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      primaryColor.withOpacity(0.15),
-                      primaryColor.withOpacity(0.05),
+                      primaryColor.withValues(alpha: 0.15),
+                      primaryColor.withValues(alpha: 0.05),
                       Colors.transparent,
                     ],
                   ),
@@ -729,8 +680,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      primaryColor.withOpacity(0.08),
-                      primaryColor.withOpacity(0.03),
+                      primaryColor.withValues(alpha: 0.08),
+                      primaryColor.withValues(alpha: 0.03),
                       Colors.transparent,
                     ],
                   ),
@@ -752,7 +703,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       Container(
         margin: const EdgeInsets.all(12),
         child: Material(
-          color: cardColor.withOpacity(0.8),
+          color: cardColor.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
@@ -764,8 +715,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
               ),
               child: Icon(
@@ -811,7 +762,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryColor.withOpacity(0.3),
+                        color: primaryColor.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -883,16 +834,16 @@ class _RegisterScreenState extends State<RegisterScreen>
               boxShadow: [
                 BoxShadow(
                   color: isDarkMode
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.04),
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.black.withValues(alpha: 0.04),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
               ],
               border: Border.all(
                 color: isDarkMode
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05),
               ),
             ),
             child: Padding(
@@ -1059,16 +1010,16 @@ class _RegisterScreenState extends State<RegisterScreen>
           boxShadow: [
             BoxShadow(
               color: isDarkMode
-                  ? Colors.black.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.03),
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.03),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
           ],
           border: Border.all(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.08)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
           ),
         ),
         child: Padding(
@@ -1079,7 +1030,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -1117,7 +1068,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
               Switch.adaptive(
                 value: _rememberLogin,
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
                 onChanged: (value) {
                   setState(() {
                     _rememberLogin = value;
@@ -1184,7 +1135,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     ),
                     WidgetSpan(
                       child: GestureDetector(
-                        onTap: () => _openPrivacyPolicy(),
+                        onTap: _openPrivacyPolicy,
                         child: Text(
                           AppLocalizationsSimple.of(context)?.privacyPolicy ??
                               '隐私政策',
@@ -1199,7 +1150,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     const TextSpan(text: ' 和 '),
                     WidgetSpan(
                       child: GestureDetector(
-                        onTap: () => _openUserAgreement(),
+                        onTap: _openUserAgreement,
                         child: Text(
                           AppLocalizationsSimple.of(context)?.userAgreement ??
                               '用户协议',
@@ -1240,7 +1191,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     : LinearGradient(
                         colors: [
                           primaryColor,
-                          primaryColor.withOpacity(0.8),
+                          primaryColor.withValues(alpha: 0.8),
                         ],
                       ),
                 color: _isLoading || !_agreedToTerms
@@ -1251,7 +1202,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     ? []
                     : [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -1293,12 +1244,12 @@ class _RegisterScreenState extends State<RegisterScreen>
             // 登录链接
             DecoratedBox(
               decoration: BoxDecoration(
-                color: cardColor.withOpacity(0.5),
+                color: cardColor.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
               ),
               child: Material(
@@ -1355,224 +1306,223 @@ class _RegisterScreenState extends State<RegisterScreen>
     Color textSecondary,
     Color primaryColor,
     bool isDarkMode,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 服务器类型选择标题
-        Text(
-          AppLocalizationsSimple.of(context)?.server ?? '服务器',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: textPrimary,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-        
-        // 下拉选择框（官方/自定义）
-        Container(
-          decoration: BoxDecoration(
-            color: isDarkMode
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDarkMode
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.08),
-              width: 1,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<bool>(
-              value: _useCustomServer,
-              isExpanded: true,
-              icon: Icon(
-                Icons.arrow_drop_down,
-                color: primaryColor,
-              ),
-              dropdownColor: isDarkMode
-                  ? AppTheme.darkCardColor
-                  : AppTheme.surfaceColor,
-              style: TextStyle(
-                fontSize: 15,
-                color: textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: false,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.verified_outlined,
-                        size: 20,
-                        color: primaryColor,
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            AppLocalizationsSimple.of(context)?.officialServer ?? '官方服务器',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: textPrimary,
-                            ),
-                          ),
-                          Text(
-                            AppLocalizationsSimple.of(context)?.recommended ?? '推荐使用',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: true,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.dns_outlined,
-                        size: 20,
-                        color: textSecondary,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        AppLocalizationsSimple.of(context)?.customServer ?? '自定义服务器',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  _onServerTypeChanged(value);
-                }
-              },
-            ),
-          ),
-        ),
-        
-        // 🎯 自定义服务器地址输入框（仅在选择自定义时显示）
-        if (_useCustomServer) ...[
-          const SizedBox(height: 20),
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 服务器类型选择标题
           Text(
-            AppLocalizationsSimple.of(context)?.serverAddress ?? '服务器地址',
+            AppLocalizationsSimple.of(context)?.server ?? '服务器',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: textPrimary,
+              height: 1.5,
             ),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: _serverController,
-            style: TextStyle(
-              fontSize: 16,
-              color: textPrimary,
-              fontWeight: FontWeight.w500,
+
+          // 下拉选择框（官方/自定义）
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.08),
+              ),
             ),
-            keyboardType: TextInputType.url,
-            onChanged: (value) {
-              // 实时保存到SharedPreferences
-              _onCustomServerUrlChanged(value);
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return '请输入服务器地址';
-              }
-              if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                return '服务器地址必须以 http:// 或 https:// 开头';
-              }
-              return null;
-            },
-            decoration: InputDecoration(
-              hintText: 'https://your-memos-server.com',
-              hintStyle: TextStyle(
-                color: textSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.normal,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.cloud_outlined,
-                  size: 18,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<bool>(
+                value: _useCustomServer,
+                isExpanded: true,
+                icon: Icon(
+                  Icons.arrow_drop_down,
                   color: primaryColor,
                 ),
-              ),
-              filled: true,
-              fillColor: isDarkMode
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.black.withOpacity(0.02),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
+                dropdownColor:
+                    isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: textPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: primaryColor,
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 1.5,
-                ),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 2,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
+                items: [
+                  DropdownMenuItem(
+                    value: false,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          size: 20,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              AppLocalizationsSimple.of(context)
+                                      ?.officialServer ??
+                                  '官方服务器',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: textPrimary,
+                              ),
+                            ),
+                            Text(
+                              AppLocalizationsSimple.of(context)?.recommended ??
+                                  '推荐使用',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: true,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.dns_outlined,
+                          size: 20,
+                          color: textSecondary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          AppLocalizationsSimple.of(context)?.customServer ??
+                              '自定义服务器',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    _onServerTypeChanged(value);
+                  }
+                },
               ),
             ),
           ),
+
+          // 🎯 自定义服务器地址输入框（仅在选择自定义时显示）
+          if (_useCustomServer) ...[
+            const SizedBox(height: 20),
+            Text(
+              AppLocalizationsSimple.of(context)?.serverAddress ?? '服务器地址',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _serverController,
+              style: TextStyle(
+                fontSize: 16,
+                color: textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+              keyboardType: TextInputType.url,
+              onChanged: _onCustomServerUrlChanged,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return '请输入服务器地址';
+                }
+                if (!value.startsWith('http://') &&
+                    !value.startsWith('https://')) {
+                  return '服务器地址必须以 http:// 或 https:// 开头';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: 'https://your-memos-server.com',
+                hintStyle: TextStyle(
+                  color: textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.normal,
+                ),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(12),
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.cloud_outlined,
+                    size: 18,
+                    color: primaryColor,
+                  ),
+                ),
+                filled: true,
+                fillColor: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : Colors.black.withValues(alpha: 0.02),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: primaryColor,
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 1.5,
+                  ),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ],
         ],
-      ],
-    );
-  }
+      );
 
   // 📝 输入框组件
   Widget _buildTextField({
@@ -1621,7 +1571,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -1633,22 +1583,22 @@ class _RegisterScreenState extends State<RegisterScreen>
               suffixIcon: suffixIcon,
               filled: true,
               fillColor: isDarkMode
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.black.withOpacity(0.02),
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : Colors.black.withValues(alpha: 0.02),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.08),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.08),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -1700,12 +1650,12 @@ class _RegisterScreenState extends State<RegisterScreen>
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isDarkMode
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.4 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.4 : 0.1),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
@@ -1720,8 +1670,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        primaryColor.withOpacity(0.1),
-                        accentColor.withOpacity(0.05),
+                        primaryColor.withValues(alpha: 0.1),
+                        accentColor.withValues(alpha: 0.05),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -1737,7 +1687,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.15),
+                          color: primaryColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
@@ -1885,8 +1835,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                     border: Border(
                       top: BorderSide(
                         color: isDarkMode
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.black.withOpacity(0.05),
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.black.withValues(alpha: 0.05),
                       ),
                     ),
                   ),
@@ -1955,13 +1905,13 @@ class _RegisterScreenState extends State<RegisterScreen>
       DecoratedBox(
         decoration: BoxDecoration(
           color: isDarkMode
-              ? Colors.white.withOpacity(0.03)
-              : Colors.black.withOpacity(0.02),
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.08)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.05),
           ),
         ),
         child: Theme(
@@ -1971,7 +1921,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -1998,8 +1948,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.03)
-                      : Colors.black.withOpacity(0.02),
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.black.withValues(alpha: 0.02),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -2032,196 +1982,4 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ),
       );
-
-  // 🔧 自定义服务器对话框
-  void _showCustomServerDialog() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final dialogColor =
-        isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    const primaryColor = AppTheme.primaryColor;
-
-    final customServerController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Dialog(
-          backgroundColor: dialogColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.dns_outlined,
-                        color: primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      AppLocalizationsSimple.of(context)?.customServer ?? '自定义服务器',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.orange.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.orange,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          AppLocalizationsSimple.of(context)?.customServerWarning ?? '使用自定义服务器可能会影响使用体验',
-                          style: TextStyle(
-                            color: Colors.orange[700],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: customServerController,
-                  decoration: InputDecoration(
-                    labelText: '服务器地址',
-                    hintText: 'https://your-server.com',
-                    prefixIcon: const Icon(Icons.language, color: primaryColor),
-                    filled: true,
-                    fillColor: isDarkMode
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.02),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: isDarkMode
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.black.withOpacity(0.08),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide:
-                          const BorderSide(color: primaryColor, width: 2),
-                    ),
-                  ),
-                  style: TextStyle(fontSize: 16, color: textColor),
-                  keyboardType: TextInputType.url,
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // 🎯 大厂标准：提供快捷返回官方服务器的选项
-                    TextButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _useCustomServer = false;
-                          _serverController.text = AppConfig.officialMemosServer;
-                        });
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.home_outlined, size: 18),
-                      label: const Text(
-                        '使用官方',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      style: TextButton.styleFrom(
-                        foregroundColor: primaryColor,
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text(
-                            '取消',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            final customServer = customServerController.text.trim();
-                            if (customServer.isNotEmpty) {
-                              setState(() {
-                                _useCustomServer = true;
-                                _serverController.text =
-                                    customServer.startsWith('http')
-                                        ? customServer
-                                        : 'https://$customServer';
-                              });
-                            }
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          child: const Text(
-                            '确定',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

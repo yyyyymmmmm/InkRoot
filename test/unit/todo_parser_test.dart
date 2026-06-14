@@ -31,7 +31,8 @@ void main() {
     });
 
     test('TD-04 多个待办事项按行顺序返回', () {
-      const content = '''- [ ] 任务一
+      const content = '''
+- [ ] 任务一
 - [x] 任务二
 - [ ] 任务三''';
       final todos = TodoParser.parseTodos(content);
@@ -41,7 +42,8 @@ void main() {
     });
 
     test('TD-05 普通文本行不被解析为待办', () {
-      const content = '''普通文字
+      const content = '''
+普通文字
 - [ ] 只有这个是待办
 另一行普通文字''';
       final todos = TodoParser.parseTodos(content);
@@ -61,7 +63,8 @@ void main() {
     });
 
     test('TD-08 lineNumber 从 0 开始正确标注', () {
-      const content = '''第0行
+      const content = '''
+第0行
 - [ ] 第1行待办
 第2行''';
       final todos = TodoParser.parseTodos(content);
@@ -112,7 +115,8 @@ void main() {
   // ─────────────────────────────────────────────────────────
   group('TodoParser.countTodos', () {
     test('TD-14 统计完成数和待完成数', () {
-      const content = '''- [x] 完成了
+      const content = '''
+- [x] 完成了
 - [ ] 没完成
 - [x] 也完成了''';
       final counts = TodoParser.countTodos(content);

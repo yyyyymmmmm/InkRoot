@@ -80,7 +80,7 @@ void main() {
 
   group('User.toJson', () {
     test('UM-09 toJson 包含所有基础字段', () {
-      final user = User(id: '5', username: 'test', role: 'USER');
+      final user = User(id: '5', username: 'test');
       final json = user.toJson();
       expect(json['id'], '5');
       expect(json['username'], 'test');
@@ -102,7 +102,14 @@ void main() {
       expect(restored.username, original.username);
       expect(restored.email, original.email);
       expect(restored.role, original.role);
-      expect(restored.token, original.token);
+      expect(json.containsKey('token'), isFalse);
+      expect(restored.token, isNull);
+    });
+
+    test('UM-10B toJson 需要显式 includeToken 才输出 token', () {
+      final user = User(id: '10', username: 'roundtrip', token: 'tok-abc');
+      final json = user.toJson(includeToken: true);
+      expect(json['token'], 'tok-abc');
     });
   });
 
@@ -115,8 +122,8 @@ void main() {
     });
 
     test('UM-12 copyWith 未指定字段保持原值', () {
-      final original = User(
-          id: '1', username: 'alice', email: 'a@x.com', role: 'ADMIN');
+      final original =
+          User(id: '1', username: 'alice', email: 'a@x.com', role: 'ADMIN');
       final copy = original.copyWith(username: 'alice-v2');
       expect(copy.email, 'a@x.com');
       expect(copy.role, 'ADMIN');
@@ -130,7 +137,7 @@ void main() {
     });
 
     test('UM-14 isUser 仅在 role=USER 时为 true', () {
-      expect(User(id: '1', username: 'u', role: 'USER').isUser, isTrue);
+      expect(User(id: '1', username: 'u').isUser, isTrue);
       expect(User(id: '1', username: 'u', role: 'ADMIN').isUser, isFalse);
     });
 

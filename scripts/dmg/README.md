@@ -23,6 +23,12 @@
 
 ```bash
 # 在项目根目录运行
+dart tool/inkroot.dart build macos-debug
+```
+
+需要创建 DMG 时再运行：
+
+```bash
 ./scripts/dmg/build_release.sh
 ```
 
@@ -57,7 +63,7 @@ flutter build macos --debug
 1. **更新版本号**
    ```bash
    # 编辑 pubspec.yaml
-   version: 1.0.9+9  # 修改这里
+   version: 1.1.0+10100
    ```
 
 2. **运行发布脚本**

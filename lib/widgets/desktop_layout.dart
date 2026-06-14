@@ -1,22 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/widgets/sidebar.dart';
 
 /// 桌面端固定侧边栏布局
 /// 侧边栏保持不动，只更新右侧内容
 class DesktopLayout extends StatefulWidget {
-  final Widget child;
-  final PreferredSizeWidget? appBar;
-  final Color? backgroundColor;
-
   const DesktopLayout({
-    super.key,
     required this.child,
+    super.key,
     this.appBar,
     this.backgroundColor,
   });
+  final Widget child;
+  final PreferredSizeWidget? appBar;
+  final Color? backgroundColor;
 
   @override
   State<DesktopLayout> createState() => _DesktopLayoutState();
@@ -32,7 +32,7 @@ class _DesktopLayoutState extends State<DesktopLayout> {
         (isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor);
 
     // 检测是否为桌面端
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
 
     if (!isDesktop) {
       // 移动端直接返回子组件
@@ -49,7 +49,8 @@ class _DesktopLayoutState extends State<DesktopLayout> {
             child: SizedBox(
               width: _sidebarWidth,
               child: ColoredBox(
-                color: isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor,
+                color:
+                    isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor,
                 child: const Sidebar(isDrawer: false),
               ),
             ),
@@ -60,7 +61,8 @@ class _DesktopLayoutState extends State<DesktopLayout> {
             child: GestureDetector(
               onHorizontalDragUpdate: (details) {
                 setState(() {
-                  _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(200.0, 400.0);
+                  _sidebarWidth =
+                      (_sidebarWidth + details.delta.dx).clamp(200.0, 400.0);
                 });
               },
               child: Container(

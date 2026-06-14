@@ -105,7 +105,7 @@ void main() {
 
     test('AS-15 大写 HTTPS 开头不重复添加协议', () {
       // 实际 URL 通常小写，但函数应能处理
-      final input = 'https://example.com';
+      const input = 'https://example.com';
       final result = ApiServiceFactory.normalizeApiUrl(input);
       expect(result, 'https://example.com');
     });

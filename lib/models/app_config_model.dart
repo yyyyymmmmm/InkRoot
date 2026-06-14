@@ -1,4 +1,5 @@
-import 'sidebar_config.dart';
+import 'package:inkroot/models/sidebar_config.dart';
+import 'package:inkroot/utils/logger.dart';
 
 class AppConfig {
   AppConfig({
@@ -31,34 +32,6 @@ class AppConfig {
     this.customTagRecommendationPrompt, // 自定义标签推荐Prompt
     SidebarConfig? sidebarConfig,
   }) : sidebarConfig = sidebarConfig ?? SidebarConfig();
-
-  // 🔧 修复 API Key 编码问题（UTF-16BE -> ASCII）
-  static String? _fixApiKeyEncoding(String? apiKey) {
-    if (apiKey == null || apiKey.isEmpty) return apiKey;
-    
-    // 检查是否包含非 ASCII 字符（可能是编码错误）
-    if (apiKey.runes.any((rune) => rune > 127)) {
-      try {
-        // 尝试修复 UTF-16BE 编码错误
-        // 如果字符的 Unicode 码点在 0xXX00 范围内，提取高字节
-        final fixed = apiKey.runes
-            .map((r) => (r & 0xFF00) != 0 && (r & 0xFF) == 0
-                ? String.fromCharCode((r >> 8) & 0xFF)
-                : String.fromCharCode(r))
-            .join();
-        
-        // 验证修复后的结果是否为纯 ASCII
-        if (fixed.runes.every((r) => r <= 127) && fixed.isNotEmpty) {
-          print('🔧 自动修复 API Key 编码问题: ${apiKey.substring(0, 10)}... -> ${fixed.substring(0, 10)}...');
-          return fixed;
-        }
-      } catch (e) {
-        print('⚠️ API Key 编码修复失败: $e');
-      }
-    }
-    
-    return apiKey;
-  }
 
   factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(
         isLocalMode: json['isLocalMode'] ?? false,
@@ -93,6 +66,48 @@ class AppConfig {
             ? SidebarConfig.fromJson(json['sidebarConfig'])
             : null,
       );
+
+  // 🔧 修复 API Key 编码问题（UTF-16BE -> ASCII）
+  static String? _fixApiKeyEncoding(String? apiKey) {
+    if (apiKey == null || apiKey.isEmpty) {
+      return apiKey;
+    }
+
+    // 检查是否包含非 ASCII 字符（可能是编码错误）
+    if (apiKey.runes.any((rune) => rune > 127)) {
+      try {
+        // 尝试修复 UTF-16BE 编码错误
+        // 如果字符的 Unicode 码点在 0xXX00 范围内，提取高字节
+        final fixed = apiKey.runes
+            .map(
+              (r) => (r & 0xFF00) != 0 && (r & 0xFF) == 0
+                  ? String.fromCharCode((r >> 8) & 0xFF)
+                  : String.fromCharCode(r),
+            )
+            .join();
+
+        // 验证修复后的结果是否为纯 ASCII
+        if (fixed.runes.every((r) => r <= 127) && fixed.isNotEmpty) {
+          Log.custom('AppConfig').info(
+            'Fixed API key encoding',
+            data: {
+              'beforePrefix': apiKey.substring(0, 10),
+              'afterPrefix': fixed.substring(0, 10),
+            },
+          );
+          return fixed;
+        }
+      } on Object catch (e, stackTrace) {
+        Log.custom('AppConfig').warning(
+          'Failed to fix API key encoding',
+          data: {'error': e, 'stackTrace': stackTrace},
+        );
+      }
+    }
+
+    return apiKey;
+  }
+
   final bool isLocalMode;
   final String? memosApiUrl;
   final String? lastToken;
@@ -152,7 +167,7 @@ class AppConfig {
   static const String FONT_FAMILY_ZCOOL_XIAOWEI = 'zcool-xiaowei'; // 站酷小薇
   static const String FONT_FAMILY_ZCOOL_QINGKE = 'zcool-qingke'; // 站酷庆科黄油体
 
-  // 语言选项 (23种语言，覆盖全球主要市场)
+  // 语言选项。当前产品入口只开放中英文，其它常量为后续多语言扩展预留。
   static const String? LOCALE_SYSTEM = null; // 跟随系统
   static const String LOCALE_ZH_CN = 'zh_CN'; // 简体中文
   static const String LOCALE_ZH_TW = 'zh_TW'; // 繁体中文（台湾）
@@ -182,31 +197,32 @@ class AppConfig {
   // DeepSeek 系列（2025）
   static const String AI_MODEL_DEEPSEEK = 'deepseek-chat'; // V3版本
   static const String AI_MODEL_DEEPSEEK_REASONER = 'deepseek-reasoner';
-  
+
   // OpenAI 系列（2025）
   static const String AI_MODEL_O1 = 'o1'; // 推理模型
   static const String AI_MODEL_O1_MINI = 'o1-mini'; // 轻量推理
   static const String AI_MODEL_O3_MINI = 'o3-mini'; // 最新推理
   static const String AI_MODEL_GPT4O = 'gpt-4o'; // 多模态旗舰
   static const String AI_MODEL_GPT4O_MINI = 'gpt-4o-mini';
-  
+
   // 通义千问系列（2025）
   static const String AI_MODEL_QWEN_MAX = 'qwen-max'; // 旗舰版
   static const String AI_MODEL_QWEN_PLUS = 'qwen-plus';
   static const String AI_MODEL_QWEN_TURBO = 'qwen-turbo';
-  
+
   // 智谱 GLM 系列（2025）
   static const String AI_MODEL_GLM_4_FLASH = 'glm-4-flash';
   static const String AI_MODEL_GLM_4_PLUS = 'glm-4-plus';
   static const String AI_MODEL_GLM_4_AIR = 'glm-4-air';
-  
+
   // Moonshot（Kimi）系列
   static const String AI_MODEL_MOONSHOT = 'moonshot-v1-128k'; // 升级到128k
 
   // 官方API地址（兼容OpenAI格式）
   static const String DEEPSEEK_API_URL = 'https://api.deepseek.com/v1';
   static const String OPENAI_API_URL = 'https://api.openai.com/v1';
-  static const String QWEN_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+  static const String QWEN_API_URL =
+      'https://dashscope.aliyuncs.com/compatible-mode/v1';
   static const String MOONSHOT_API_URL = 'https://api.moonshot.cn/v1';
   static const String ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/';
 
@@ -232,6 +248,8 @@ class AppConfig {
     String? aiApiKey,
     String? aiModel,
     bool? aiEnabled,
+    bool updateAiApiUrl = false,
+    bool updateAiApiKey = false,
     bool? autoShowEditorOnLaunch,
     bool? useCustomPrompt,
     String? customInsightPrompt,
@@ -239,6 +257,11 @@ class AppConfig {
     String? customContinuationPrompt,
     String? customTagInsightPrompt,
     String? customTagRecommendationPrompt,
+    bool updateCustomInsightPrompt = false,
+    bool updateCustomReviewPrompt = false,
+    bool updateCustomContinuationPrompt = false,
+    bool updateCustomTagInsightPrompt = false,
+    bool updateCustomTagRecommendationPrompt = false,
     SidebarConfig? sidebarConfig,
   }) =>
       AppConfig(
@@ -262,18 +285,29 @@ class AppConfig {
             ? locale
             : (locale ??
                 this.locale), // 如果updateLocale为true，则使用传入的locale（可能是null）
-        aiApiUrl: aiApiUrl ?? this.aiApiUrl,
-        aiApiKey: aiApiKey ?? this.aiApiKey,
+        aiApiUrl: updateAiApiUrl ? aiApiUrl : (aiApiUrl ?? this.aiApiUrl),
+        aiApiKey: updateAiApiKey ? aiApiKey : (aiApiKey ?? this.aiApiKey),
         aiModel: aiModel ?? this.aiModel,
         aiEnabled: aiEnabled ?? this.aiEnabled,
         autoShowEditorOnLaunch:
             autoShowEditorOnLaunch ?? this.autoShowEditorOnLaunch,
         useCustomPrompt: useCustomPrompt ?? this.useCustomPrompt,
-        customInsightPrompt: customInsightPrompt ?? this.customInsightPrompt,
-        customReviewPrompt: customReviewPrompt ?? this.customReviewPrompt,
-        customContinuationPrompt: customContinuationPrompt ?? this.customContinuationPrompt,
-        customTagInsightPrompt: customTagInsightPrompt ?? this.customTagInsightPrompt,
-        customTagRecommendationPrompt: customTagRecommendationPrompt ?? this.customTagRecommendationPrompt,
+        customInsightPrompt: updateCustomInsightPrompt
+            ? customInsightPrompt
+            : (customInsightPrompt ?? this.customInsightPrompt),
+        customReviewPrompt: updateCustomReviewPrompt
+            ? customReviewPrompt
+            : (customReviewPrompt ?? this.customReviewPrompt),
+        customContinuationPrompt: updateCustomContinuationPrompt
+            ? customContinuationPrompt
+            : (customContinuationPrompt ?? this.customContinuationPrompt),
+        customTagInsightPrompt: updateCustomTagInsightPrompt
+            ? customTagInsightPrompt
+            : (customTagInsightPrompt ?? this.customTagInsightPrompt),
+        customTagRecommendationPrompt: updateCustomTagRecommendationPrompt
+            ? customTagRecommendationPrompt
+            : (customTagRecommendationPrompt ??
+                this.customTagRecommendationPrompt),
         sidebarConfig: sidebarConfig ?? this.sidebarConfig,
       );
 

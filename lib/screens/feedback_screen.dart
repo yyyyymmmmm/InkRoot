@@ -154,7 +154,7 @@ ${_feedbackController.text}
         // 如果无法打开邮件客户端，复制到剪贴板
         _copyToClipboard();
       }
-    } catch (e) {
+    } on Object {
       if (mounted) {
         SnackBarUtils.showError(
           context,
@@ -209,7 +209,7 @@ ${_feedbackController.text}
               width: ResponsiveUtils.responsiveIconSize(context, 80),
               height: ResponsiveUtils.responsiveIconSize(context, 80),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(40),
               ),
               child: Icon(
@@ -296,43 +296,44 @@ ${_feedbackController.text}
   }
 
   PreferredSizeWidget _buildAppBar(bool isDarkMode) {
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-    
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
     return AppBar(
-        title: Text(
-          AppLocalizationsSimple.of(context)?.feedbackTitle ?? '意见反馈',
-          style: TextStyle(
-            fontSize: ResponsiveUtils.responsiveFontSize(context, 18),
-            fontWeight: FontWeight.w600,
-            color: isDarkMode ? Colors.white : AppTheme.textPrimaryColor,
-          ),
+      title: Text(
+        AppLocalizationsSimple.of(context)?.feedbackTitle ?? '意见反馈',
+        style: TextStyle(
+          fontSize: ResponsiveUtils.responsiveFontSize(context, 18),
+          fontWeight: FontWeight.w600,
+          color: isDarkMode ? Colors.white : AppTheme.textPrimaryColor,
         ),
-        backgroundColor:
-            isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_rounded,
-            color: isDarkMode ? Colors.white : AppTheme.textPrimaryColor,
-            size: ResponsiveUtils.responsiveIconSize(context, 20),
-          ),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _copyToClipboard,
-            child: Text(
-              AppLocalizationsSimple.of(context)?.copyEmail ?? '复制邮箱',
-              style: TextStyle(
-                color: AppTheme.primaryColor,
-                fontSize: ResponsiveUtils.responsiveFontSize(context, 14),
-                fontWeight: FontWeight.w500,
+      ),
+      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      leading: isDesktop
+          ? null
+          : IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_rounded,
+                color: isDarkMode ? Colors.white : AppTheme.textPrimaryColor,
+                size: ResponsiveUtils.responsiveIconSize(context, 20),
               ),
+              onPressed: () => context.pop(),
+            ),
+      actions: [
+        TextButton(
+          onPressed: _copyToClipboard,
+          child: Text(
+            AppLocalizationsSimple.of(context)?.copyEmail ?? '复制邮箱',
+            style: TextStyle(
+              color: AppTheme.primaryColor,
+              fontSize: ResponsiveUtils.responsiveFontSize(context, 14),
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 
   Widget _buildBody(bool isDarkMode) => SingleChildScrollView(
@@ -366,15 +367,15 @@ ${_feedbackController.text}
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.primaryColor.withOpacity(0.1),
-              AppTheme.primaryLightColor.withOpacity(0.05),
+              AppTheme.primaryColor.withValues(alpha: 0.1),
+              AppTheme.primaryLightColor.withValues(alpha: 0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
           ),
         ),
         child: Column(
@@ -385,7 +386,7 @@ ${_feedbackController.text}
                 Container(
                   padding: ResponsiveUtils.responsivePadding(context, all: 8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -471,10 +472,10 @@ ${_feedbackController.text}
             vertical: 8,
           ),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -775,7 +776,7 @@ ${_feedbackController.text}
         padding: ResponsiveUtils.responsivePadding(context, all: 16),
         decoration: BoxDecoration(
           color: isDarkMode
-              ? AppTheme.darkCardColor.withOpacity(0.5)
+              ? AppTheme.darkCardColor.withValues(alpha: 0.5)
               : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
         ),

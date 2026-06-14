@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:inkroot/config/app_config.dart' as Config;
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// 🚀 大厂标准：统一错误处理器
 /// 集成Sentry监控，提供结构化的错误报告
 class ErrorHandler {
-  // 单例模式
-  static final ErrorHandler _instance = ErrorHandler._internal();
   factory ErrorHandler() => _instance;
   ErrorHandler._internal();
+  // 单例模式
+  static final ErrorHandler _instance = ErrorHandler._internal();
 
   /// 初始化错误监控
   static Future<void> initialize({
@@ -24,54 +24,52 @@ class ErrorHandler {
         // DSN从环境变量读取（不要hardcode）
         options.dsn = const String.fromEnvironment(
           'SENTRY_DSN',
-          defaultValue: '',
         );
-        
+
         // 环境标识：development, staging, production
         options.environment = environment;
-        
+
         // 采样率配置
         options.tracesSampleRate = environment == 'production' ? 0.2 : 1.0;
-        
+
         // 🚀 大厂标准：在所有环境都启用（通过beforeSend过滤）
-        
+
         // 添加全局上下文
         options.beforeSend = (event, hint) async {
           // 只在生产环境上报
           if (environment != 'production') {
             return null; // 不上报
           }
-          
+
           // 过滤敏感信息
-          event = _sanitizeEvent(event);
-          
+          final sanitizedEvent = _sanitizeEvent(event);
+
           // 添加自定义标签
-          event = event.copyWith(
+          return sanitizedEvent.copyWith(
             tags: {
-              ...?event.tags,
+              ...?sanitizedEvent.tags,
               'app_version': Config.AppConfig.appVersion,
               'platform': Platform.operatingSystem,
             },
           );
-          
-          return event;
         };
-        
+
         // 设置发布版本
-        options.release = '${Config.AppConfig.appName}@${Config.AppConfig.appVersion}';
-        
+        options.release =
+            '${Config.AppConfig.appName}@${Config.AppConfig.appVersion}';
+
         // 设置分布标识（可选）
         options.dist = Config.AppConfig.buildNumber.toString();
-        
+
         // 附加上下文
         options.attachStacktrace = true;
         options.attachScreenshot = true; // 崩溃时自动截图
-        
+
         // 调试模式下打印详细日志
         options.debug = !kReleaseMode;
       },
     );
-    
+
     // 设置用户信息
     if (userId != null) {
       setUser(userId);
@@ -81,11 +79,13 @@ class ErrorHandler {
   /// 设置当前用户信息
   static void setUser(String userId, {String? username, String? email}) {
     Sentry.configureScope((scope) {
-      scope.setUser(SentryUser(
-        id: userId,
-        username: username,
-        email: email,
-      ));
+      scope.setUser(
+        SentryUser(
+          id: userId,
+          username: username,
+          email: email,
+        ),
+      );
     });
   }
 
@@ -95,13 +95,13 @@ class ErrorHandler {
   }
 
   /// 捕获异常
-  /// 
+  ///
   /// [exception] 异常对象
   /// [stackTrace] 堆栈信息
   /// [context] 额外的上下文信息
   /// [level] 严重程度：debug, info, warning, error, fatal
   static Future<void> captureException(
-    dynamic exception, {
+    Object exception, {
     StackTrace? stackTrace,
     Map<String, dynamic>? context,
     SentryLevel? level,
@@ -109,12 +109,12 @@ class ErrorHandler {
     try {
       // 本地日志
       if (kDebugMode) {
-        print('❌ [Error] ${exception.toString()}');
+        print('❌ [Error] $exception');
         if (stackTrace != null) {
           print('Stack trace:\n$stackTrace');
         }
       }
-      
+
       // 上报到 Sentry
       await Sentry.captureException(
         exception,
@@ -123,7 +123,7 @@ class ErrorHandler {
         withScope: (scope) {
           // 设置错误级别
           scope.level = level ?? SentryLevel.error;
-          
+
           // 添加额外上下文
           if (context != null) {
             for (final entry in context.entries) {
@@ -133,16 +133,18 @@ class ErrorHandler {
               );
             }
           }
-          
+
           // 添加面包屑（用户操作路径）
-          scope.addBreadcrumb(Breadcrumb(
-            message: 'Exception captured: ${exception.runtimeType}',
-            level: level ?? SentryLevel.error,
-            timestamp: DateTime.now(),
-          ));
+          scope.addBreadcrumb(
+            Breadcrumb(
+              message: 'Exception captured: ${exception.runtimeType}',
+              level: level ?? SentryLevel.error,
+              timestamp: DateTime.now(),
+            ),
+          );
         },
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) {
         print('⚠️  [Error] Failed to report exception: $e');
       }
@@ -169,13 +171,15 @@ class ErrorHandler {
     SentryLevel level = SentryLevel.info,
     Map<String, dynamic>? data,
   }) {
-    Sentry.addBreadcrumb(Breadcrumb(
-      message: message,
-      category: category,
-      level: level,
-      data: data,
-      timestamp: DateTime.now(),
-    ));
+    Sentry.addBreadcrumb(
+      Breadcrumb(
+        message: message,
+        category: category,
+        level: level,
+        data: data,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
   /// 包装异步操作，自动捕获异常
@@ -187,7 +191,7 @@ class ErrorHandler {
   }) async {
     try {
       return await operation();
-    } catch (exception, stackTrace) {
+    } on Object catch (exception, stackTrace) {
       await captureException(
         exception,
         stackTrace: stackTrace,
@@ -196,11 +200,11 @@ class ErrorHandler {
           'timestamp': DateTime.now().toIso8601String(),
         },
       );
-      
+
       if (shouldRethrow) {
         rethrow;
       }
-      
+
       return fallbackValue;
     }
   }
@@ -214,7 +218,7 @@ class ErrorHandler {
   }) {
     try {
       return operation();
-    } catch (exception, stackTrace) {
+    } on Object catch (exception, stackTrace) {
       captureException(
         exception,
         stackTrace: stackTrace,
@@ -223,11 +227,11 @@ class ErrorHandler {
           'timestamp': DateTime.now().toIso8601String(),
         },
       );
-      
+
       if (shouldRethrow) {
         rethrow;
       }
-      
+
       return fallbackValue;
     }
   }
@@ -240,7 +244,7 @@ class ErrorHandler {
   }
 
   /// 转换为Map（Sentry要求）
-  static Map<String, dynamic> _convertToMap(dynamic value) {
+  static Map<String, dynamic> _convertToMap(value) {
     if (value is Map<String, dynamic>) {
       return value;
     } else if (value is String) {
@@ -259,7 +263,7 @@ class GlobalErrorCatcher {
     // 捕获 Flutter 框架错误
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      
+
       ErrorHandler.captureException(
         details.exception,
         stackTrace: details.stack,
@@ -271,7 +275,7 @@ class GlobalErrorCatcher {
         level: SentryLevel.error,
       );
     };
-    
+
     // 捕获 Dart 异步错误
     PlatformDispatcher.instance.onError = (error, stack) {
       ErrorHandler.captureException(
@@ -282,7 +286,7 @@ class GlobalErrorCatcher {
         },
         level: SentryLevel.fatal,
       );
-      
+
       return true; // 表示已处理
     };
   }
@@ -290,17 +294,16 @@ class GlobalErrorCatcher {
 
 /// 🚀 大厂标准：API错误分类
 class ApiError implements Exception {
+  ApiError({
+    required this.message,
+    this.statusCode,
+    this.endpoint,
+    this.data,
+  });
   final int? statusCode;
   final String message;
   final String? endpoint;
   final Map<String, dynamic>? data;
-
-  ApiError({
-    this.statusCode,
-    required this.message,
-    this.endpoint,
-    this.data,
-  });
 
   @override
   String toString() =>
@@ -308,43 +311,41 @@ class ApiError implements Exception {
 }
 
 class NetworkError implements Exception {
-  final String message;
-  
   NetworkError(this.message);
-  
+  final String message;
+
   @override
   String toString() => 'NetworkError: $message';
 }
 
 class DatabaseError implements Exception {
+  DatabaseError(this.message, {this.operation});
   final String message;
   final String? operation;
-  
-  DatabaseError(this.message, {this.operation});
-  
+
   @override
   String toString() => 'DatabaseError: $message (operation: $operation)';
 }
 
 /// 使用示例：
-/// 
+///
 /// 1. 初始化（在main.dart中）
 /// ```dart
 /// void main() async {
 ///   WidgetsFlutterBinding.ensureInitialized();
-///   
+///
 ///   // 初始化错误监控
 ///   await ErrorHandler.initialize(
 ///     environment: kReleaseMode ? 'production' : 'development',
 ///   );
-///   
+///
 ///   // 初始化全局错误捕获
 ///   GlobalErrorCatcher.initialize();
-///   
+///
 ///   runApp(MyApp());
 /// }
 /// ```
-/// 
+///
 /// 2. 手动捕获异常
 /// ```dart
 /// try {
@@ -360,7 +361,7 @@ class DatabaseError implements Exception {
 ///   );
 /// }
 /// ```
-/// 
+///
 /// 3. 包装异步操作
 /// ```dart
 /// final notes = await ErrorHandler.wrapAsync(
@@ -369,7 +370,7 @@ class DatabaseError implements Exception {
 ///   fallbackValue: [],
 /// );
 /// ```
-/// 
+///
 /// 4. 添加面包屑
 /// ```dart
 /// ErrorHandler.addBreadcrumb(
@@ -378,4 +379,3 @@ class DatabaseError implements Exception {
 ///   level: SentryLevel.info,
 /// );
 /// ```
-

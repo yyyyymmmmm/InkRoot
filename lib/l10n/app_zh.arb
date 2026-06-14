@@ -350,17 +350,17 @@
     "description": "保存图片消息"
   },
 
-  "shareImageSavingToAlbum": "正在保存到相册，请稍候",
+  "shareImageSavingToAlbum": "正在保存图片，请稍候",
   "@shareImageSavingToAlbum": {
     "description": "保存到相册消息"
   },
 
-  "shareImageSaveSuccess": "图片已保存到相册",
+  "shareImageSaveSuccess": "图片已保存",
   "@shareImageSaveSuccess": {
     "description": "图片保存成功消息"
   },
 
-  "shareImageSaveFailed": "保存失败，请检查相册权限",
+  "shareImageSaveFailed": "保存失败，请检查权限或保存位置",
   "@shareImageSaveFailed": {
     "description": "保存失败消息"
   },
@@ -761,4 +761,3 @@
     "description": "功能开发中"
   }
 }
-

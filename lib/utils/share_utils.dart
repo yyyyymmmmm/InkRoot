@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/providers/app_provider.dart';
+import 'package:inkroot/services/memos_resource_service.dart';
 import 'package:inkroot/utils/share_image_widget.dart';
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
 import 'package:intl/intl.dart';
@@ -67,31 +68,34 @@ class ShareThemeColors {
       isDarkMode ? const Color(0xFF2D2D2D) : Colors.white;
 
   /// 获取主要文字颜色
-  Color get primaryTextColor =>
-      isDarkMode ? Colors.white.withOpacity(0.9) : const Color(0xFF1A1A1A);
+  Color get primaryTextColor => isDarkMode
+      ? Colors.white.withValues(alpha: 0.9)
+      : const Color(0xFF1A1A1A);
 
   /// 获取次要文字颜色
-  Color get secondaryTextColor =>
-      isDarkMode ? Colors.white.withOpacity(0.7) : const Color(0xFF666666);
+  Color get secondaryTextColor => isDarkMode
+      ? Colors.white.withValues(alpha: 0.7)
+      : const Color(0xFF666666);
 
   /// 获取毛玻璃效果颜色
   Color get glassEffectColor => isDarkMode
-      ? Colors.black.withOpacity(0.15)
-      : Colors.white.withOpacity(0.15);
+      ? Colors.black.withValues(alpha: 0.15)
+      : Colors.white.withValues(alpha: 0.15);
 
   /// 获取毛玻璃边框颜色
   Color get glassBorderColor => isDarkMode
-      ? Colors.white.withOpacity(0.1)
-      : Colors.white.withOpacity(0.2);
+      ? Colors.white.withValues(alpha: 0.1)
+      : Colors.white.withValues(alpha: 0.2);
 
   /// 获取阴影颜色
   Color get shadowColor => isDarkMode
-      ? Colors.black.withOpacity(0.5)
-      : Colors.black.withOpacity(0.15);
+      ? Colors.black.withValues(alpha: 0.5)
+      : Colors.black.withValues(alpha: 0.15);
 
   /// 获取时间戳文字颜色
-  Color get timestampTextColor =>
-      isDarkMode ? Colors.white.withOpacity(0.6) : const Color(0xFF999999);
+  Color get timestampTextColor => isDarkMode
+      ? Colors.white.withValues(alpha: 0.6)
+      : const Color(0xFF999999);
 
   /// 从BuildContext获取主题颜色
   static ShareThemeColors fromContext(BuildContext? context) {
@@ -178,8 +182,10 @@ class ShareUtils {
       final imageBytes = await _captureWidgetInOverlay(context, widget);
 
       return imageBytes;
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ ShareUtils: 生成预览图失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ ShareUtils: 生成预览图失败: $e');
+      }
       return null;
     }
   }
@@ -219,8 +225,10 @@ class ShareUtils {
       }
 
       return false;
-    } catch (e) {
-      if (kDebugMode) debugPrint('生成分享图失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('生成分享图失败: $e');
+      }
       return false;
     }
   }
@@ -283,12 +291,16 @@ class ShareUtils {
         debugPrint('⏳ _captureWidgetInOverlay: 等待 Markdown 渲染...');
       }
       await Future.delayed(const Duration(milliseconds: 300)); // Markdown 渲染
-      if (kDebugMode) debugPrint('⏳ _captureWidgetInOverlay: 等待图片加载（最多2秒）...');
+      if (kDebugMode) {
+        debugPrint('⏳ _captureWidgetInOverlay: 等待图片加载（最多2秒）...');
+      }
       await Future.delayed(
         const Duration(milliseconds: 2000),
       ); // 🔧 减少到2秒，配合外层的15秒超时
 
-      if (kDebugMode) debugPrint('📸 _captureWidgetInOverlay: 开始截图...');
+      if (kDebugMode) {
+        debugPrint('📸 _captureWidgetInOverlay: 开始截图...');
+      }
 
       // 🔥 检查 context 和 RenderObject
       if (globalKey.currentContext == null) {
@@ -324,18 +336,24 @@ class ShareUtils {
       }
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
-      if (kDebugMode) debugPrint('✅ _captureWidgetInOverlay: 截图完成！');
+      if (kDebugMode) {
+        debugPrint('✅ _captureWidgetInOverlay: 截图完成！');
+      }
 
       return byteData?.buffer.asUint8List();
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ _captureWidgetInOverlay: 截图失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ _captureWidgetInOverlay: 截图失败: $e');
+      }
       return null;
     } finally {
       // 🔥 确保一定会移除 overlay entry，避免内存泄漏
       try {
         overlayEntry?.remove();
-        if (kDebugMode) debugPrint('🧹 _captureWidgetInOverlay: Overlay已清理');
-      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('🧹 _captureWidgetInOverlay: Overlay已清理');
+        }
+      } on Object catch (e) {
         if (kDebugMode) {
           debugPrint('⚠️ _captureWidgetInOverlay: 清理Overlay时出错: $e');
         }
@@ -372,9 +390,12 @@ class ShareUtils {
         showBrand: showBrand,
         context: context,
       );
+      if (context != null && !context.mounted) {
+        return null;
+      }
 
       return imageBytes;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('生成预览图片失败: $e');
       return null;
     }
@@ -430,6 +451,9 @@ class ShareUtils {
       if (imagePaths != null && imagePaths.isNotEmpty) {
         onProgress?.call(0.1);
         await _loadImagesParallel(imagePaths, baseUrl, token);
+        if (!context.mounted) {
+          return false;
+        }
         onProgress?.call(0.3);
       } else {
         onProgress?.call(0.3);
@@ -449,6 +473,9 @@ class ShareUtils {
         showBrand: showBrand,
         context: context,
       );
+      if (!context.mounted) {
+        return false;
+      }
 
       onProgress?.call(0.8);
 
@@ -460,8 +487,10 @@ class ShareUtils {
       }
 
       return false;
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error generating share image: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error generating share image: $e');
+      }
       return false;
     }
   }
@@ -493,6 +522,9 @@ class ShareUtils {
         showUser: showUser,
         showBrand: showBrand,
       );
+      if (context != null && !context.mounted) {
+        return null;
+      }
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -578,7 +610,7 @@ class ShareUtils {
       }
 
       return null;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('Error in _generateImageWithCanvas: $e');
       return null;
     }
@@ -915,7 +947,9 @@ class ShareUtils {
     bool showUser = true,
     ShareThemeColors? themeColors,
   }) async {
-    if (!showTime && !showUser) return;
+    if (!showTime && !showUser) {
+      return;
+    }
 
     final colors = themeColors ?? ShareThemeColors(isDarkMode: false);
     const headerPadding = 20;
@@ -1031,12 +1065,6 @@ class ShareUtils {
     );
   }
 
-  // 获取星期几
-  static String _getWeekday(DateTime date) {
-    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-    return weekdays[date.weekday % 7];
-  }
-
   // 现代卡片布局 - 深度阴影、圆角设计
   static Future<void> _drawModernCardLayout(
     Canvas canvas,
@@ -1063,7 +1091,7 @@ class ShareUtils {
 
     for (final shadow in shadowLayers) {
       final shadowPaint = Paint()
-        ..color = Colors.black.withOpacity(shadow['opacity']! as double)
+        ..color = Colors.black.withValues(alpha: shadow['opacity']! as double)
         ..maskFilter =
             MaskFilter.blur(BlurStyle.normal, shadow['blur']! as double);
 
@@ -1132,7 +1160,9 @@ class ShareUtils {
     bool showTime = true,
     bool showUser = true,
   }) async {
-    if (!showTime && !showUser) return;
+    if (!showTime && !showUser) {
+      return;
+    }
     const headerPadding = 20;
     final headerY = cardRect.top + 16;
 
@@ -1189,317 +1219,11 @@ class ShareUtils {
     }
   }
 
-  // 优化的UX布局 - 头部底部信息露出，提升用户体验
-  static Future<void> _drawOptimizedUXLayout(
-    Canvas canvas,
-    Size size,
-    String content,
-    DateTime timestamp,
-    List<String>? imagePaths,
-    String? baseUrl,
-    String? token,
-  ) async {
-    const horizontalMargin = 20.0;
-    const topSpacing = 16.0;
-    const bottomSpacing = 20.0;
-
-    var currentY = topSpacing;
-
-    // 1. 顶部应用名称和日期 - 露出在卡片外
-    await _drawFloatingHeader(
-      canvas,
-      size,
-      timestamp,
-      horizontalMargin,
-      currentY,
-    );
-    currentY += 50; // 头部高度 + 间距
-
-    // 2. 主卡片区域 - 包含图片和内容
-    final cardHeight = await _calculateMainCardHeight(
-      content,
-      imagePaths,
-      size.width - horizontalMargin * 2,
-    );
-    final cardRect = Rect.fromLTWH(
-      horizontalMargin,
-      currentY,
-      size.width - horizontalMargin * 2,
-      cardHeight,
-    );
-
-    await _drawMainContentCard(
-      canvas,
-      cardRect,
-      content,
-      imagePaths,
-      baseUrl,
-      token,
-    );
-    currentY += cardHeight + 16;
-
-    // 3. 底部统计信息 - 露出在卡片外
-    await _drawFloatingFooter(canvas, size, horizontalMargin, currentY);
-  }
-
-  // 绘制浮动头部
-  static Future<void> _drawFloatingHeader(
-    Canvas canvas,
-    Size size,
-    DateTime timestamp,
-    double margin,
-    double y,
-  ) async {
-    // 半透明背景
-    final headerBg = Paint()
-      ..color = Colors.white.withOpacity(0.9)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
-    final headerRect = Rect.fromLTWH(margin, y, size.width - margin * 2, 40);
-    final headerRRect =
-        RRect.fromRectAndRadius(headerRect, const Radius.circular(20));
-    canvas.drawRRect(headerRRect, headerBg);
-
-    // 左侧应用名称
-    final titleStyle = ui.TextStyle(
-      color: const Color(0xFF1A1A1A),
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    );
-
-    final titleParagraph = ui.ParagraphBuilder(ui.ParagraphStyle())
-      ..pushStyle(titleStyle)
-      ..addText('星河');
-    final titleText = titleParagraph.build()
-      ..layout(const ui.ParagraphConstraints(width: 120));
-    canvas.drawParagraph(titleText, Offset(margin + 16, y + 10));
-
-    // 右侧日期
-    final dateStyle = ui.TextStyle(
-      color: const Color(0xFF666666),
-      fontSize: 14,
-      fontWeight: FontWeight.w400,
-    );
-
-    final date = DateFormat('yyyy/MM/dd').format(timestamp);
-    final dateParagraph =
-        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.right))
-          ..pushStyle(dateStyle)
-          ..addText(date);
-    final dateText = dateParagraph.build()
-      ..layout(const ui.ParagraphConstraints(width: 120));
-    canvas.drawParagraph(dateText, Offset(size.width - margin - 136, y + 13));
-  }
-
-  // 计算主卡片高度
-  static Future<double> _calculateMainCardHeight(
-    String content,
-    List<String>? imagePaths,
-    double cardWidth,
-  ) async {
-    double height = 32; // 内边距
-
-    // 文本高度
-    final processedContent = _processContentForDisplay(content);
-    if (processedContent.isNotEmpty) {
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: processedContent,
-          style: const TextStyle(fontSize: 16, height: 1.4),
-        ),
-        textDirection: ui.TextDirection.ltr,
-      );
-      textPainter.layout(maxWidth: cardWidth - 48); // 减去内边距
-      height += textPainter.height + 16;
-    }
-
-    // 图片高度
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      try {
-        final image = await _loadImage(imagePaths[0], null, null);
-        if (image != null) {
-          final imageWidth = cardWidth - 48; // 减去内边距
-          final imageHeight =
-              (image.height.toDouble() / image.width.toDouble()) * imageWidth;
-          height += imageHeight + 16;
-        } else {
-          height += (cardWidth - 48) * 0.6 + 16; // 默认比例
-        }
-      } catch (e) {
-        height += (cardWidth - 48) * 0.6 + 16; // 默认比例
-      }
-    }
-
-    height += 24; // 底部内边距
-    return height;
-  }
-
-  // 绘制主内容卡片
-  static Future<void> _drawMainContentCard(
-    Canvas canvas,
-    Rect cardRect,
-    String content,
-    List<String>? imagePaths,
-    String? baseUrl,
-    String? token,
-  ) async {
-    // 卡片背景和阴影
-    final cardPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.08)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-
-    final cardRRect =
-        RRect.fromRectAndRadius(cardRect, const Radius.circular(20));
-
-    // 绘制阴影和卡片
-    canvas.drawRRect(cardRRect.shift(const Offset(0, 6)), shadowPaint);
-    canvas.drawRRect(cardRRect, cardPaint);
-
-    // 内容区域
-    const contentPadding = 24.0;
-    var currentY = cardRect.top + contentPadding;
-    final contentWidth = cardRect.width - contentPadding * 2;
-
-    // 绘制文本内容
-    final processedContent = _processContentForDisplay(content);
-    if (processedContent.isNotEmpty) {
-      final contentStyle = ui.TextStyle(
-        color: const Color(0xFF2C2C2C),
-        fontSize: 16,
-        height: 1.4,
-        fontWeight: FontWeight.w400,
-      );
-
-      final contentParagraph = ui.ParagraphBuilder(ui.ParagraphStyle())
-        ..pushStyle(contentStyle)
-        ..addText(processedContent);
-      final contentText = contentParagraph.build()
-        ..layout(ui.ParagraphConstraints(width: contentWidth));
-
-      canvas.drawParagraph(
-        contentText,
-        Offset(cardRect.left + contentPadding, currentY),
-      );
-      currentY += contentText.height + 16;
-    }
-
-    // 绘制图片
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      try {
-        final image = await _loadImage(imagePaths[0], baseUrl, token);
-        if (image != null) {
-          final imageHeight =
-              (image.height.toDouble() / image.width.toDouble()) * contentWidth;
-
-          final srcRect = Rect.fromLTWH(
-            0,
-            0,
-            image.width.toDouble(),
-            image.height.toDouble(),
-          );
-          final dstRect = Rect.fromLTWH(
-            cardRect.left + contentPadding,
-            currentY,
-            contentWidth,
-            imageHeight,
-          );
-          final imageRRect =
-              RRect.fromRectAndRadius(dstRect, const Radius.circular(16));
-
-          // 绘制图片
-          canvas.saveLayer(dstRect, Paint());
-          canvas.drawRRect(imageRRect, Paint()..color = Colors.white);
-          canvas.drawImageRect(
-            image,
-            srcRect,
-            dstRect,
-            Paint()..blendMode = BlendMode.srcIn,
-          );
-          canvas.restore();
-
-          // 添加微妙边框
-          canvas.drawRRect(
-            imageRRect,
-            Paint()
-              ..color = const Color(0xFFE8E8E8)
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 0.5,
-          );
-        }
-      } catch (e) {
-        // 占位符
-        final placeholderHeight = contentWidth * 0.6;
-        final placeholderRect = Rect.fromLTWH(
-          cardRect.left + contentPadding,
-          currentY,
-          contentWidth,
-          placeholderHeight,
-        );
-        final placeholderRRect =
-            RRect.fromRectAndRadius(placeholderRect, const Radius.circular(16));
-
-        final placeholderPaint = Paint()..color = const Color(0xFFF5F5F5);
-        canvas.drawRRect(placeholderRRect, placeholderPaint);
-      }
-    }
-  }
-
-  // 绘制浮动底部
-  static Future<void> _drawFloatingFooter(
-    Canvas canvas,
-    Size size,
-    double margin,
-    double y,
-  ) async {
-    // 半透明背景
-    final footerBg = Paint()
-      ..color = Colors.white.withOpacity(0.8)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
-    final footerRect = Rect.fromLTWH(margin, y, size.width - margin * 2, 32);
-    final footerRRect =
-        RRect.fromRectAndRadius(footerRect, const Radius.circular(16));
-    canvas.drawRRect(footerRRect, footerBg);
-
-    // 左侧统计信息
-    final statsStyle = ui.TextStyle(
-      color: const Color(0xFF888888),
-      fontSize: 12,
-      fontWeight: FontWeight.w400,
-    );
-
-    final statsParagraph = ui.ParagraphBuilder(ui.ParagraphStyle())
-      ..pushStyle(statsStyle)
-      ..addText('14 MEMOS • 450 DAYS');
-    final statsText = statsParagraph.build()
-      ..layout(const ui.ParagraphConstraints(width: 150));
-    canvas.drawParagraph(statsText, Offset(margin + 16, y + 10));
-
-    // 右侧品牌标识
-    final brandStyle = ui.TextStyle(
-      color: const Color(0xFFBBBBBB),
-      fontSize: 12,
-      fontWeight: FontWeight.w300,
-    );
-
-    final brandParagraph =
-        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.right))
-          ..pushStyle(brandStyle)
-          ..addText('flomo');
-    final brandText = brandParagraph.build()
-      ..layout(const ui.ParagraphConstraints(width: 80));
-    canvas.drawParagraph(brandText, Offset(size.width - margin - 96, y + 10));
-  }
-
   // 绘制纸质纹理效果
   static Future<void> _drawPaperTexture(Canvas canvas, Size size) async {
     // 横向线条 - 模拟笔记本纸
     final linePaint = Paint()
-      ..color = const Color(0xFFE8D5B7).withOpacity(0.4)
+      ..color = const Color(0xFFE8D5B7).withValues(alpha: 0.4)
       ..strokeWidth = 0.5;
 
     for (var i = 80; i < size.height.toInt(); i += 32) {
@@ -1512,7 +1236,7 @@ class ShareUtils {
 
     // 左侧红边线
     final marginPaint = Paint()
-      ..color = const Color(0xFFD4AF37).withOpacity(0.7)
+      ..color = const Color(0xFFD4AF37).withValues(alpha: 0.7)
       ..strokeWidth = 2;
     canvas.drawLine(
       const Offset(70, 50),
@@ -1537,7 +1261,7 @@ class ShareUtils {
 
     // 纸质斑点纹理
     final texturePaint = Paint()
-      ..color = const Color(0xFFD4AF37).withOpacity(0.1);
+      ..color = const Color(0xFFD4AF37).withValues(alpha: 0.1);
 
     for (var i = 0; i < 30; i++) {
       final x = (i * 47) % size.width.toInt();
@@ -1618,7 +1342,9 @@ class ShareUtils {
     bool showTime = true,
     bool showUser = true,
   }) async {
-    if (!showTime && !showUser) return;
+    if (!showTime && !showUser) {
+      return;
+    }
 
     final textStyle = ui.TextStyle(
       color: const Color(0xFF8B4513),
@@ -1662,7 +1388,7 @@ class ShareUtils {
 
     // 装饰性下划线
     final underlinePaint = Paint()
-      ..color = const Color(0xFF8B4513).withOpacity(0.5)
+      ..color = const Color(0xFF8B4513).withValues(alpha: 0.5)
       ..strokeWidth = 1;
     canvas.drawLine(
       Offset(margin + 50, 105),
@@ -1678,13 +1404,15 @@ class ShareUtils {
     double margin, {
     bool showBrand = true,
   }) async {
-    if (!showBrand) return;
+    if (!showBrand) {
+      return;
+    }
 
     final y = size.height - 60;
 
     // 应用标识 - 复古字体，右下角显示InkRoot
     final brandStyle = ui.TextStyle(
-      color: const Color(0xFF8B4513).withOpacity(0.6),
+      color: const Color(0xFF8B4513).withValues(alpha: 0.6),
       fontSize: 14,
       fontWeight: FontWeight.w300,
       fontStyle: FontStyle.italic,
@@ -1782,7 +1510,9 @@ class ShareUtils {
     bool showUser = true,
     ShareThemeColors? themeColors,
   }) async {
-    if (!showTime && !showUser) return;
+    if (!showTime && !showUser) {
+      return;
+    }
 
     final colors = themeColors ?? ShareThemeColors(isDarkMode: false);
     final textStyle = ui.TextStyle(
@@ -1830,7 +1560,9 @@ class ShareUtils {
     String? baseUrl,
     String? token,
   ) async {
-    if (imagePaths.isEmpty) return [];
+    if (imagePaths.isEmpty) {
+      return [];
+    }
 
     // 创建并发任务
     final futures = imagePaths.map((imagePath) async {
@@ -1873,7 +1605,9 @@ class ShareUtils {
   static void clearImageCache() {
     _imageCache.clear();
     _cacheSize = 0;
-    if (kDebugMode) debugPrint('ShareUtils: 图片缓存已清理');
+    if (kDebugMode) {
+      debugPrint('ShareUtils: 图片缓存已清理');
+    }
   }
 
   /// 获取当前缓存状态 - 用于调试
@@ -2031,7 +1765,10 @@ class ShareUtils {
     bool showBrand = true,
     ShareThemeColors? themeColors,
   }) async {
-    if (!showBrand) return; // 如果隐藏品牌，直接返回
+    if (!showBrand) {
+      // 如果隐藏品牌，直接返回
+      return;
+    }
 
     final colors = themeColors ?? ShareThemeColors(isDarkMode: false);
 
@@ -2062,7 +1799,9 @@ class ShareUtils {
     String? token,
     Paint borderPaint,
   ) async {
-    if (imagePaths.isEmpty) return;
+    if (imagePaths.isEmpty) {
+      return;
+    }
 
     const gap = 12.0; // 图片间隙
     var currentY = y;
@@ -2146,530 +1885,6 @@ class ShareUtils {
     return placeholderHeight;
   }
 
-  // 绘制单张图片并返回高度
-  static Future<double> _drawSingleImageAndGetHeight(
-    Canvas canvas,
-    double x,
-    double y,
-    double width,
-    String imagePath,
-    String? baseUrl,
-    String? token,
-    Paint borderPaint,
-  ) async {
-    try {
-      final image = await _loadImage(imagePath, baseUrl, token);
-      if (image != null) {
-        final imageHeight =
-            (image.height.toDouble() / image.width.toDouble()) * width;
-
-        final srcRect = Rect.fromLTWH(
-          0,
-          0,
-          image.width.toDouble(),
-          image.height.toDouble(),
-        );
-        final dstRect = Rect.fromLTWH(x, y, width, imageHeight);
-        final imageRRect =
-            RRect.fromRectAndRadius(dstRect, const Radius.circular(12));
-
-        // 绘制图片
-        canvas.saveLayer(dstRect, Paint());
-        canvas.drawRRect(imageRRect, Paint()..color = Colors.white);
-        canvas.drawImageRect(
-          image,
-          srcRect,
-          dstRect,
-          Paint()..blendMode = BlendMode.srcIn,
-        );
-        canvas.restore();
-
-        // 边框
-        canvas.drawRRect(
-          imageRRect,
-          Paint()
-            ..color = const Color(0xFFE8E8E8)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.5,
-        );
-
-        return imageHeight;
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    // 占位符
-    final placeholderHeight = width * 0.6;
-    final placeholderRect = Rect.fromLTWH(x, y, width, placeholderHeight);
-    final placeholderRRect =
-        RRect.fromRectAndRadius(placeholderRect, const Radius.circular(12));
-
-    canvas.drawRRect(
-      placeholderRRect,
-      Paint()..color = const Color(0xFFF0F0F0),
-    );
-    canvas.drawRRect(placeholderRRect, borderPaint);
-
-    return placeholderHeight;
-  }
-
-  // 绘制单张图片（保留原函数以防其他地方使用）
-  static Future<void> _drawSingleImage(
-    Canvas canvas,
-    double x,
-    double y,
-    double width,
-    String imagePath,
-    String? baseUrl,
-    String? token,
-    Paint borderPaint,
-  ) async {
-    await _drawSingleImageAndGetHeight(
-      canvas,
-      x,
-      y,
-      width,
-      imagePath,
-      baseUrl,
-      token,
-      borderPaint,
-    );
-  }
-
-  // 获取单张图片高度
-  static Future<double> _getSingleImageHeight(
-    double width,
-    String imagePath,
-    String? baseUrl,
-    String? token,
-  ) async {
-    try {
-      final image = await _loadImage(imagePath, baseUrl, token);
-      if (image != null) {
-        return (image.height.toDouble() / image.width.toDouble()) * width;
-      }
-    } catch (e) {
-      // ignore
-    }
-    return width * 0.6; // 默认比例
-  }
-
-  // 绘制图片数量覆盖层
-  static Future<void> _drawImageCountOverlay(
-    Canvas canvas,
-    double x,
-    double y,
-    double width,
-    double height,
-    int remainingCount,
-  ) async {
-    final overlayRect = Rect.fromLTWH(x, y, width, height);
-    final overlayRRect =
-        RRect.fromRectAndRadius(overlayRect, const Radius.circular(12));
-
-    // 半透明遮罩
-    canvas.drawRRect(
-      overlayRRect,
-      Paint()
-        ..color = Colors.black.withOpacity(0.6)
-        ..style = PaintingStyle.fill,
-    );
-
-    // "+N" 文字
-    final textStyle = ui.TextStyle(
-      color: Colors.white,
-      fontSize: 24,
-      fontWeight: FontWeight.w600,
-    );
-
-    final textParagraph =
-        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.center))
-          ..pushStyle(textStyle)
-          ..addText('+$remainingCount');
-    final text = textParagraph.build()
-      ..layout(ui.ParagraphConstraints(width: width));
-
-    canvas.drawParagraph(text, Offset(x, y + (height - text.height) / 2));
-  }
-
-  // 通用的内容和图片绘制方法 - 优化布局
-  // 统一的布局函数 - 所有模板都使用相同的布局结构
-  static Future<void> _drawUnifiedLayout(
-    Canvas canvas,
-    Size size,
-    String content,
-    DateTime timestamp,
-    List<String>? imagePaths,
-    String? baseUrl,
-    String? token, {
-    required Color titleColor,
-    required Color dateColor,
-    required Color contentColor,
-    required Color statsColor,
-    required Color brandColor,
-    double offsetX = 0,
-    double offsetY = 0,
-  }) async {
-    final baseX = 30.0 + offsetX; // 左边距保持
-    final baseY = 0.0 + offsetY; // 完全顶对齐，无顶部边距
-    final contentWidth = size.width - 60 - (offsetX * 2); // 左右边距保持
-
-    // 顶部信息 - 更紧凑的布局
-    final headerStyle = ui.TextStyle(
-      color: dateColor,
-      fontSize: 20, // 进一步减小日期字体
-      fontWeight: FontWeight.w400,
-    );
-
-    // 左侧内容标题 - 更紧凑的标题
-    final titleParagraph = ui.ParagraphBuilder(ui.ParagraphStyle())
-      ..pushStyle(
-        ui.TextStyle(
-          color: titleColor,
-          fontSize: 24, // 进一步减小标题字体
-          fontWeight: FontWeight.w500,
-        ),
-      )
-      ..addText('星河');
-    final titleText = titleParagraph.build()
-      ..layout(const ui.ParagraphConstraints(width: 300)); // 减小宽度
-    canvas.drawParagraph(titleText, Offset(baseX, baseY));
-
-    // 右上角日期 - 参考图片的位置
-    final date = DateFormat('yyyy/MM/dd').format(timestamp);
-    final dateParagraph =
-        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.right))
-          ..pushStyle(headerStyle)
-          ..addText(date);
-    final dateText = dateParagraph.build()
-      ..layout(ui.ParagraphConstraints(width: contentWidth));
-    canvas.drawParagraph(dateText, Offset(baseX, baseY));
-
-    // 内容区域 - 更紧凑的间距
-    final contentStartY = baseY + 35; // 进一步减小间距
-    final contentEndY = await _drawReferenceContentAndImages(
-      canvas,
-      size,
-      content,
-      imagePaths,
-      baseUrl,
-      token,
-      contentStartY,
-      contentWidth,
-      contentColor: contentColor,
-      offsetX: offsetX,
-    );
-
-    // 底部统计信息 - 紧贴内容，无多余空白
-    final bottomStyle = ui.TextStyle(
-      color: statsColor,
-      fontSize: 14, // 进一步减小字体
-      fontWeight: FontWeight.w400,
-      letterSpacing: 0.5,
-    );
-    final bottomParagraph =
-        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.left))
-          ..pushStyle(bottomStyle)
-          ..addText('14 MEMOS • 450 DAYS');
-    final bottomText = bottomParagraph.build()
-      ..layout(ui.ParagraphConstraints(width: contentWidth));
-    canvas.drawParagraph(
-      bottomText,
-      Offset(baseX, contentEndY + 15),
-    ); // 紧贴内容，只留15px间距
-
-    // 右下角品牌标识 - 更紧凑的位置
-    final brandStyle = ui.TextStyle(
-      color: brandColor,
-      fontSize: 14, // 进一步减小字体
-      fontWeight: FontWeight.w300,
-    );
-    final brandParagraph =
-        ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.right))
-          ..pushStyle(brandStyle)
-          ..addText('flomo');
-    final brandText = brandParagraph.build()
-      ..layout(ui.ParagraphConstraints(width: contentWidth));
-    canvas.drawParagraph(brandText, Offset(baseX, contentEndY + 15)); // 与统计信息对齐
-  }
-
-  // 专门按照参考图片样式绘制内容和图片
-  static Future<double> _drawReferenceContentAndImages(
-    Canvas canvas,
-    Size size,
-    String content,
-    List<String>? imagePaths,
-    String? baseUrl,
-    String? token,
-    double startY,
-    double contentWidth, {
-    Color contentColor = const Color(0xFF333333),
-    double offsetX = 0,
-  }) async {
-    var currentY = startY;
-
-    // 处理内容 - 参考图片的文本样式
-    final processedContent = _processContentForDisplay(content);
-
-    // 绘制文本内容 - 更紧凑的字体样式
-    if (processedContent.isNotEmpty) {
-      final contentStyle = ui.TextStyle(
-        color: contentColor, // 使用传入的颜色
-        fontSize: 22, // 进一步减小字体大小
-        height: 1.3, // 减小行高
-        fontWeight: FontWeight.w400,
-      );
-      final contentParagraph = ui.ParagraphBuilder(
-        ui.ParagraphStyle(
-          textAlign: TextAlign.left,
-        ),
-      )
-        ..pushStyle(contentStyle)
-        ..addText(processedContent);
-      final contentText = contentParagraph.build()
-        ..layout(ui.ParagraphConstraints(width: contentWidth));
-      canvas.drawParagraph(contentText, Offset(30 + offsetX, currentY)); // 减小边距
-
-      currentY += contentText.height + 15; // 进一步减小文本下方间距
-    }
-
-    // 绘制图片 - 更紧凑的图片布局
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      const maxImageWidth = 590.0; // 大幅增加图片宽度，接近参考图效果
-      const imageSpacing = 12.0; // 减小图片间距
-      final imageCount =
-          imagePaths.length > 3 ? 3 : imagePaths.length; // 最多3张图片
-
-      for (var i = 0; i < imageCount; i++) {
-        if (kDebugMode) debugPrint('尝试加载图片 $i: ${imagePaths[i]}');
-        try {
-          final image = await _loadImage(imagePaths[i], baseUrl, token);
-          if (image != null) {
-            if (kDebugMode) {
-              debugPrint('图片加载成功: ${image.width}x${image.height}');
-            }
-            // 计算图片显示尺寸 - 按最大宽度等比缩放，并限制最大高度
-            var imageWidth = image.width.toDouble();
-            var imageHeight = image.height.toDouble();
-            const maxImageHeight = 400.0; // 增加图片最大高度，让图片显示更大
-
-            if (imageWidth > maxImageWidth) {
-              final scale = maxImageWidth / imageWidth;
-              imageWidth = maxImageWidth;
-              imageHeight = imageHeight * scale;
-            }
-
-            // 如果高度仍然过大，再次缩放
-            if (imageHeight > maxImageHeight) {
-              final scale = maxImageHeight / imageHeight;
-              imageWidth = imageWidth * scale;
-              imageHeight = maxImageHeight;
-            }
-
-            // 左对齐显示图片，与文字对齐
-            final imageX = 30 + offsetX; // 与文字左对齐
-            final imageY = currentY;
-            if (kDebugMode) {
-              debugPrint(
-                '绘制图片位置: x=$imageX, y=$imageY, width=$imageWidth, height=$imageHeight',
-              );
-            }
-
-            // 绘制图片
-            final srcRect = Rect.fromLTWH(
-              0,
-              0,
-              image.width.toDouble(),
-              image.height.toDouble(),
-            );
-            final dstRect =
-                Rect.fromLTWH(imageX, imageY, imageWidth, imageHeight);
-            final imageRRect =
-                RRect.fromRectAndRadius(dstRect, const Radius.circular(8));
-
-            canvas.saveLayer(dstRect, Paint());
-            canvas.drawRRect(imageRRect, Paint()..color = Colors.white);
-            canvas.drawImageRect(
-              image,
-              srcRect,
-              dstRect,
-              Paint()..blendMode = BlendMode.srcIn,
-            );
-            canvas.restore();
-
-            // 添加淡边框
-            canvas.drawRRect(
-              imageRRect,
-              Paint()
-                ..color = const Color(0xFFEEEEEE)
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 1.0,
-            );
-
-            currentY += imageHeight + imageSpacing;
-          } else {
-            if (kDebugMode) debugPrint('图片加载失败，显示占位符');
-            // 图片加载失败的占位符 - 使用与maxImageWidth一致的尺寸
-            const placeholderWidth = 590.0;
-            const placeholderHeight = 400.0; // 与最大高度一致
-            final placeholderX = 30.0 + offsetX; // 与文字左对齐
-            _drawImagePlaceholder(
-              canvas,
-              placeholderX,
-              currentY,
-              placeholderWidth,
-            );
-            currentY += placeholderHeight + imageSpacing;
-          }
-        } catch (e) {
-          // 异常处理 - 使用与maxImageWidth一致的尺寸
-          const placeholderWidth = 590.0;
-          const placeholderHeight = 400.0; // 与最大高度一致
-          final placeholderX = 30.0 + offsetX; // 与文字左对齐
-          _drawImagePlaceholder(
-            canvas,
-            placeholderX,
-            currentY,
-            placeholderWidth,
-          );
-          currentY += placeholderHeight + imageSpacing;
-        }
-      }
-    }
-
-    return currentY; // 返回内容结束的Y位置
-  }
-
-  static Future<void> _drawContentAndImages(
-    Canvas canvas,
-    Size size,
-    String content,
-    List<String>? imagePaths,
-    String? baseUrl,
-    String? token,
-    double startY,
-    double contentWidth, {
-    Color textColor = const Color(0xFF1D1D1F),
-  }) async {
-    var currentY = startY;
-
-    // 处理内容
-    final processedContent = _processContentForDisplay(content);
-
-    // 绘制文本内容 - flomo风格的文本排版
-    if (processedContent.isNotEmpty) {
-      final contentStyle = ui.TextStyle(
-        color: textColor,
-        fontSize: 36, // 稍大的字体，更接近flomo
-        height: 1.8, // 更大的行高，增加可读性
-        fontWeight: FontWeight.w400,
-      );
-      final contentParagraph = ui.ParagraphBuilder(
-        ui.ParagraphStyle(
-          textAlign: TextAlign.left,
-        ),
-      )
-        ..pushStyle(contentStyle)
-        ..addText(processedContent);
-      final contentText = contentParagraph.build()
-        ..layout(ui.ParagraphConstraints(width: contentWidth));
-      canvas.drawParagraph(contentText, Offset(40, currentY));
-
-      currentY += contentText.height + 50; // 增加间距
-    }
-
-    // 绘制图片网格 - flomo风格的图片布局
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      const spacing = 16.0; // 更大的间距
-      const imageSize = 180.0; // 稍小的图片，更精致
-      const maxImagesPerRow = 3;
-      final imageCount = imagePaths.length > 9 ? 9 : imagePaths.length;
-
-      for (var i = 0; i < imageCount; i++) {
-        final row = i ~/ maxImagesPerRow;
-        final col = i % maxImagesPerRow;
-        final x = 40.0 + col * (imageSize + spacing);
-        final y = currentY + row * (imageSize + spacing);
-
-        try {
-          final image = await _loadImage(imagePaths[i], baseUrl, token);
-          if (image != null) {
-            // 绘制图片 - flomo风格的圆角
-            final srcRect = Rect.fromLTWH(
-              0,
-              0,
-              image.width.toDouble(),
-              image.height.toDouble(),
-            );
-            final dstRect = Rect.fromLTWH(x, y, imageSize, imageSize);
-            final imageRRect = RRect.fromRectAndRadius(
-              dstRect,
-              const Radius.circular(8),
-            ); // 更小的圆角
-
-            canvas.saveLayer(dstRect, Paint());
-            canvas.drawRRect(imageRRect, Paint()..color = Colors.white);
-            canvas.drawImageRect(
-              image,
-              srcRect,
-              dstRect,
-              Paint()..blendMode = BlendMode.srcIn,
-            );
-            canvas.restore();
-
-            // 添加淡淡的边框 - flomo风格
-            canvas.drawRRect(
-              imageRRect,
-              Paint()
-                ..color = const Color(0xFFEEEEEE)
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 1.0,
-            );
-          } else {
-            _drawImagePlaceholder(canvas, x, y, imageSize);
-          }
-        } catch (e) {
-          _drawImagePlaceholder(canvas, x, y, imageSize);
-        }
-      }
-    }
-  }
-
-  // 优化图片占位框
-  static void _drawImagePlaceholder(
-    Canvas canvas,
-    double x,
-    double y,
-    double size,
-  ) {
-    final placeholderPaint = Paint()
-      ..color = const Color(0xFFF0F0F0)
-      ..style = PaintingStyle.fill;
-
-    final borderPaint = Paint()
-      ..color = const Color(0xFFE0E0E0)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    final rect = Rect.fromLTWH(x, y, size, size);
-    final rRect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
-
-    canvas.drawRRect(rRect, placeholderPaint);
-    canvas.drawRRect(rRect, borderPaint);
-
-    // 绘制图片图标
-    final iconPaint = Paint()..color = const Color(0xFFBDBDBD);
-    final center = Offset(x + size / 2, y + size / 2);
-    canvas.drawCircle(center, 20, iconPaint);
-
-    // 简单的图片图标
-    final iconRect = Rect.fromCenter(center: center, width: 24, height: 20);
-    final iconRRect =
-        RRect.fromRectAndRadius(iconRect, const Radius.circular(2));
-    canvas.drawRRect(iconRRect, Paint()..color = Colors.white);
-  }
-
   // 加载图片
   static Future<ui.Image?> _loadImage(
     String imagePath,
@@ -2696,12 +1911,11 @@ class ShareUtils {
         if (response.statusCode == 200) {
           return await decodeImageFromList(response.bodyBytes);
         }
-      } else if ((imagePath.startsWith('/o/r/') ||
-              imagePath.startsWith('/file/') ||
-              imagePath.startsWith('/resource/')) &&
+      } else if (MemosResourceService.isServerResourcePath(imagePath) &&
           baseUrl != null) {
         // Memos服务器资源路径
-        final fullUrl = '$baseUrl$imagePath';
+        final fullUrl =
+            MemosResourceService(baseUrl: baseUrl).buildImageUrl(imagePath);
         final headers = <String, String>{};
         if (token != null) {
           headers['Authorization'] = 'Bearer $token';
@@ -2713,7 +1927,7 @@ class ShareUtils {
       }
       // 其他情况暂时不处理，返回null
       return null;
-    } catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) {
         debugPrint('Error loading image: $e for path: $imagePath');
       }
@@ -2796,7 +2010,9 @@ class ShareUtils {
 
       // 添加标签
       final tagText = '【${match.group(1)!}】';
-      if (kDebugMode) debugPrint('ShareUtils: 解析到标签: "$tagText"');
+      if (kDebugMode) {
+        debugPrint('ShareUtils: 解析到标签: "$tagText"');
+      }
       spans.add(_createTagTextSpan(tagText, isGlassStyle: isGlassStyle));
 
       lastIndex = match.end;
@@ -2817,7 +2033,9 @@ class ShareUtils {
       }
     }
 
-    if (kDebugMode) debugPrint('ShareUtils: 解析完成，共生成 ${spans.length} 个span');
+    if (kDebugMode) {
+      debugPrint('ShareUtils: 解析完成，共生成 ${spans.length} 个span');
+    }
     return spans;
   }
 
@@ -2997,53 +2215,6 @@ class ShareUtils {
         ),
       );
 
-  static TextSpan _createQuoteTextSpan(String text) => TextSpan(
-        text: text,
-        style: const TextStyle(
-          color: Color(0xFF666666),
-          fontSize: 17,
-          height: 1.5,
-          fontStyle: FontStyle.italic,
-        ),
-      );
-
-  static TextSpan _createListTextSpan(String text) => TextSpan(
-        text: text,
-        style: const TextStyle(
-          color: Color(0xFF333333),
-          fontSize: 17,
-          height: 1.5,
-        ),
-      );
-
-  static TextSpan _createTitleTextSpan(String text, [int level = 1]) {
-    double fontSize;
-    switch (level) {
-      case 1:
-        fontSize = 20.0;
-        break;
-      case 2:
-        fontSize = 18.0;
-        break;
-      case 3:
-        fontSize = 16.0;
-        break;
-      default:
-        fontSize = 15.0;
-        break;
-    }
-
-    return TextSpan(
-      text: text,
-      style: TextStyle(
-        color: const Color(0xFF333333),
-        fontSize: fontSize,
-        height: 1.5,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
   // 创建标题样式的span，但保留原有的粗体、斜体等样式
   static TextSpan _createTitleStyledSpan(TextSpan originalSpan, int level) {
     double fontSize;
@@ -3098,8 +2269,10 @@ class ShareUtils {
       );
 
       return true;
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error saving and sharing image: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error saving and sharing image: $e');
+      }
       return false;
     }
   }
@@ -3167,8 +2340,10 @@ class ShareUtils {
       }
 
       return false;
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error saving image to gallery: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error saving image to gallery: $e');
+      }
       return false;
     }
   }
@@ -3183,20 +2358,26 @@ class ShareUtils {
 
       // 🍎 iOS权限检查和保存
       if (Platform.isIOS) {
-        if (kDebugMode) debugPrint('ShareUtils: iOS平台，开始保存图片到相册');
+        if (kDebugMode) {
+          debugPrint('ShareUtils: iOS平台，开始保存图片到相册');
+        }
 
         final result = await ImageGallerySaverPlus.saveImage(
           imageBytes,
           name: fileName,
           quality: 100,
-        );
+        ) as Map<dynamic, dynamic>;
 
         if (result['isSuccess'] == true) {
-          if (kDebugMode) debugPrint('ShareUtils: iOS图片保存成功');
+          if (kDebugMode) {
+            debugPrint('ShareUtils: iOS图片保存成功');
+          }
           return true;
         } else {
-          final errorMsg = result['errorMessage'] ?? '未知错误';
-          if (kDebugMode) debugPrint('ShareUtils: iOS图片保存失败: $errorMsg');
+          final errorMsg = result['errorMessage']?.toString() ?? '未知错误';
+          if (kDebugMode) {
+            debugPrint('ShareUtils: iOS图片保存失败: $errorMsg');
+          }
 
           // iOS特殊错误处理
           if (errorMsg.contains('permission') || errorMsg.contains('denied')) {
@@ -3208,20 +2389,26 @@ class ShareUtils {
 
       // 🤖 Android权限检查和保存
       if (Platform.isAndroid) {
-        if (kDebugMode) debugPrint('ShareUtils: Android平台，开始保存图片到相册');
+        if (kDebugMode) {
+          debugPrint('ShareUtils: Android平台，开始保存图片到相册');
+        }
 
         final result = await ImageGallerySaverPlus.saveImage(
           imageBytes,
           name: fileName,
           quality: 100,
-        );
+        ) as Map<dynamic, dynamic>;
 
         if (result['isSuccess'] == true) {
-          if (kDebugMode) debugPrint('ShareUtils: Android图片保存成功');
+          if (kDebugMode) {
+            debugPrint('ShareUtils: Android图片保存成功');
+          }
           return true;
         } else {
-          final errorMsg = result['errorMessage'] ?? '未知错误';
-          if (kDebugMode) debugPrint('ShareUtils: Android图片保存失败: $errorMsg');
+          final errorMsg = result['errorMessage']?.toString() ?? '未知错误';
+          if (kDebugMode) {
+            debugPrint('ShareUtils: Android图片保存失败: $errorMsg');
+          }
 
           // Android特殊错误处理
           if (errorMsg.contains('permission') ||
@@ -3233,10 +2420,14 @@ class ShareUtils {
       }
 
       // 其他平台
-      if (kDebugMode) debugPrint('ShareUtils: 不支持的平台');
+      if (kDebugMode) {
+        debugPrint('ShareUtils: 不支持的平台');
+      }
       return false;
-    } catch (e) {
-      if (kDebugMode) debugPrint('ShareUtils: 保存图片异常: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('ShareUtils: 保存图片异常: $e');
+      }
       rethrow; // 重新抛出异常，让上层处理
     }
   }

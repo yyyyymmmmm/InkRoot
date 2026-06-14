@@ -213,14 +213,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareImageSaving => 'Saving image...';
 
   @override
-  String get shareImageSavingToAlbum => 'Saving to album, please wait';
+  String get shareImageSavingToAlbum => 'Saving image, please wait';
 
   @override
-  String get shareImageSaveSuccess => 'Image saved to album';
+  String get shareImageSaveSuccess => 'Image saved';
 
   @override
   String get shareImageSaveFailed =>
-      'Save failed, please check album permissions';
+      'Save failed. Please check permissions or save location';
 
   @override
   String get shareImageShareFailed => 'Share failed';

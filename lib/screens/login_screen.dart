@@ -149,10 +149,10 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _loadAnnouncements() async {
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
-      
+
       // 从 AppProvider 获取公告
       await appProvider.refreshAnnouncements();
-      
+
       if (mounted) {
         setState(() {
           // 获取 AppProvider 的公告列表，只显示非更新类型的通知
@@ -165,13 +165,13 @@ class _LoginScreenState extends State<LoginScreen>
         // 🚀 总是启动跑马灯滚动（云通知或默认静态公告都需要）
         _startAutoScroll();
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('LoginScreen: 加载云通知失败: $e');
       if (mounted) {
         setState(() {
           _isLoadingAnnouncements = false;
         });
-        
+
         // 🚀 即使加载失败，也启动跑马灯显示默认公告
         _startAutoScroll();
       }
@@ -181,18 +181,22 @@ class _LoginScreenState extends State<LoginScreen>
   /// 启动自动滚动（跑马灯效果）
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
-    
+
     // 等待布局完成后再开始滚动
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_announcementScrollController.hasClients) return;
-      
-      _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!mounted || !_announcementScrollController.hasClients) {
+        return;
+      }
+
+      _autoScrollTimer =
+          Timer.periodic(const Duration(milliseconds: 50), (timer) {
         if (!mounted || !_announcementScrollController.hasClients) {
           timer.cancel();
           return;
         }
 
-        final maxScroll = _announcementScrollController.position.maxScrollExtent;
+        final maxScroll =
+            _announcementScrollController.position.maxScrollExtent;
         final currentScroll = _announcementScrollController.offset;
 
         // 如果滚动到末尾，重置到开头
@@ -209,17 +213,17 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _loadSavedLoginInfo() async {
     debugPrint('LoginScreen: 加载保存的登录信息');
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    
+
     // 🎯 大厂标准：加载服务器选择偏好（跨页面共享）
     final prefsService = appProvider.preferencesService;
     final useCustomServer = await prefsService.getUseCustomServer();
     final customServerUrl = await prefsService.getCustomServerUrl();
-    
+
     final savedServer = await appProvider.getSavedServer();
     final savedUsername = await appProvider.getSavedUsername();
     final savedPassword = await appProvider.getSavedPassword();
     final savedToken = await appProvider.getSavedToken(); // 获取保存的token
-    
+
     debugPrint('LoginScreen: 使用自定义服务器: $useCustomServer');
     debugPrint('LoginScreen: 自定义服务器地址: $customServerUrl');
 
@@ -246,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     // 🔑 检查是否有有效的token可以快速登录
     if (savedToken != null && savedServer != null && savedUsername != null) {
-      _attemptQuickLogin(savedServer, savedToken);
+      unawaited(_attemptQuickLogin(savedServer, savedToken));
     }
   }
 
@@ -254,15 +258,15 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _onServerTypeChanged(bool useCustom) async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final prefsService = appProvider.preferencesService;
-    
+
     if (useCustom) {
       // 切换到自定义：显示之前保存的自定义地址，如果没有则清空
       final savedCustomUrl = await prefsService.getCustomServerUrl();
       setState(() {
         _useCustomServer = true;
-        _serverController.text = (savedCustomUrl != null && 
-                savedCustomUrl != AppConfig.officialMemosServer) 
-            ? savedCustomUrl 
+        _serverController.text = (savedCustomUrl != null &&
+                savedCustomUrl != AppConfig.officialMemosServer)
+            ? savedCustomUrl
             : ''; // 清空输入框，让用户输入
       });
     } else {
@@ -273,21 +277,21 @@ class _LoginScreenState extends State<LoginScreen>
       });
       await prefsService.saveCustomServerUrl(AppConfig.officialMemosServer);
     }
-    
+
     // 保存选择到SharedPreferences，实现跨页面同步
     await prefsService.saveUseCustomServer(useCustom);
-    
+
     debugPrint('LoginScreen: 服务器选择已更改: ${useCustom ? "自定义" : "官方"}');
   }
-  
+
   // 🎯 大厂标准：处理自定义服务器地址变化
   Future<void> _onCustomServerUrlChanged(String url) async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final prefsService = appProvider.preferencesService;
-    
+
     // 保存到SharedPreferences，实现跨页面同步
     await prefsService.saveCustomServerUrl(url);
-    
+
     debugPrint('LoginScreen: 自定义服务器地址已更新: $url');
   }
 
@@ -309,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen>
           try {
             debugPrint('LoginScreen: 开始后台数据同步');
             await appProvider.fetchNotesFromServer();
-          } catch (e) {
+          } on Object catch (e) {
             debugPrint('LoginScreen: 后台同步失败: $e');
           }
         });
@@ -317,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen>
         // Token失效，清除保存的登录信息，让用户手动登录
         await appProvider.clearLoginInfo();
       }
-    } catch (e) {
+    } on Object {
       // 异常情况下清除保存的登录信息
       if (mounted) {
         final appProvider = Provider.of<AppProvider>(context, listen: false);
@@ -327,7 +331,9 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -356,25 +362,29 @@ class _LoginScreenState extends State<LoginScreen>
 
         // 🎉 成功动画
         await _scaleController.reverse();
+        if (!mounted) {
+          return;
+        }
 
         context.go('/');
 
         // 后台执行数据同步
-        Future.microtask(() async {
-          try {
-            debugPrint('LoginScreen: 开始后台数据同步');
-            await appProvider.fetchNotesFromServer();
-            final hasLocalData = await appProvider.hasLocalData();
-            if (hasLocalData) {
-              await appProvider.syncLocalDataToServer();
+        unawaited(
+          Future.microtask(() async {
+            try {
+              debugPrint('LoginScreen: 开始后台数据同步');
+              await appProvider.fetchNotesFromServer();
+              final hasLocalData = await appProvider.hasLocalData();
+              if (hasLocalData) {
+                await appProvider.syncLocalDataToServer();
+              }
+            } on Object catch (e) {
+              debugPrint('LoginScreen: 后台同步失败: $e');
             }
-          } catch (e) {
-            debugPrint('LoginScreen: 后台同步失败: $e');
-          }
-        });
+          }),
+        );
       } else if (mounted) {
         debugPrint('LoginScreen: 登录失败: ${result.$2}');
-        final l10n = AppLocalizationsSimple.of(context);
         SnackBarUtils.showError(
           context,
           result.$2 ??
@@ -384,7 +394,7 @@ class _LoginScreenState extends State<LoginScreen>
           onRetry: _login,
         );
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('LoginScreen: 登录异常: $e');
       if (mounted) {
         SnackBarUtils.showNetworkError(
@@ -404,92 +414,95 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _showSuccessLoginDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) => AlertDialog(
-        backgroundColor: isDarkMode ? AppTheme.darkCardColor : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        contentPadding: ResponsiveUtils.responsivePadding(context, all: 24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 成功动画图标
-            TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 800),
-              tween: Tween<double>(begin: 0, end: 1),
-              curve: Curves.elasticOut,
-              builder: (context, value, child) => Transform.scale(
-                scale: value,
-                child: Container(
-                  width: ResponsiveUtils.responsiveIconSize(context, 80),
-                  height: ResponsiveUtils.responsiveIconSize(context, 80),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.green.withOpacity(0.1),
-                        Colors.green.withOpacity(0.05),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) => AlertDialog(
+          backgroundColor: isDarkMode ? AppTheme.darkCardColor : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: ResponsiveUtils.responsivePadding(context, all: 24),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 成功动画图标
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 800),
+                tween: Tween<double>(begin: 0, end: 1),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) => Transform.scale(
+                  scale: value,
+                  child: Container(
+                    width: ResponsiveUtils.responsiveIconSize(context, 80),
+                    height: ResponsiveUtils.responsiveIconSize(context, 80),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.green.withValues(alpha: 0.1),
+                          Colors.green.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(40),
                     ),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: Icon(
-                    Icons.check_circle_rounded,
-                    size: ResponsiveUtils.responsiveIconSize(context, 50),
-                    color: Colors.green,
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: ResponsiveUtils.responsiveIconSize(context, 50),
+                      color: Colors.green,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 20)),
+              SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 20)),
 
-            Text(
-              AppLocalizationsSimple.of(context)?.loginSuccessful ?? '登录成功！',
-              style: TextStyle(
-                fontSize: ResponsiveUtils.responsiveFontSize(context, 20),
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppTheme.textPrimaryColor,
+              Text(
+                AppLocalizationsSimple.of(context)?.loginSuccessful ?? '登录成功！',
+                style: TextStyle(
+                  fontSize: ResponsiveUtils.responsiveFontSize(context, 20),
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : AppTheme.textPrimaryColor,
+                ),
               ),
-            ),
 
-            SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 12)),
+              SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 12)),
 
-            Text(
-              AppLocalizationsSimple.of(context)?.welcomeBackPreparingSpace ??
-                  '欢迎回来！正在为您准备个人笔记空间...',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: ResponsiveUtils.responsiveFontSize(context, 14),
-                color: isDarkMode ? Colors.white70 : Colors.black54,
-                height: 1.5,
+              Text(
+                AppLocalizationsSimple.of(context)?.welcomeBackPreparingSpace ??
+                    '欢迎回来！正在为您准备个人笔记空间...',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: ResponsiveUtils.responsiveFontSize(context, 14),
+                  color: isDarkMode ? Colors.white70 : Colors.black54,
+                  height: 1.5,
+                ),
               ),
-            ),
 
-            SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 20)),
+              SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 20)),
 
-            // 加载进度指示器
-            SizedBox(
-              width: ResponsiveUtils.responsive<double>(
-                context,
-                mobile: 200,
-                tablet: 220,
-                desktop: 250,
+              // 加载进度指示器
+              SizedBox(
+                width: ResponsiveUtils.responsive<double>(
+                  context,
+                  mobile: 200,
+                  tablet: 220,
+                  desktop: 250,
+                ),
+                child: LinearProgressIndicator(
+                  backgroundColor:
+                      isDarkMode ? Colors.grey[700] : Colors.grey[200],
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppTheme.primaryColor,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                  minHeight: 6,
+                ),
               ),
-              child: LinearProgressIndicator(
-                backgroundColor:
-                    isDarkMode ? Colors.grey[700] : Colors.grey[200],
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                borderRadius: BorderRadius.circular(4),
-                minHeight: 6,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -505,12 +518,10 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final screenHeight = MediaQuery.of(context).size.height;
-    final l10n = AppLocalizationsSimple.of(context);
 
     // 🎨 现代化配色方案 - 绿色主题
     const primaryColor = AppTheme.primaryColor;
     const primaryLight = AppTheme.primaryLightColor;
-    const primaryDark = AppTheme.primaryDarkColor;
 
     final surfaceColor =
         isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor;
@@ -671,7 +682,6 @@ class _LoginScreenState extends State<LoginScreen>
           constraints: const BoxConstraints(maxWidth: 1000),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 左侧装饰区域
               Expanded(
@@ -751,7 +761,6 @@ class _LoginScreenState extends State<LoginScreen>
           child: Padding(
             padding: const EdgeInsets.all(48),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // 左侧装饰区域
                 Expanded(
@@ -859,8 +868,8 @@ class _LoginScreenState extends State<LoginScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      primaryColor.withOpacity(0.15),
-                      primaryColor.withOpacity(0.05),
+                      primaryColor.withValues(alpha: 0.15),
+                      primaryColor.withValues(alpha: 0.05),
                       Colors.transparent,
                     ],
                   ),
@@ -879,8 +888,8 @@ class _LoginScreenState extends State<LoginScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      primaryColor.withOpacity(0.1),
-                      primaryColor.withOpacity(0.03),
+                      primaryColor.withValues(alpha: 0.1),
+                      primaryColor.withValues(alpha: 0.03),
                       Colors.transparent,
                     ],
                   ),
@@ -902,7 +911,7 @@ class _LoginScreenState extends State<LoginScreen>
       Container(
         margin: const EdgeInsets.all(12),
         child: Material(
-          color: cardColor.withOpacity(0.9),
+          color: cardColor.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
@@ -914,8 +923,8 @@ class _LoginScreenState extends State<LoginScreen>
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
               ),
               child: Icon(
@@ -983,7 +992,7 @@ class _LoginScreenState extends State<LoginScreen>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryColor.withOpacity(0.3),
+                        color: primaryColor.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -1061,10 +1070,10 @@ class _LoginScreenState extends State<LoginScreen>
           vertical: 12,
         ),
         decoration: BoxDecoration(
-          color: primaryColor.withOpacity(0.05),
+          color: primaryColor.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
           ),
         ),
         child: Row(
@@ -1101,7 +1110,7 @@ class _LoginScreenState extends State<LoginScreen>
       // 使用云通知内容
       announcementText = _announcements.map((a) => a.content).join('  •  ');
     }
-    
+
     return Container(
       height: ResponsiveUtils.responsive<double>(
         context,
@@ -1116,19 +1125,19 @@ class _LoginScreenState extends State<LoginScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primaryColor.withOpacity(isDarkMode ? 0.12 : 0.08),
-            primaryColor.withOpacity(isDarkMode ? 0.08 : 0.04),
+            primaryColor.withValues(alpha: isDarkMode ? 0.12 : 0.08),
+            primaryColor.withValues(alpha: isDarkMode ? 0.08 : 0.04),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: primaryColor.withOpacity(isDarkMode ? 0.25 : 0.2),
+          color: primaryColor.withValues(alpha: isDarkMode ? 0.25 : 0.2),
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.06),
+            color: primaryColor.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1140,7 +1149,7 @@ class _LoginScreenState extends State<LoginScreen>
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(isDarkMode ? 0.2 : 0.15),
+              color: primaryColor.withValues(alpha: isDarkMode ? 0.2 : 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
@@ -1172,7 +1181,9 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                     // 为了实现无缝循环，添加一段空白后再重复一次文本
-                    SizedBox(width: ResponsiveUtils.responsiveSpacing(context, 40)),
+                    SizedBox(
+                      width: ResponsiveUtils.responsiveSpacing(context, 40),
+                    ),
                     Text(
                       announcementText,
                       style: TextStyle(
@@ -1195,139 +1206,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // 🔔 构建单个通知卡片
-  Widget _buildAnnouncementCard({
-    required Announcement announcement,
-    required Color primaryColor,
-    required Color textPrimary,
-    required Color textSecondary,
-    required bool isDarkMode,
-  }) {
-    // 根据通知类型选择图标和颜色
-    IconData icon;
-    Color accentColor;
-
-    switch (announcement.type) {
-      case 'warning':
-        icon = Icons.warning_amber_rounded;
-        accentColor = Colors.orange;
-        break;
-      case 'event':
-        icon = Icons.celebration_outlined;
-        accentColor = Colors.purple;
-        break;
-      case 'info':
-      default:
-        icon = Icons.info_outline;
-        accentColor = primaryColor;
-        break;
-    }
-
-    return Container(
-      padding: ResponsiveUtils.responsivePadding(
-        context,
-        horizontal: 16,
-        vertical: 14,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            accentColor.withOpacity(isDarkMode ? 0.12 : 0.08),
-            accentColor.withOpacity(isDarkMode ? 0.08 : 0.04),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: accentColor.withOpacity(isDarkMode ? 0.3 : 0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 图标
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(isDarkMode ? 0.2 : 0.15),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: accentColor.withOpacity(0.2),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: ResponsiveUtils.responsiveIconSize(context, 18),
-              color: accentColor,
-            ),
-          ),
-          SizedBox(
-            width: ResponsiveUtils.responsiveSpacing(context, 14),
-          ),
-          // 内容
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 标题
-                Text(
-                  announcement.title,
-                  style: TextStyle(
-                    fontSize: ResponsiveUtils.responsiveFontSize(
-                      context,
-                      13.5,
-                    ),
-                    fontWeight: FontWeight.w700,
-                    color: accentColor,
-                    height: 1.3,
-                    letterSpacing: 0.1,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (announcement.content.isNotEmpty) ...[
-                  SizedBox(
-                    height: ResponsiveUtils.responsiveSpacing(
-                      context,
-                      4,
-                    ),
-                  ),
-                  Text(
-                    announcement.content,
-                    style: TextStyle(
-                      fontSize: ResponsiveUtils.responsiveFontSize(
-                        context,
-                        11.5,
-                      ),
-                      color: textSecondary,
-                      height: 1.4,
-                      letterSpacing: 0.05,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // 📝 登录表单
   Widget _buildLoginForm({
     required Color cardColor,
@@ -1336,154 +1214,156 @@ class _LoginScreenState extends State<LoginScreen>
     required Color primaryColor,
     required Color primaryLight,
     required bool isDarkMode,
-  }) {
-    final l10n = AppLocalizationsSimple.of(context);
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Container(
-          margin: ResponsiveUtils.responsivePadding(context, horizontal: 24),
-          decoration: BoxDecoration(
-            color: cardColor.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(
-              ResponsiveUtils.responsive<double>(
-                context,
-                mobile: 24,
-                tablet: 28,
-                desktop: 32,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDarkMode
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-            border: Border.all(
-              color: isDarkMode
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.05),
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: cardColor.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(24),
+  }) =>
+      SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Container(
+            margin: ResponsiveUtils.responsivePadding(context, horizontal: 24),
+            decoration: BoxDecoration(
+              color: cardColor.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(
+                ResponsiveUtils.responsive<double>(
+                  context,
+                  mobile: 24,
+                  tablet: 28,
+                  desktop: 32,
                 ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 服务器选择
-                      _buildServerSection(
-                        textPrimary,
-                        textSecondary,
-                        primaryColor,
-                        isDarkMode,
-                      ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDarkMode
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(
+                color: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: cardColor.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 服务器选择
+                        _buildServerSection(
+                          textPrimary,
+                          textSecondary,
+                          primaryColor,
+                          isDarkMode,
+                        ),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // 用户名
-                      _buildTextField(
-                        controller: _usernameController,
-                        label: AppLocalizationsSimple.of(context)?.username ??
-                            '用户名',
-                        hint: AppLocalizationsSimple.of(context)?.username ??
-                            '请输入您的用户名',
-                        icon: Icons.person_outline,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        primaryColor: primaryColor,
-                        isDarkMode: isDarkMode,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return '请填写用户名，不能为空';
-                          }
-                          if (value.trim().length < 2) {
-                            return '用户名太短了，至少需要 2 个字符';
-                          }
-                          if (value.contains(' ')) {
-                            return '用户名里不能有空格，请去掉空格再试';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // 密码
-                      _buildTextField(
-                        controller: _passwordController,
-                        label: AppLocalizationsSimple.of(context)?.password ??
-                            '密码',
-                        hint: AppLocalizationsSimple.of(context)
-                                ?.pleaseEnterPassword ??
-                            '请输入您的密码',
-                        icon: Icons.lock_outline,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        primaryColor: primaryColor,
-                        isDarkMode: isDarkMode,
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: textSecondary,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
+                        // 用户名
+                        _buildTextField(
+                          controller: _usernameController,
+                          label: AppLocalizationsSimple.of(context)?.username ??
+                              '用户名',
+                          hint: AppLocalizationsSimple.of(context)?.username ??
+                              '请输入您的用户名',
+                          icon: Icons.person_outline,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          primaryColor: primaryColor,
+                          isDarkMode: isDarkMode,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return '请填写用户名，不能为空';
+                            }
+                            if (value.trim().length < 2) {
+                              return '用户名太短了，至少需要 2 个字符';
+                            }
+                            if (value.contains(' ')) {
+                              return '用户名里不能有空格，请去掉空格再试';
+                            }
+                            return null;
                           },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return '请填写密码，不能为空';
-                          }
-                          if (value.length < 6) {
-                            return '密码太短了，至少需要 6 位';
-                          }
-                          return null;
-                        },
-                      ),
 
-                      const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
-                      // 记住密码开关
-                      _buildRememberSwitch(
-                        textPrimary,
-                        textSecondary,
-                        primaryColor,
-                      ),
+                        // 密码
+                        _buildTextField(
+                          controller: _passwordController,
+                          label: AppLocalizationsSimple.of(context)?.password ??
+                              '密码',
+                          hint: AppLocalizationsSimple.of(context)
+                                  ?.pleaseEnterPassword ??
+                              '请输入您的密码',
+                          icon: Icons.lock_outline,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
+                          primaryColor: primaryColor,
+                          isDarkMode: isDarkMode,
+                          obscureText: _obscurePassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: textSecondary,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return '请填写密码，不能为空';
+                            }
+                            if (value.length < 6) {
+                              return '密码太短了，至少需要 6 位';
+                            }
+                            return null;
+                          },
+                        ),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 20),
 
-                      // 登录按钮
-                      _buildLoginButton(primaryColor, primaryLight, isDarkMode),
-                    ],
+                        // 记住密码开关
+                        _buildRememberSwitch(
+                          textPrimary,
+                          textSecondary,
+                          primaryColor,
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // 登录按钮
+                        _buildLoginButton(
+                          primaryColor,
+                          primaryLight,
+                          isDarkMode,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
 
   // 🎯 大厂标准：服务器选择器（下拉框 + 条件显示输入框）
   Widget _buildServerSection(
@@ -1491,224 +1371,223 @@ class _LoginScreenState extends State<LoginScreen>
     Color textSecondary,
     Color primaryColor,
     bool isDarkMode,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 服务器类型选择标题
-        Text(
-          AppLocalizationsSimple.of(context)?.server ?? '服务器',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: textPrimary,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-        
-        // 下拉选择框（官方/自定义）
-        Container(
-          decoration: BoxDecoration(
-            color: isDarkMode
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDarkMode
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.08),
-              width: 1,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<bool>(
-              value: _useCustomServer,
-              isExpanded: true,
-              icon: Icon(
-                Icons.arrow_drop_down,
-                color: primaryColor,
-              ),
-              dropdownColor: isDarkMode
-                  ? AppTheme.darkCardColor
-                  : AppTheme.surfaceColor,
-              style: TextStyle(
-                fontSize: 15,
-                color: textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: false,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.verified_outlined,
-                        size: 20,
-                        color: primaryColor,
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            AppLocalizationsSimple.of(context)?.officialServer ?? '官方服务器',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: textPrimary,
-                            ),
-                          ),
-                          Text(
-                            AppLocalizationsSimple.of(context)?.recommended ?? '推荐使用',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: true,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.dns_outlined,
-                        size: 20,
-                        color: textSecondary,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        AppLocalizationsSimple.of(context)?.customServer ?? '自定义服务器',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  _onServerTypeChanged(value);
-                }
-              },
-            ),
-          ),
-        ),
-        
-        // 🎯 自定义服务器地址输入框（仅在选择自定义时显示）
-        if (_useCustomServer) ...[
-          const SizedBox(height: 20),
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 服务器类型选择标题
           Text(
-            AppLocalizationsSimple.of(context)?.serverAddress ?? '服务器地址',
+            AppLocalizationsSimple.of(context)?.server ?? '服务器',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: textPrimary,
+              height: 1.5,
             ),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: _serverController,
-            style: TextStyle(
-              fontSize: 16,
-              color: textPrimary,
-              fontWeight: FontWeight.w500,
+
+          // 下拉选择框（官方/自定义）
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.08),
+              ),
             ),
-            keyboardType: TextInputType.url,
-            onChanged: (value) {
-              // 实时保存到SharedPreferences
-              _onCustomServerUrlChanged(value);
-            },
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return '请填写服务器地址，例如：https://demo.memos.app';
-              }
-              if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                return '地址格式不对，需要以 https:// 开头\n示例：https://demo.memos.app';
-              }
-              return null;
-            },
-            decoration: InputDecoration(
-              hintText: 'https://your-memos-server.com',
-              hintStyle: TextStyle(
-                color: textSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.normal,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.cloud_outlined,
-                  size: 18,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<bool>(
+                value: _useCustomServer,
+                isExpanded: true,
+                icon: Icon(
+                  Icons.arrow_drop_down,
                   color: primaryColor,
                 ),
-              ),
-              filled: true,
-              fillColor: isDarkMode
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.black.withOpacity(0.02),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
+                dropdownColor:
+                    isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: textPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: primaryColor,
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 1.5,
-                ),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 2,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
+                items: [
+                  DropdownMenuItem(
+                    value: false,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          size: 20,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              AppLocalizationsSimple.of(context)
+                                      ?.officialServer ??
+                                  '官方服务器',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: textPrimary,
+                              ),
+                            ),
+                            Text(
+                              AppLocalizationsSimple.of(context)?.recommended ??
+                                  '推荐使用',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: true,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.dns_outlined,
+                          size: 20,
+                          color: textSecondary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          AppLocalizationsSimple.of(context)?.customServer ??
+                              '自定义服务器',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    _onServerTypeChanged(value);
+                  }
+                },
               ),
             ),
           ),
+
+          // 🎯 自定义服务器地址输入框（仅在选择自定义时显示）
+          if (_useCustomServer) ...[
+            const SizedBox(height: 20),
+            Text(
+              AppLocalizationsSimple.of(context)?.serverAddress ?? '服务器地址',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _serverController,
+              style: TextStyle(
+                fontSize: 16,
+                color: textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+              keyboardType: TextInputType.url,
+              onChanged: _onCustomServerUrlChanged,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return '请填写服务器地址，例如：https://demo.memos.app';
+                }
+                if (!value.startsWith('http://') &&
+                    !value.startsWith('https://')) {
+                  return '地址格式不对，需要以 https:// 开头\n示例：https://demo.memos.app';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: 'https://your-memos-server.com',
+                hintStyle: TextStyle(
+                  color: textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.normal,
+                ),
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(12),
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.cloud_outlined,
+                    size: 18,
+                    color: primaryColor,
+                  ),
+                ),
+                filled: true,
+                fillColor: isDarkMode
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : Colors.black.withValues(alpha: 0.02),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: primaryColor,
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 1.5,
+                  ),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Colors.red,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ],
         ],
-      ],
-    );
-  }
+      );
 
   // 📝 输入框组件
   Widget _buildTextField({
@@ -1757,7 +1636,7 @@ class _LoginScreenState extends State<LoginScreen>
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -1769,22 +1648,22 @@ class _LoginScreenState extends State<LoginScreen>
               suffixIcon: suffixIcon,
               filled: true,
               fillColor: isDarkMode
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.black.withOpacity(0.02),
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : Colors.black.withValues(alpha: 0.02),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.08),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.08),
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.08),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -1818,7 +1697,7 @@ class _LoginScreenState extends State<LoginScreen>
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
@@ -1855,7 +1734,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           Switch.adaptive(
             value: _rememberLogin,
-            activeColor: primaryColor,
+            activeThumbColor: primaryColor,
             onChanged: (value) {
               setState(() {
                 _rememberLogin = value;
@@ -1870,64 +1749,62 @@ class _LoginScreenState extends State<LoginScreen>
     Color primaryColor,
     Color primaryLight,
     bool isDarkMode,
-  ) {
-    final l10n = AppLocalizationsSimple.of(context);
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: _isLoading
-            ? null
-            : LinearGradient(
-                colors: [
-                  primaryColor,
-                  primaryLight,
-                ],
-              ),
-        color: _isLoading
-            ? (isDarkMode ? Colors.grey[700] : Colors.grey[300])
-            : null,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: _isLoading
-            ? []
-            : [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+  ) =>
+      Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: _isLoading
+              ? null
+              : LinearGradient(
+                  colors: [
+                    primaryColor,
+                    primaryLight,
+                  ],
                 ),
-              ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+          color: _isLoading
+              ? (isDarkMode ? Colors.grey[700] : Colors.grey[300])
+              : null,
           borderRadius: BorderRadius.circular(16),
-          onTap: _isLoading ? null : _login,
-          child: Container(
-            alignment: Alignment.center,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    AppLocalizationsSimple.of(context)?.login ?? '登录',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
+          boxShadow: _isLoading
+              ? []
+              : [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
+                ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _isLoading ? null : _login,
+            child: Container(
+              alignment: Alignment.center,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      AppLocalizationsSimple.of(context)?.login ?? '登录',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 
   // 🔗 快速操作
   Widget _buildQuickActions({
@@ -1984,10 +1861,10 @@ class _LoginScreenState extends State<LoginScreen>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.05),
+                color: primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: primaryColor.withOpacity(0.15),
+                  color: primaryColor.withValues(alpha: 0.15),
                 ),
               ),
               child: Column(
@@ -2030,7 +1907,7 @@ class _LoginScreenState extends State<LoginScreen>
                     '遇到问题？点右上角 ? 查看常见问题解答',
                     style: TextStyle(
                       fontSize: 11,
-                      color: textSecondary.withOpacity(0.8),
+                      color: textSecondary.withValues(alpha: 0.8),
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -2040,203 +1917,6 @@ class _LoginScreenState extends State<LoginScreen>
           ],
         ),
       );
-
-  // 🔧 自定义服务器对话框
-  void _showCustomServerDialog() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final dialogColor =
-        isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    const primaryColor = AppTheme.primaryColor;
-
-    final customServerController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Dialog(
-          backgroundColor: dialogColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.dns_outlined,
-                        color: primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      AppLocalizationsSimple.of(context)?.customServer ??
-                          '自定义服务器',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.orange.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.orange,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          AppLocalizationsSimple.of(context)
-                                  ?.customServerWarning ??
-                              '使用自定义服务器可能会影响使用体验',
-                          style: TextStyle(
-                            color: Colors.orange[700],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: customServerController,
-                  decoration: InputDecoration(
-                    labelText:
-                        AppLocalizationsSimple.of(context)?.serverAddress ??
-                            '服务器地址',
-                    hintText: 'https://your-server.com',
-                    prefixIcon: const Icon(Icons.language, color: primaryColor),
-                    filled: true,
-                    fillColor: isDarkMode
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.02),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: isDarkMode
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.black.withOpacity(0.08),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide:
-                          const BorderSide(color: primaryColor, width: 2),
-                    ),
-                  ),
-                  style: TextStyle(fontSize: 16, color: textColor),
-                  keyboardType: TextInputType.url,
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // 🎯 大厂标准：提供快捷返回官方服务器的选项
-                    TextButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _useCustomServer = false;
-                          _serverController.text = AppConfig.officialMemosServer;
-                        });
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(Icons.home_outlined, size: 18),
-                      label: const Text(
-                        '使用官方',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      style: TextButton.styleFrom(
-                        foregroundColor: primaryColor,
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(
-                            AppLocalizationsSimple.of(context)?.cancel ?? '取消',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            final customServer = customServerController.text.trim();
-                            if (customServer.isNotEmpty) {
-                              setState(() {
-                                _useCustomServer = true;
-                                _serverController.text =
-                                    customServer.startsWith('http')
-                                        ? customServer
-                                        : 'https://$customServer';
-                              });
-                            }
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          child: Text(
-                            AppLocalizationsSimple.of(context)?.confirm ?? '确定',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // 🆘 帮助对话框 - 常见问题
   void _showHelpDialog() {
@@ -2268,12 +1948,12 @@ class _LoginScreenState extends State<LoginScreen>
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isDarkMode
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.4 : 0.1),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.4 : 0.1),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
@@ -2288,8 +1968,8 @@ class _LoginScreenState extends State<LoginScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        primaryColor.withOpacity(0.1),
-                        accentColor.withOpacity(0.05),
+                        primaryColor.withValues(alpha: 0.1),
+                        accentColor.withValues(alpha: 0.05),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -2305,7 +1985,7 @@ class _LoginScreenState extends State<LoginScreen>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.15),
+                          color: primaryColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
@@ -2477,8 +2157,8 @@ class _LoginScreenState extends State<LoginScreen>
                     border: Border(
                       top: BorderSide(
                         color: isDarkMode
-                            ? Colors.white.withOpacity(0.1)
-                            : Colors.black.withOpacity(0.05),
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.black.withValues(alpha: 0.05),
                       ),
                     ),
                   ),
@@ -2544,13 +2224,13 @@ class _LoginScreenState extends State<LoginScreen>
       DecoratedBox(
         decoration: BoxDecoration(
           color: isDarkMode
-              ? Colors.white.withOpacity(0.03)
-              : Colors.black.withOpacity(0.02),
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.08)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.05),
           ),
         ),
         child: Theme(
@@ -2560,7 +2240,7 @@ class _LoginScreenState extends State<LoginScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -2587,8 +2267,8 @@ class _LoginScreenState extends State<LoginScreen>
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: isDarkMode
-                      ? Colors.white.withOpacity(0.03)
-                      : Colors.black.withOpacity(0.02),
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.black.withValues(alpha: 0.02),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(

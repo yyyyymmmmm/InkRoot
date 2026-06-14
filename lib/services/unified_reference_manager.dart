@@ -1,4 +1,6 @@
 // 统一引用管理器 - 一体化双向引用系统
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/services/database_service.dart';
@@ -160,10 +162,12 @@ class UnifiedReferenceManager {
       // 引用关系创建成功
 
       // 8. 后台同步到服务器（不阻塞UI）
-      _syncToServerInBackground(sourceNoteId, targetNoteId, 'CREATE');
+      unawaited(
+        _syncToServerInBackground(sourceNoteId, targetNoteId, 'CREATE'),
+      );
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       _handleError('创建引用关系失败: $e');
       return false;
     }
@@ -264,10 +268,12 @@ class UnifiedReferenceManager {
       }
 
       // 7. 后台同步到服务器
-      _syncToServerInBackground(sourceNoteId, targetNoteId, 'DELETE');
+      unawaited(
+        _syncToServerInBackground(sourceNoteId, targetNoteId, 'DELETE'),
+      );
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       _handleError('删除引用关系失败: $e');
       return false;
     }
@@ -283,7 +289,9 @@ class UnifiedReferenceManager {
     String noteId,
     String content,
   ) async {
-    if (_databaseService == null) return false;
+    if (_databaseService == null) {
+      return false;
+    }
 
     if (kDebugMode) {
       // 🚀 智能更新引用关系（静默处理）
@@ -347,7 +355,9 @@ class UnifiedReferenceManager {
             // 优先精确匹配，然后前缀匹配
             final targetNote = notes.firstWhere((n) {
               final content = n.content.trim();
-              if (content == refId) return true;
+              if (content == refId) {
+                return true;
+              }
 
               final cleanContent =
                   content.replaceAll(RegExp(r'[*_#`\[\]\(\)]'), '').trim();
@@ -389,13 +399,17 @@ class UnifiedReferenceManager {
       // 删除旧关系
       for (final targetId in toRemove) {
         final result = await removeReference(noteId, targetId);
-        if (!result) success = false;
+        if (!result) {
+          success = false;
+        }
       }
 
       // 创建新关系
       for (final targetId in toAdd) {
         final result = await createReference(noteId, targetId);
-        if (!result) success = false;
+        if (!result) {
+          success = false;
+        }
       }
 
       if (kDebugMode) {
@@ -406,7 +420,7 @@ class UnifiedReferenceManager {
       }
 
       return success;
-    } catch (e) {
+    } on Object catch (e) {
       _handleError('智能更新引用失败: $e');
       return false;
     }
@@ -440,14 +454,18 @@ class UnifiedReferenceManager {
   ) async {
     // 这里实现服务器同步逻辑
     // 不阻塞主线程，在后台执行
-    Future.microtask(() async {
-      try {
-        // 调用实际的服务器同步逻辑
-        if (_syncReferenceToServerUnified != null) {
-          await _syncReferenceToServerUnified!(sourceId, targetId, action);
+    unawaited(
+      Future.microtask(() async {
+        try {
+          // 调用实际的服务器同步逻辑
+          if (_syncReferenceToServerUnified != null) {
+            await _syncReferenceToServerUnified!(sourceId, targetId, action);
+          }
+        } on Object catch (_) {
+          // Server sync is retried by later sync flows; local relation stays valid.
         }
-      } catch (e) {}
-    });
+      }),
+    );
   }
 
   /// 错误处理
@@ -457,7 +475,9 @@ class UnifiedReferenceManager {
 
   /// 🧹 清理孤立的引用关系
   Future<int> cleanupOrphanedReferences() async {
-    if (_databaseService == null) return 0;
+    if (_databaseService == null) {
+      return 0;
+    }
 
     try {
       final notes = await _databaseService!.getNotes();
@@ -470,10 +490,14 @@ class UnifiedReferenceManager {
 
         // 清理孤立的REFERENCED_BY关系
         final cleanedRelations = note.relations.where((rel) {
-          if (rel['type'] != 'REFERENCED_BY') return true;
+          if (rel['type'] != 'REFERENCED_BY') {
+            return true;
+          }
 
           final sourceNoteId = rel['memoId']?.toString();
-          if (sourceNoteId == null) return false;
+          if (sourceNoteId == null) {
+            return false;
+          }
 
           // 检查源笔记是否存在
           final sourceNote = notes.firstWhere(
@@ -486,7 +510,10 @@ class UnifiedReferenceManager {
             ),
           );
 
-          if (sourceNote.id.isEmpty) return false; // 源笔记不存在
+          if (sourceNote.id.isEmpty) {
+            // 源笔记不存在
+            return false;
+          }
 
           // 检查源笔记是否有对应的REFERENCE关系
           final hasCorrespondingReference = sourceNote.relations.any(
@@ -514,7 +541,7 @@ class UnifiedReferenceManager {
       }
 
       return cleanedCount;
-    } catch (e) {
+    } on Object catch (e) {
       _handleError('清理孤立引用失败: $e');
       return 0;
     }
@@ -562,7 +589,7 @@ class UnifiedReferenceManager {
       } else {}
 
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       _handleError('清理无效引用失败: $e');
       return false;
     }

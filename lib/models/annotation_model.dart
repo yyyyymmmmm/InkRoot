@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
+import 'package:inkroot/utils/logger.dart';
 
 /// 批注类型枚举
 enum AnnotationType {
-  comment,    // 💬 评论
-  question,   // ❓ 问题
-  idea,       // 💡 想法
-  important,  // ⭐ 重要
-  todo,       // ✅ 待办
+  comment, // 💬 评论
+  question, // ❓ 问题
+  idea, // 💡 想法
+  important, // ⭐ 重要
+  todo, // ✅ 待办
 }
 
 /// 批注模型 - 专业版
-/// 
+///
 /// 对标 Notion、Obsidian 等成熟笔记软件的批注系统
 class Annotation {
   const Annotation({
@@ -33,28 +34,31 @@ class Annotation {
   /// 从Map创建批注对象（用于数据库读取）
   factory Annotation.fromMap(Map<String, dynamic> map) {
     // 解析批注类型
-    AnnotationType type = AnnotationType.comment;
+    var type = AnnotationType.comment;
     if (map['type'] != null) {
       try {
         type = AnnotationType.values.firstWhere(
           (e) => e.toString() == 'AnnotationType.${map['type']}',
           orElse: () => AnnotationType.comment,
         );
-      } catch (e) {
+      } on Object {
         type = AnnotationType.comment;
       }
     }
 
     // 解析回复列表
-    List<AnnotationReply> replies = [];
+    var replies = <AnnotationReply>[];
     if (map['replies'] != null && map['replies'] is String) {
       try {
         final List<dynamic> replyList = json.decode(map['replies']);
         replies = replyList
             .map((r) => AnnotationReply.fromMap(r as Map<String, dynamic>))
             .toList();
-      } catch (e) {
-        print('❌ 解析回复列表失败: $e');
+      } on Object catch (e, stackTrace) {
+        Log.custom('Annotation').warning(
+          'Failed to parse annotation replies',
+          data: {'error': e, 'stackTrace': stackTrace},
+        );
       }
     }
 
@@ -62,7 +66,7 @@ class Annotation {
       id: map['id'] as String,
       content: map['content'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: map['updatedAt'] != null 
+      updatedAt: map['updatedAt'] != null
           ? DateTime.parse(map['updatedAt'] as String)
           : null,
       author: map['author'] as String?,
@@ -77,22 +81,21 @@ class Annotation {
   }
 
   /// 从JSON创建批注对象（用于API响应）
-  factory Annotation.fromJson(Map<String, dynamic> json) {
-    return Annotation.fromMap(json);
-  }
+  factory Annotation.fromJson(Map<String, dynamic> json) =>
+      Annotation.fromMap(json);
 
   /// 批注ID
   final String id;
-  
+
   /// 批注内容
   final String content;
-  
+
   /// 创建时间
   final DateTime createdAt;
-  
+
   /// 更新时间（可选）
   final DateTime? updatedAt;
-  
+
   /// 作者（可选，用于多人协作场景）
   final String? author;
 
@@ -118,22 +121,20 @@ class Annotation {
   final bool isResolved;
 
   /// 转换为Map（用于数据库存储）
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'content': content,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-      'author': author,
-      'type': type.toString().split('.').last,
-      'color': color,
-      'highlightedText': highlightedText,
-      'startOffset': startOffset,
-      'endOffset': endOffset,
-      'replies': json.encode(replies.map((r) => r.toMap()).toList()),
-      'isResolved': isResolved ? 1 : 0,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'content': content,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt?.toIso8601String(),
+        'author': author,
+        'type': type.toString().split('.').last,
+        'color': color,
+        'highlightedText': highlightedText,
+        'startOffset': startOffset,
+        'endOffset': endOffset,
+        'replies': json.encode(replies.map((r) => r.toMap()).toList()),
+        'isResolved': isResolved ? 1 : 0,
+      };
 
   /// 转换为JSON（用于API请求）
   Map<String, dynamic> toJson() => toMap();
@@ -152,22 +153,21 @@ class Annotation {
     int? endOffset,
     List<AnnotationReply>? replies,
     bool? isResolved,
-  }) {
-    return Annotation(
-      id: id ?? this.id,
-      content: content ?? this.content,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      author: author ?? this.author,
-      type: type ?? this.type,
-      color: color ?? this.color,
-      highlightedText: highlightedText ?? this.highlightedText,
-      startOffset: startOffset ?? this.startOffset,
-      endOffset: endOffset ?? this.endOffset,
-      replies: replies ?? this.replies,
-      isResolved: isResolved ?? this.isResolved,
-    );
-  }
+  }) =>
+      Annotation(
+        id: id ?? this.id,
+        content: content ?? this.content,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        author: author ?? this.author,
+        type: type ?? this.type,
+        color: color ?? this.color,
+        highlightedText: highlightedText ?? this.highlightedText,
+        startOffset: startOffset ?? this.startOffset,
+        endOffset: endOffset ?? this.endOffset,
+        replies: replies ?? this.replies,
+        isResolved: isResolved ?? this.isResolved,
+      );
 
   /// 获取批注类型图标
   IconData get typeIcon {
@@ -217,7 +217,7 @@ class Annotation {
         return localizations?.annotationTypeTodo ?? '待办';
     }
   }
-  
+
   /// 获取批注类型文本（兼容旧版本，不需要context）
   String get typeText {
     switch (type) {
@@ -235,13 +235,14 @@ class Annotation {
   }
 
   @override
-  String toString() {
-    return 'Annotation(id: $id, content: $content, createdAt: $createdAt)';
-  }
+  String toString() =>
+      'Annotation(id: $id, content: $content, createdAt: $createdAt)';
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     return other is Annotation && other.id == id;
   }
 
@@ -258,28 +259,24 @@ class AnnotationReply {
     this.author,
   });
 
-  factory AnnotationReply.fromMap(Map<String, dynamic> map) {
-    return AnnotationReply(
-      id: map['id'] as String,
-      content: map['content'] as String,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      author: map['author'] as String?,
-    );
-  }
+  factory AnnotationReply.fromMap(Map<String, dynamic> map) => AnnotationReply(
+        id: map['id'] as String,
+        content: map['content'] as String,
+        createdAt: DateTime.parse(map['createdAt'] as String),
+        author: map['author'] as String?,
+      );
 
   final String id;
   final String content;
   final DateTime createdAt;
   final String? author;
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'content': content,
-      'createdAt': createdAt.toIso8601String(),
-      'author': author,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'content': content,
+        'createdAt': createdAt.toIso8601String(),
+        'author': author,
+      };
 }
 
 /// 批注列表工具类
@@ -289,14 +286,17 @@ class AnnotationList {
     if (jsonString == null || jsonString.isEmpty) {
       return [];
     }
-    
+
     try {
       final List<dynamic> jsonList = json.decode(jsonString);
       return jsonList
           .map((json) => Annotation.fromMap(json as Map<String, dynamic>))
           .toList();
-    } catch (e) {
-      print('❌ 解析批注列表失败: $e');
+    } on Object catch (e, stackTrace) {
+      Log.custom('Annotation').warning(
+        'Failed to parse annotation list',
+        data: {'error': e, 'stackTrace': stackTrace},
+      );
       return [];
     }
   }
@@ -306,12 +306,15 @@ class AnnotationList {
     if (annotations.isEmpty) {
       return '[]';
     }
-    
+
     try {
       final jsonList = annotations.map((a) => a.toMap()).toList();
       return json.encode(jsonList);
-    } catch (e) {
-      print('❌ 序列化批注列表失败: $e');
+    } on Object catch (e, stackTrace) {
+      Log.custom('Annotation').warning(
+        'Failed to serialize annotation list',
+        data: {'error': e, 'stackTrace': stackTrace},
+      );
       return '[]';
     }
   }

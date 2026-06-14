@@ -1,16 +1,16 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:inkroot/l10n/app_localizations_simple.dart';
+import 'package:inkroot/services/baidu_realtime_speech_service.dart';
+import 'package:inkroot/services/baidu_speech_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'baidu_speech_service.dart';
-import 'baidu_realtime_speech_service.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 /// 语音识别服务
 /// 提供本地+云端混合语音转文字功能
-/// 
+///
 /// 策略：
 /// 1. 优先使用本地识别（免费，实时）
 /// 2. 本地不可用时降级到百度云识别（需配置 API Key）
@@ -21,12 +21,13 @@ class SpeechService {
 
   late stt.SpeechToText _speech;
   final BaiduSpeechService _baiduSpeech = BaiduSpeechService();
-  final BaiduRealtimeSpeechService _baiduRealtime = BaiduRealtimeSpeechService();
-  
+  final BaiduRealtimeSpeechService _baiduRealtime =
+      BaiduRealtimeSpeechService();
+
   bool _isInitialized = false;
   bool _isListening = false;
   String _lastRecognizedText = '';
-  
+
   // 用户偏好设置
   static const String _prefKeyUseCloud = 'speech_use_cloud';
   bool _preferCloudRecognition = false; // 商业化上架默认仅本地识别
@@ -39,10 +40,10 @@ class SpeechService {
 
   /// 获取最后识别的文本
   String get lastRecognizedText => _lastRecognizedText;
-  
+
   /// 是否优先使用云端识别
   bool get preferCloudRecognition => _preferCloudRecognition;
-  
+
   /// 百度云识别是否已配置
   bool get isBaiduConfigured => _baiduSpeech.isConfigured();
 
@@ -52,7 +53,7 @@ class SpeechService {
       // 加载用户偏好
       final prefs = await SharedPreferences.getInstance();
       _preferCloudRecognition = prefs.getBool(_prefKeyUseCloud) ?? false;
-      
+
       // 初始化本地语音识别
       _speech = stt.SpeechToText();
       _isInitialized = await _speech.initialize(
@@ -63,12 +64,12 @@ class SpeechService {
       );
 
       return _isInitialized;
-    } catch (e) {
+    } on Object {
       _isInitialized = false;
       return false;
     }
   }
-  
+
   /// 设置是否优先使用云端识别
   Future<void> setPreferCloudRecognition(bool prefer) async {
     _preferCloudRecognition = prefer;
@@ -95,8 +96,8 @@ class SpeechService {
   Future<bool> requestPermission() async => requestMicrophonePermission();
 
   /// 开始语音识别
-  /// 
-  /// 优先使用百度实时识别，失败时降级到本地识别
+  ///
+  /// 使用本地 speech_to_text 实时识别
   Future<bool> startListening({
     Function(String)? onResult,
     Function(String)? onError,
@@ -105,25 +106,6 @@ class SpeechService {
     BuildContext? context,
   }) async {
     try {
-      // 🎯 暂时禁用百度实时识别（WebSocket 实现复杂）
-      // 直接使用本地识别，体验已经很好了
-      if (false && _preferCloudRecognition && _baiduSpeech.isConfigured()) {
-        debugPrint('SpeechService: 使用百度实时识别');
-        final success = await _baiduRealtime.startListening(
-          onResult: onResult!,
-          onError: onError,
-          onSoundLevel: onSoundLevel,
-        );
-        
-        if (success) {
-          _isListening = true;
-          return true;
-        }
-        
-        // 百度识别失败，降级到本地识别
-        debugPrint('SpeechService: 百度识别失败，降级到本地识别');
-      }
-      
       // 🎯 使用本地识别（已优化，体验很好）
       debugPrint('SpeechService: 使用本地实时识别');
       // iOS: speech_to_text的initialize()方法会自动触发权限请求
@@ -134,7 +116,7 @@ class SpeechService {
 
         if (!success) {
           // 如果初始化失败，提示用户
-          if (context != null) {
+          if (context != null && context.mounted) {
             _showLocalSpeechFailedDialog(context, onError);
           }
           return false;
@@ -143,7 +125,7 @@ class SpeechService {
 
       if (!_isInitialized) {
         // 本地识别不可用，提示用户
-        if (context != null) {
+        if (context != null && context.mounted) {
           _showLocalSpeechFailedDialog(context, onError);
         }
         return false;
@@ -152,7 +134,7 @@ class SpeechService {
       // 检查权限状态
       final available = await _speech.hasPermission;
       if (!available) {
-        if (context != null) {
+        if (context != null && context.mounted) {
           _showPermissionDeniedDialog(context);
         }
         return false;
@@ -172,32 +154,34 @@ class SpeechService {
           if (onSoundLevel != null && level > 0.1) {
             onSoundLevel(level);
           } else if (onSoundLevel != null) {
-            onSoundLevel(0.0); // 静音时返回 0
+            onSoundLevel(0); // 静音时返回 0
           }
         },
-        listenFor: timeout ?? const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        localeId: 'zh_CN',
-        cancelOnError: true,
+        listenOptions: stt.SpeechListenOptions(
+          listenFor: timeout ?? const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 3),
+          localeId: 'zh_CN',
+          cancelOnError: true,
+        ),
       );
 
       _isListening = true;
       return true;
-    } catch (e) {
+    } on Object catch (e) {
       if (onError != null) {
         onError(e.toString());
       }
-      
+
       // 本地识别失败，提示用户
-      if (context != null) {
+      if (context != null && context.mounted) {
         _showLocalSpeechFailedDialog(context, onError);
       }
       return false;
     }
   }
-  
+
   /// 识别音频文件（支持云端识别）
-  /// 
+  ///
   /// [audioPath] 音频文件路径
   /// [onResult] 识别成功回调
   /// [onError] 识别失败回调
@@ -219,14 +203,12 @@ class SpeechService {
         }
         return false;
       }
-      
+
       // 使用百度云识别
       final result = await _baiduSpeech.recognizeAudioFile(
         audioPath: audioPath,
-        format: 'wav',
-        rate: 16000,
       );
-      
+
       if (result != null && result.isNotEmpty) {
         _lastRecognizedText = result;
         if (onResult != null) {
@@ -239,7 +221,7 @@ class SpeechService {
         }
         return false;
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (onError != null) {
         onError(e.toString());
       }
@@ -251,22 +233,20 @@ class SpeechService {
   Future<void> stopListening() async {
     try {
       _isListening = false;
-      
+
       // 停止百度实时识别
       if (_baiduRealtime.isListening) {
         await _baiduRealtime.stopListening();
       }
-      
+
       // 停止本地识别
       if (_speech.isListening) {
-        // 🔥 Android: 确保完全释放麦克风资源
-        // stop() 只是停止识别，cancel() 会完全释放资源
-        await _speech.cancel();
-        
+        await _speech.stop();
+
         // 等待系统完全释放麦克风权限
         await Future.delayed(const Duration(milliseconds: 100));
       }
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('停止语音识别失败: $e');
       _isListening = false;
     }
@@ -334,7 +314,7 @@ class SpeechService {
       // 5. 检查当前状态
       result['isListening'] = _isListening;
       result['lastText'] = _lastRecognizedText;
-    } catch (e) {
+    } on Object catch (e) {
       result['error'] = e.toString();
     }
 
@@ -350,8 +330,8 @@ class SpeechService {
       }
       _isListening = false;
       _lastRecognizedText = '';
-    } catch (e) {
-      debugPrint('释放语音资源失败: $e');
+    } on Object catch (e) {
+      debugPrint('Failed to release speech resources: $e');
     }
   }
 
@@ -361,36 +341,46 @@ class SpeechService {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Text('🎤', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text('需要麦克风权限'),
+            const Text('🎤', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text(
+              AppLocalizationsSimple.of(context)
+                      ?.speechPermissionRequiredTitle ??
+                  '需要麦克风权限',
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('语音识别功能需要麦克风和语音识别权限。'),
+            Text(
+              AppLocalizationsSimple.of(context)
+                      ?.speechPermissionRequiredMessage ??
+                  '语音识别功能需要麦克风和语音识别权限。',
+            ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '操作步骤：',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    AppLocalizationsSimple.of(context)?.permissionStepTitle ??
+                        '操作步骤：',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    '1. 点击"去设置"按钮\n2. 找到"麦克风"和"语音识别"\n3. 开启权限开关\n4. 返回应用重试',
-                    style: TextStyle(fontSize: 12),
+                    AppLocalizationsSimple.of(context)?.permissionStepSpeech ??
+                        '1. 点击"去设置"按钮\n2. 找到"麦克风"和"语音识别"\n3. 开启权限开关\n4. 返回应用重试',
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
@@ -400,20 +390,21 @@ class SpeechService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(AppLocalizationsSimple.of(context)?.cancel ?? '取消'),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
               await openAppSettings();
             },
-            child: const Text('去设置'),
+            child:
+                Text(AppLocalizationsSimple.of(context)?.goToSettings ?? '去设置'),
           ),
         ],
       ),
     );
   }
-  
+
   /// 显示本地语音识别失败的对话框
   void _showLocalSpeechFailedDialog(
     BuildContext context,
@@ -422,38 +413,48 @@ class SpeechService {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Text('⚠️', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text('语音识别不可用'),
+            const Text('⚠️', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text(
+              AppLocalizationsSimple.of(context)
+                      ?.speechRecognitionUnavailable ??
+                  '语音识别不可用',
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('本地语音识别功能暂时不可用。'),
+            Text(
+              AppLocalizationsSimple.of(context)?.localSpeechUnavailable ??
+                  '本地语音识别功能暂时不可用。',
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '可能的原因：',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    AppLocalizationsSimple.of(context)?.possibleReasons ??
+                        '可能的原因：',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
-                    '• Android: 缺少 Google 服务\n'
-                    '• iOS: 系统版本过低\n'
-                    '• 网络连接问题',
-                    style: TextStyle(fontSize: 12),
+                    AppLocalizationsSimple.of(context)
+                            ?.speechUnavailableReasons ??
+                        '• Android: 缺少 Google 服务\n'
+                            '• iOS: 系统版本过低\n'
+                            '• 网络连接问题',
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
@@ -463,21 +464,24 @@ class SpeechService {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  border:
+                      Border.all(color: Colors.green.withValues(alpha: 0.3)),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '💡 建议',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      AppLocalizationsSimple.of(context)?.suggestion ?? '💡 建议',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
-                      '您可以使用云端语音识别功能（百度语音），识别准确率更高。',
-                      style: TextStyle(fontSize: 12),
+                      AppLocalizationsSimple.of(context)
+                              ?.cloudSpeechSuggestion ??
+                          '您可以使用云端语音识别功能（百度语音），识别准确率更高。',
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
@@ -488,7 +492,7 @@ class SpeechService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('知道了'),
+            child: Text(AppLocalizationsSimple.of(context)?.iKnow ?? '知道了'),
           ),
           if (_baiduSpeech.isConfigured())
             ElevatedButton(
@@ -497,23 +501,30 @@ class SpeechService {
                 // 设置优先使用云端识别
                 await setPreferCloudRecognition(true);
               },
-              child: const Text('使用云端识别'),
+              child: Text(
+                AppLocalizationsSimple.of(context)?.useCloudRecognition ??
+                    '使用云端识别',
+              ),
             ),
         ],
       ),
     );
   }
-  
+
   /// 显示百度语音未配置的对话框
   void _showBaiduNotConfiguredDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Text('🔧', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 8),
-            Text('云端识别未配置'),
+            const Text('🔧', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text(
+              AppLocalizationsSimple.of(context)
+                      ?.cloudRecognitionNotConfigured ??
+                  '云端识别未配置',
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -521,12 +532,15 @@ class SpeechService {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('百度语音识别 API 尚未配置。'),
+              Text(
+                AppLocalizationsSimple.of(context)?.baiduSpeechNotConfigured ??
+                    '百度语音识别 API 尚未配置。',
+              ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -540,7 +554,7 @@ class SpeechService {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('知道了'),
+            child: Text(AppLocalizationsSimple.of(context)?.iKnow ?? '知道了'),
           ),
         ],
       ),

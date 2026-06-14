@@ -4,9 +4,9 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
-// import '../utils/share_helper.dart'; // 🔥 分享接收助手（暂时禁用）
 import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/app_config_model.dart' as models;
@@ -21,9 +21,7 @@ import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:inkroot/widgets/note_card.dart';
 import 'package:inkroot/widgets/note_editor.dart';
-import 'package:inkroot/widgets/privacy_policy_dialog.dart';
 import 'package:inkroot/widgets/sidebar.dart';
-import 'package:inkroot/widgets/desktop_layout.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -41,12 +39,16 @@ class _HomeScreenState extends State<HomeScreen>
   // 🏢 大厂方案：会话标记 - 标记本次应用会话是否已自动弹出编辑框
   // 参考微信、Notion等应用，只在应用冷启动时弹出一次，而不是每次进入页面
   static bool _hasShownEditorInThisSession = false;
-  
+
   // 🔧 恢复 _scaffoldKey 以修复侧边栏按钮
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   List<Note> _searchResults = [];
+  Timer? _searchDebounceTimer;
+  int _searchRequestSeq = 0;
+  bool _isSearchLoading = false;
   bool _isRefreshing = false;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
@@ -55,24 +57,14 @@ class _HomeScreenState extends State<HomeScreen>
   // 🚀 分页加载相关
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
-  
-
-  // 🚀 搜索防抖
-  Timer? _searchDebounce;
 
   // 🚀 分帧渲染优化
   int _visibleItemsCount = 0; // 初始显示0个NoteCard，首帧只渲染骨架
 
-  // 🔥 分享接收助手（暂时禁用）
-  // final ShareHelper _shareHelper = ShareHelper();
-  
-  // 🎨 侧边栏宽度（可拖动调整）
-  double _sidebarWidth = 280;
-
   @override
   void initState() {
     super.initState();
-    
+
     // 🚀 大厂做法：先渲染 UI，再异步初始化（不阻塞 UI）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp(); // 异步执行，不阻塞首帧
@@ -117,7 +109,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 🚀 分帧渲染：逐步增加可见NoteCard数量
   void _startProgressiveRendering() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final totalNotes = appProvider.notes.length;
@@ -132,7 +126,9 @@ class _HomeScreenState extends State<HomeScreen>
     var currentCount = 0;
 
     void renderNextBatch() {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       currentCount = (currentCount + itemsPerFrame).clamp(0, totalNotes);
 
@@ -154,7 +150,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 🎯 退出搜索状态
   void _exitSearch() {
-    if (!_isSearchActive) return;
+    if (!_isSearchActive) {
+      return;
+    }
 
     setState(() {
       _isSearchActive = false;
@@ -162,6 +160,83 @@ class _HomeScreenState extends State<HomeScreen>
       _searchResults.clear();
     });
     FocusScope.of(context).unfocus(); // 收起键盘
+  }
+
+  void _enterSearch() {
+    if (_isSearchActive) {
+      _searchFocusNode.requestFocus();
+      return;
+    }
+
+    setState(() {
+      _isSearchActive = true;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _clearSearchQuery() {
+    _searchController.clear();
+    _searchDebounceTimer?.cancel();
+    _searchRequestSeq++;
+    setState(() {
+      _searchResults.clear();
+      _isSearchLoading = false;
+    });
+    _searchFocusNode.requestFocus();
+  }
+
+  void _dismissSearchKeyboard() {
+    if (_isSearchActive) {
+      _searchFocusNode.unfocus();
+    }
+  }
+
+  void _handleSearchChanged(String query) {
+    final normalizedQuery = query.trim();
+    _searchDebounceTimer?.cancel();
+    final requestSeq = ++_searchRequestSeq;
+
+    if (normalizedQuery.isEmpty) {
+      setState(() {
+        _searchResults.clear();
+        _isSearchLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearchLoading = true;
+    });
+
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 240), () async {
+      try {
+        final appProvider = Provider.of<AppProvider>(context, listen: false);
+        final results = await appProvider.searchNotes(normalizedQuery);
+        if (!mounted || requestSeq != _searchRequestSeq) {
+          return;
+        }
+        setState(() {
+          _searchResults = results;
+          _isSearchLoading = false;
+        });
+      } on Object catch (e) {
+        if (kDebugMode) {
+          debugPrint('HomeScreen: 搜索失败: $e');
+        }
+        if (!mounted || requestSeq != _searchRequestSeq) {
+          return;
+        }
+        setState(() {
+          _searchResults.clear();
+          _isSearchLoading = false;
+        });
+      }
+    });
   }
 
   // 🚀 滚动监听 - 检测底部并加载更多
@@ -175,10 +250,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 🚀 加载更多笔记
   Future<void> _loadMoreNotes() async {
-    if (_isLoadingMore) return;
+    if (_isLoadingMore) {
+      return;
+    }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    if (!appProvider.hasMoreData) return;
+    if (!appProvider.hasMoreData) {
+      return;
+    }
 
     setState(() {
       _isLoadingMore = true;
@@ -186,8 +265,10 @@ class _HomeScreenState extends State<HomeScreen>
 
     try {
       await appProvider.loadMoreNotes();
-    } catch (e) {
-      if (kDebugMode) debugPrint('HomeScreen: 加载更多失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('HomeScreen: 加载更多失败: $e');
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -197,58 +278,41 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // 🔥 检查并处理待分享的内容（暂时禁用）
-  /*
-  void _checkPendingShared() {
-    if (_shareHelper.hasPendingShared()) {
-      if (kDebugMode) debugPrint('HomeScreen: 检测到待处理的分享内容');
-      final appProvider = Provider.of<AppProvider>(context, listen: false);
-      _shareHelper.checkAndHandleShared(
-        context,
-        (content) async {
-          try {
-            if (kDebugMode) debugPrint('HomeScreen: 从分享创建笔记，内容长度: ${content.length}');
-            await appProvider.createNote(content);
-            if (kDebugMode) debugPrint('HomeScreen: 分享笔记创建成功');
-          } catch (e) {
-            if (kDebugMode) debugPrint('HomeScreen: 创建分享笔记失败: $e');
-            if (mounted) {
-              SnackBarUtils.showError(context, '${AppLocalizationsSimple.of(context)?.createNoteFailed ?? '创建笔记失败'}: $e');
-            }
-          }
-        },
-      );
-    }
-  }
-  */
-
   // 异步检查更新
   Future<void> _checkForUpdates() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     // 异步检查更新，不阻塞UI
-    appProvider.checkForUpdatesOnStartup().then((_) {
-      if (mounted) {
-        appProvider.showUpdateDialogIfNeeded(context);
-      }
-    });
+    unawaited(
+      appProvider.checkForUpdatesOnStartup().then((_) {
+        if (mounted) {
+          appProvider.showUpdateDialogIfNeeded(context);
+        }
+      }),
+    );
   }
 
   // 刷新通知数据
   Future<void> _refreshNotifications() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     // 异步刷新通知数量，不阻塞UI
-    appProvider.refreshUnreadAnnouncementsCount();
+    unawaited(appProvider.refreshUnreadAnnouncementsCount());
   }
 
   // 🏢 大厂方案：等待配置加载完成后检查并自动弹出编辑框
   // 参考微信、Notion等应用，只在应用冷启动时弹出一次
   Future<void> _checkAndShowEditorOnLaunch() async {
-    if (!mounted) return;
-    
+    if (!mounted) {
+      return;
+    }
+
     // 🎯 核心优化：检查本次会话是否已弹出过
     // 避免每次页面切换都弹出（如从设置页返回主页）
     if (_hasShownEditorInThisSession) {
@@ -257,30 +321,30 @@ class _HomeScreenState extends State<HomeScreen>
       }
       return;
     }
-    
+
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    
+
     // 🎯 等待 AppProvider 初始化完成
     // 最多等待5秒，避免无限等待
-    int attempts = 0;
+    var attempts = 0;
     while (!appProvider.isInitialized && attempts < 50 && mounted) {
       await Future.delayed(const Duration(milliseconds: 100));
       attempts++;
     }
-    
+
     // 检查配置是否启用了自动弹出
     if (mounted && appProvider.appConfig.autoShowEditorOnLaunch) {
       // 再延迟一小段时间，确保UI完全准备好
       await Future.delayed(const Duration(milliseconds: 300));
-      
+
       if (mounted) {
         // 🏢 标记本次会话已弹出，避免重复弹出
         _hasShownEditorInThisSession = true;
-        
+
         if (kDebugMode) {
           debugPrint('HomeScreen: 应用启动时自动弹出编辑框');
         }
-        
+
         _showAddNoteForm();
       }
     }
@@ -288,15 +352,18 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _fabAnimationController.dispose();
     _scrollController.dispose(); // 🚀 释放滚动控制器
-    _searchDebounce?.cancel(); // 🚀 取消防抖定时器
     super.dispose();
   }
 
   Future<void> _initializeApp() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final preferencesService = PreferencesService();
@@ -311,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (isFirstLaunch) {
       // 🔒 首次启动时清理所有旧数据（防止卸载后重装时残留 Keychain 数据）
       await preferencesService.clearAllSecureData();
-      
+
       if (mounted) {
         // 跳转到引导页（路由应该已经处理了，这里是兜底）
         context.go('/onboarding');
@@ -330,7 +397,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 刷新笔记数据
   Future<void> _refreshNotes() async {
-    if (_isRefreshing) return;
+    if (_isRefreshing) {
+      return;
+    }
 
     setState(() {
       _isRefreshing = true;
@@ -379,14 +448,16 @@ class _HomeScreenState extends State<HomeScreen>
         if (kDebugMode) {
           debugPrint('HomeScreen: Notion 同步成功');
         }
-      } catch (e) {
+      } on Object catch (e) {
         // Notion 同步失败不影响主流程
         if (kDebugMode) {
           debugPrint('HomeScreen: Notion 同步失败: $e');
         }
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('HomeScreen: 刷新失败: $e');
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('HomeScreen: 刷新失败: $e');
+      }
       // 显示刷新失败提示
       if (mounted) {
         SnackBarUtils.showError(
@@ -538,6 +609,10 @@ class _HomeScreenState extends State<HomeScreen>
               // 🚀 笔记创建成功（静默）
 
               // 🔧 修复：退出搜索模式，确保新笔记显示
+              if (!mounted || !context.mounted) {
+                return;
+              }
+
               if (_isSearchActive) {
                 _exitSearch();
               }
@@ -557,22 +632,29 @@ class _HomeScreenState extends State<HomeScreen>
 
                 // 🚀 滚动到顶部，确保用户看到新笔记
                 if (_scrollController.hasClients) {
-                  _scrollController.animateTo(
-                    0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
+                  unawaited(
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    ),
                   );
                 }
               }
 
               // 如果用户已登录但笔记未同步，尝试再次同步
               if (appProvider.isLoggedIn && !note.isSynced) {
-                appProvider.syncNotesWithServer();
+                unawaited(appProvider.syncNotesWithServer());
               }
-            } catch (e) {
-              if (kDebugMode) debugPrint('HomeScreen: 创建笔记失败: $e');
-              if (mounted) {
-                SnackBarUtils.showError(context, '${AppLocalizationsSimple.of(context)?.createNoteFailed ?? '创建笔记失败'}: $e');
+            } on Object catch (e) {
+              if (kDebugMode) {
+                debugPrint('HomeScreen: 创建笔记失败: $e');
+              }
+              if (mounted && context.mounted) {
+                SnackBarUtils.showError(
+                  context,
+                  '${AppLocalizationsSimple.of(context)?.createNoteFailed ?? '创建笔记失败'}: $e',
+                );
               }
             }
           }
@@ -600,6 +682,10 @@ class _HomeScreenState extends State<HomeScreen>
               // 🚀 笔记创建成功（静默）
 
               // 🔧 修复：退出搜索模式，确保新笔记显示
+              if (!mounted || !context.mounted) {
+                return;
+              }
+
               if (_isSearchActive) {
                 _exitSearch();
               }
@@ -619,31 +705,38 @@ class _HomeScreenState extends State<HomeScreen>
 
                 // 🚀 滚动到顶部，确保用户看到新笔记
                 if (_scrollController.hasClients) {
-                  _scrollController.animateTo(
-                    0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
+                  unawaited(
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    ),
                   );
                 }
               }
 
               // 如果用户已登录但笔记未同步，尝试再次同步
               if (appProvider.isLoggedIn && !note.isSynced) {
-                appProvider.syncNotesWithServer();
+                unawaited(appProvider.syncNotesWithServer());
               }
 
               // 显示成功提示
-              if (mounted) {
+              if (mounted && context.mounted) {
                 SnackBarUtils.showSuccess(
                   context,
                   AppLocalizationsSimple.of(context)?.addedFromShare ??
                       '已添加来自分享的笔记',
                 );
               }
-            } catch (e) {
-              if (kDebugMode) debugPrint('HomeScreen: 创建笔记失败: $e');
-              if (mounted) {
-                SnackBarUtils.showError(context, '${AppLocalizationsSimple.of(context)?.createNoteFailed ?? '创建笔记失败'}: $e');
+            } on Object catch (e) {
+              if (kDebugMode) {
+                debugPrint('HomeScreen: 创建笔记失败: $e');
+              }
+              if (mounted && context.mounted) {
+                SnackBarUtils.showError(
+                  context,
+                  '${AppLocalizationsSimple.of(context)?.createNoteFailed ?? '创建笔记失败'}: $e',
+                );
               }
             }
           }
@@ -670,14 +763,11 @@ class _HomeScreenState extends State<HomeScreen>
                   Provider.of<AppProvider>(context, listen: false);
               await appProvider.updateNote(note, content);
               // 🚀 笔记更新成功（静默）
-
-              // 确保标签更新
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                appProvider.notifyListeners(); // 通知所有监听者，确保标签页更新
-              });
-            } catch (e) {
-              if (kDebugMode) debugPrint('HomeScreen: 更新笔记失败: $e');
-              if (mounted) {
+            } on Object catch (e) {
+              if (kDebugMode) {
+                debugPrint('HomeScreen: 更新笔记失败: $e');
+              }
+              if (mounted && context.mounted) {
                 SnackBarUtils.showError(
                   context,
                   '${AppLocalizationsSimple.of(context)?.updateFailed ?? '更新失败'}: $e',
@@ -692,6 +782,26 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  void _showDeleteUndoSnackBar(AppProvider appProvider) {
+    final l10n = AppLocalizationsSimple.of(context);
+    SnackBarUtils.showAction(
+      context,
+      l10n?.noteDeleted ?? '笔记已删除',
+      icon: Icons.delete_outline_rounded,
+      actionLabel: l10n?.undo ?? '撤销',
+      duration: AppProvider.deleteUndoWindow,
+      onAction: () async {
+        final restored = await appProvider.restoreNote();
+        if (!mounted) {
+          return;
+        }
+        if (!restored) {
+          SnackBarUtils.showError(context, l10n?.undoFailed ?? '撤销失败');
+        }
+      },
+    );
+  }
+
   // 构建通知提示框
   // 构建通知提示框
   Widget _buildNotificationBanner() {
@@ -703,10 +813,11 @@ class _HomeScreenState extends State<HomeScreen>
       return const SizedBox.shrink();
     }
 
-    // 设置颜色 - 使用卡片背景色和蓝色主题
+    // 设置颜色 - 使用卡片背景色和应用主题强调色
     final backgroundColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
-    final textColor = Colors.blue.shade600;
-    final iconColor = Colors.blue.shade600;
+    final textColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
+    final iconColor = textColor;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8), // 减少下边距
@@ -716,7 +827,7 @@ class _HomeScreenState extends State<HomeScreen>
           onTap: () async {
             // 🎯 点击跳转到通知页面（不自动标记已读）
             if (context.mounted) {
-              context.pushNamed('notifications');
+              unawaited(context.pushNamed('notifications'));
             }
           },
           borderRadius: BorderRadius.circular(12),
@@ -727,7 +838,7 @@ class _HomeScreenState extends State<HomeScreen>
               boxShadow: [
                 BoxShadow(
                   color: (isDarkMode ? Colors.black : Colors.black)
-                      .withOpacity(isDarkMode ? 0.3 : 0.05),
+                      .withValues(alpha: isDarkMode ? 0.3 : 0.05),
                   offset: const Offset(0, 1),
                   blurRadius: 3,
                 ),
@@ -750,7 +861,8 @@ class _HomeScreenState extends State<HomeScreen>
                   Text(
                     AppLocalizationsSimple.of(context)
                             ?.unreadNotificationsCount(
-                                appProvider.unreadAnnouncementsCount) ??
+                          appProvider.unreadAnnouncementsCount,
+                        ) ??
                         '${appProvider.unreadAnnouncementsCount}条未读信息',
                     style: TextStyle(
                       color: textColor,
@@ -796,7 +908,7 @@ class _HomeScreenState extends State<HomeScreen>
               child: Icon(
                 Icons.note_add_rounded,
                 size: 48,
-                color: iconColor.withOpacity(0.6),
+                color: iconColor.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -818,99 +930,6 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showSortOrderOptions() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final dialogColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    final headerBgColor = isDarkMode
-        ? AppTheme.primaryColor.withOpacity(0.15)
-        : AppTheme.primaryColor.withOpacity(0.05);
-    final iconColor =
-        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
-
-    final appProvider = Provider.of<AppProvider>(context, listen: false);
-    // 获取当前排序方式
-    var currentSortOrder = SortOrder.newest;
-
-    // 检查当前排序方式
-    if (appProvider.notes.length > 1) {
-      if (appProvider.notes[0].createdAt
-          .isAfter(appProvider.notes[1].createdAt)) {
-        currentSortOrder = SortOrder.newest;
-      } else if (appProvider.notes[0].createdAt
-          .isBefore(appProvider.notes[1].createdAt)) {
-        currentSortOrder = SortOrder.oldest;
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: dialogColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: headerBgColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    AppLocalizationsSimple.of(context)?.sortBy ?? '排序方式',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: iconColor,
-                    ),
-                  ),
-                ),
-              ),
-              RadioListTile<SortOrder>(
-                title: Text(
-                  AppLocalizationsSimple.of(context)?.newestFirst ?? '从新到旧',
-                  style: TextStyle(color: textColor),
-                ),
-                value: SortOrder.newest,
-                groupValue: currentSortOrder,
-                activeColor: iconColor,
-                onChanged: (SortOrder? value) {
-                  if (value != null) {
-                    appProvider.sortNotes(value);
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-              RadioListTile<SortOrder>(
-                title: Text(
-                  AppLocalizationsSimple.of(context)?.oldestFirst ?? '从旧到新',
-                  style: TextStyle(color: textColor),
-                ),
-                value: SortOrder.oldest,
-                groupValue: currentSortOrder,
-                activeColor: iconColor,
-                onChanged: (SortOrder? value) {
-                  if (value != null) {
-                    appProvider.sortNotes(value);
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -941,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen>
       hintColor ?? Colors.grey,
       isDarkMode,
     );
-    
+
     return ResponsiveLayout(
       mobile: content,
       tablet: content, // 平板端也使用相同布局
@@ -959,121 +978,126 @@ class _HomeScreenState extends State<HomeScreen>
     Color hintColor,
     bool isDarkMode,
   ) {
-    final bool isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
-    
+    final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: backgroundColor,
       drawer: isDesktop ? null : const Sidebar(),
-      drawerEdgeDragWidth: isDesktop ? null : MediaQuery.of(context).size.width * 0.25,
+      drawerEdgeDragWidth:
+          isDesktop ? null : MediaQuery.of(context).size.width * 0.25,
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
-        leading: isDesktop ? null : IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 16,
-                  height: 2,
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: iconColor,
-                    borderRadius: BorderRadius.circular(1),
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 10,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: iconColor,
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          onPressed: _openDrawer,
-        ),
-          title: _isSearchActive
-              ? Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
-                        offset: const Offset(0, 2),
-                        blurRadius: 5,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 2,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 10,
+                        height: 2,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
                       ),
                     ],
                   ),
+                ),
+                onPressed: _openDrawer,
+              ),
+        title: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SizeTransition(
+              sizeFactor: animation,
+              axis: Axis.horizontal,
+              child: child,
+            ),
+          ),
+          child: _isSearchActive
+              ? Container(
+                  key: const ValueKey('home_search_field'),
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : Colors.black.withValues(alpha: 0.06),
+                    ),
+                  ),
                   child: TextField(
                     controller: _searchController,
-                    autofocus: true, // 自动聚焦，提供更好的用户体验
+                    focusNode: _searchFocusNode,
+                    textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText:
                           AppLocalizationsSimple.of(context)?.searchNotes ??
-                              '搜索笔记...',
+                              '搜索笔记',
                       hintStyle: TextStyle(
                         color: hintColor,
+                        fontSize: 15,
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: iconColor,
+                        color: secondaryTextColor,
                         size: 20,
                       ),
+                      suffixIcon: _searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip:
+                                  AppLocalizationsSimple.of(context)?.clear ??
+                                      '清除',
+                              icon: Icon(
+                                Icons.cancel_rounded,
+                                color:
+                                    secondaryTextColor.withValues(alpha: 0.7),
+                                size: 18,
+                              ),
+                              onPressed: _clearSearchQuery,
+                            ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                      ),
                     ),
                     style: TextStyle(
                       color: textColor,
+                      fontSize: 15,
+                      height: 1.25,
                     ),
-                    onChanged: (query) {
-                      final appProvider =
-                          Provider.of<AppProvider>(context, listen: false);
-
-                      if (query.isEmpty) {
-                        // 搜索框为空时，清空搜索结果，这样会显示所有笔记
-                        setState(() {
-                          _searchResults.clear();
-                        });
-                        return;
-                      }
-
-                      // 执行搜索过滤
-                      final results = appProvider.notes
-                          .where(
-                            (note) =>
-                                note.content
-                                    .toLowerCase()
-                                    .contains(query.toLowerCase()) ||
-                                note.tags.any(
-                                  (tag) => tag
-                                      .toLowerCase()
-                                      .contains(query.toLowerCase()),
-                                ),
-                          )
-                          .toList();
-
-                      setState(() {
-                        _searchResults = results;
-                      });
-                    },
+                    onChanged: _handleSearchChanged,
                   ),
                 )
               : GestureDetector(
+                  key: const ValueKey('home_title'),
                   onTap: _showSortOptions,
                   child: Container(
                     padding:
@@ -1103,9 +1127,11 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                 ),
-          centerTitle: true,
-          actions: [
-            // AI洞察按钮
+        ),
+        centerTitle: !_isSearchActive,
+        actions: [
+          // AI洞察按钮
+          if (!_isSearchActive) ...[
             IconButton(
               icon: Container(
                 padding: EdgeInsets.all(
@@ -1142,757 +1168,283 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 child: Icon(
-                  _isSearchActive ? Icons.close : Icons.search,
+                  Icons.search,
                   size: ResponsiveUtils.fontScaledIconSize(context, 20),
                   color: iconColor,
                 ),
               ),
-              onPressed: () {
-                setState(() {
-                  _isSearchActive = !_isSearchActive;
-                  if (!_isSearchActive) {
-                    _searchController.clear();
-                    _searchResults.clear();
-                  }
-                });
-              },
+              tooltip: AppLocalizationsSimple.of(context)?.search ?? '搜索',
+              onPressed: _enterSearch,
             ),
-            SizedBox(width: ResponsiveUtils.fontScaledSpacing(context, 8)),
-          ],
-        ),
-        body: Consumer<AppProvider>(
-          builder: (context, appProvider, child) {
-            // 🚀 极速启动：不等loading，立即显示界面
-            // 如果没有数据会显示空白状态，数据加载完立即刷新
+          ] else
+            TextButton(
+              onPressed: _exitSearch,
+              child: Text(
+                AppLocalizationsSimple.of(context)?.cancel ?? '取消',
+                style: TextStyle(
+                  color: iconColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          SizedBox(width: ResponsiveUtils.fontScaledSpacing(context, 8)),
+        ],
+      ),
+      body: Consumer<AppProvider>(
+        builder: (context, appProvider, child) {
+          // 🚀 极速启动：不等loading，立即显示界面
+          // 如果没有数据会显示空白状态，数据加载完立即刷新
 
-            final notes = _isSearchActive
-                ? (_searchController.text.isEmpty
-                    ? appProvider.notes
-                    : _searchResults)
-                : appProvider.notes;
+          final notes = _isSearchActive
+              ? (_searchController.text.isEmpty
+                  ? appProvider.notes
+                  : _searchResults)
+              : appProvider.notes;
 
-            // 🔧 修复：确保至少显示一些笔记，避免创建后不显示
-            if (!_isSearchActive &&
-                notes.isNotEmpty &&
-                _visibleItemsCount == 0) {
-              // 使用 post frame callback 避免在 build 中调用 setState
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    // 至少显示 10 条笔记（如果有的话）
-                    _visibleItemsCount = notes.length >= 10 ? 10 : notes.length;
-                  });
-                }
-              });
-            }
-            
-            // 🔥 大厂标准：动态更新可见数量（同步完成后自动显示全部）
-            if (!_isSearchActive && notes.length > _visibleItemsCount) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    // 如果笔记数量增加了（比如同步完成），立即显示全部
-                    _visibleItemsCount = notes.length;
-                  });
-                }
-              });
-            }
+          // 🔧 修复：确保至少显示一些笔记，避免创建后不显示
+          if (!_isSearchActive && notes.isNotEmpty && _visibleItemsCount == 0) {
+            // 使用 post frame callback 避免在 build 中调用 setState
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  // 至少显示 10 条笔记（如果有的话）
+                  _visibleItemsCount = notes.length >= 10 ? 10 : notes.length;
+                });
+              }
+            });
+          }
 
-            // 🚀 分帧渲染：限制可见笔记数量（搜索时不限制）
-            final visibleNotes = _isSearchActive
-                ? notes.length
-                : _visibleItemsCount.clamp(0, notes.length);
+          // 保持分帧渲染收益：数据增加时只补一小批，剩余由滚动/下一帧加载。
+          if (!_isSearchActive &&
+              notes.length > _visibleItemsCount &&
+              _visibleItemsCount > 0) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _visibleItemsCount =
+                      (_visibleItemsCount + 10).clamp(0, notes.length);
+                });
+              }
+            });
+          }
 
-            return Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: _exitSearch, // 🎯 点击空白处退出搜索
-                        behavior: HitTestBehavior.translucent, // 确保空白区域也能响应点击
-                        child: RefreshIndicator(
-                          onRefresh: _refreshNotes,
-                          color: AppTheme.primaryColor,
-                          child: SlidableAutoCloseBehavior(
-                            // 🔥 类似微信：同时只能打开一个侧滑项
-                            child: notes.isEmpty
-                                ? ListView(
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(),
-                                    children: [
-                                      // 添加通知提示框到ListView内部
+          // 🚀 分帧渲染：限制可见笔记数量（搜索时不限制）
+          final visibleNotes = _isSearchActive
+              ? notes.length
+              : _visibleItemsCount.clamp(0, notes.length);
+          final searchQuery = _searchController.text.trim();
+          final showSearchSummary = _isSearchActive && searchQuery.isNotEmpty;
+
+          return Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: _dismissSearchKeyboard,
+                      behavior: HitTestBehavior.translucent,
+                      child: RefreshIndicator(
+                        onRefresh: _refreshNotes,
+                        color: AppTheme.primaryColor,
+                        child: SlidableAutoCloseBehavior(
+                          // 🔥 类似微信：同时只能打开一个侧滑项
+                          child: notes.isEmpty
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    if (!_isSearchActive)
                                       _buildNotificationBanner(),
-                                      SizedBox(
-                                        height:
-                                            MediaQuery.of(context).size.height -
-                                                200,
-                                        child: _buildEmptyState(),
-                                      ),
-                                    ],
-                                  )
-                                : ListView.builder(
-                                    controller: _scrollController, // 🚀 添加滚动控制器
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(), // 🎯 确保下拉刷新可用
-                                    itemCount: visibleNotes +
-                                        3, // 🚀 使用可见数量 +1通知栏 +1加载指示器 +1底部间距
-                                    padding: EdgeInsets.zero,
-                                    cacheExtent: 1000, // 🚀 增加缓存区域，减少重建
-                                    itemBuilder: (context, index) {
-                                      // 第一个item是通知栏
-                                      if (index == 0) {
-                                        return _buildNotificationBanner();
-                                      }
-
-                                      // 倒数第二个item是加载更多指示器
-                                      if (index == visibleNotes + 1) {
-                                        return _buildLoadMoreIndicator(
-                                          appProvider,
+                                    SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height -
+                                              240,
+                                      child:
+                                          showSearchSummary && _isSearchLoading
+                                              ? _buildSearchLoadingState()
+                                              : showSearchSummary
+                                                  ? _buildSearchEmptyState(
+                                                      searchQuery,
+                                                    )
+                                                  : _buildEmptyState(),
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                                  controller: _scrollController, // 🚀 添加滚动控制器
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(), // 🎯 确保下拉刷新可用
+                                  itemCount: visibleNotes +
+                                      3, // 🚀 使用可见数量 +1头部 +1加载指示器 +1底部间距
+                                  padding: EdgeInsets.zero,
+                                  scrollCacheExtent:
+                                      const ScrollCacheExtent.pixels(
+                                    1000,
+                                  ), // 🚀 增加缓存区域，减少重建
+                                  itemBuilder: (context, index) {
+                                    // 第一个item是通知栏或搜索结果摘要
+                                    if (index == 0) {
+                                      if (showSearchSummary) {
+                                        return _buildSearchSummary(
+                                          notes.length,
                                         );
                                       }
+                                      return _buildNotificationBanner();
+                                    }
 
-                                      // 最后一个item是底部间距
-                                      if (index == visibleNotes + 2) {
-                                        return const SizedBox(height: 120);
+                                    // 倒数第二个item是加载更多指示器
+                                    if (index == visibleNotes + 1) {
+                                      if (_isSearchActive) {
+                                        return const SizedBox.shrink();
                                       }
+                                      return _buildLoadMoreIndicator(
+                                        appProvider,
+                                      );
+                                    }
 
-                                      final noteIndex =
-                                          index - 1; // 调整索引，因为第一个是通知栏
+                                    // 最后一个item是底部间距
+                                    if (index == visibleNotes + 2) {
+                                      return const SizedBox(height: 120);
+                                    }
 
-                                      // 🚀 显示骨架屏占位符（分帧渲染未到达的item）
-                                      if (noteIndex >= visibleNotes) {
-                                        return _buildSkeletonCard();
-                                      }
+                                    final noteIndex =
+                                        index - 1; // 调整索引，因为第一个是通知栏
 
-                                      final note = notes[noteIndex];
-                                      return RepaintBoundary(
+                                    // 🚀 显示骨架屏占位符（分帧渲染未到达的item）
+                                    if (noteIndex >= visibleNotes) {
+                                      return _buildSkeletonCard();
+                                    }
+
+                                    final note = notes[noteIndex];
+                                    return RepaintBoundary(
+                                      key: ValueKey(
+                                        note.id,
+                                      ), // 🚀 添加key避免不必要的重建
+                                      child: NoteCard(
                                         key: ValueKey(
-                                          note.id,
-                                        ), // 🚀 添加key避免不必要的重建
-                                        child: NoteCard(
-                                          key: ValueKey(
-                                            'card_${note.id}',
-                                          ), // 🚀 为NoteCard添加key
-                                          note: note, // 🚀 直接传递Note对象，避免内部查找
-                                          onEdit: () {
-                                            // 🚀 编辑笔记（静默）
-                                            _showEditNoteForm(note);
-                                          },
-                                          onDelete: () async {
-                                            // 🚀 乐观删除笔记（立即更新UI）
-                                            try {
-                                              final appProvider =
-                                                  Provider.of<AppProvider>(
-                                                context,
-                                                listen: false,
-                                              );
-                                              await appProvider
-                                                  .deleteNote(note.id);
-
-                                              if (context.mounted) {
-                                                // 🎯 清除之前的通知，避免累积
-                                                ScaffoldMessenger.of(context).clearSnackBars();
-                                                // 🔇 已禁用删除成功通知
-                                                /* 显示带撤销按钮的美化提示
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    content: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        const Icon(
-                                                          Icons.check,
-                                                          color: Colors.white,
-                                                          size: 20,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 8,
-                                                        ),
-                                                        Expanded(
-                                                          child: Text(
-                                                            AppLocalizationsSimple
-                                                                    .of(
-                                                                  context,
-                                                                )?.noteDeleted ??
-                                                                '笔记已删除',
-                                                            style:
-                                                                const TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                            ),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    backgroundColor:
-                                                        AppTheme.successColor,
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                    margin: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 50,
-                                                      vertical: 20,
-                                                    ),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        25,
-                                                      ),
-                                                    ),
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6,
-                                                    ),
-                                                    duration: const Duration(
-                                                      seconds: 3,
-                                                    ),
-                                                    action: SnackBarAction(
-                                                      label:
-                                                          AppLocalizationsSimple
-                                                                      .of(context)
-                                                                  ?.undo ??
-                                                              '撤销',
-                                                      textColor: Colors.white,
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      disabledTextColor:
-                                                          Colors.white70,
-                                                      onPressed: () async {
-                                                        // 撤销删除
-                                                        await appProvider
-                                                            .restoreNote();
-                                                        if (context.mounted) {
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Row(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                children: [
-                                                                  const Icon(
-                                                                    Icons
-                                                                        .restore,
-                                                                    color: Colors
-                                                                        .white,
-                                                                    size: 20,
-                                                                  ),
-                                                                  const SizedBox(
-                                                                    width: 8,
-                                                                  ),
-                                                                  Expanded(
-                                                                    child: Text(
-                                                                      AppLocalizationsSimple.of(context)
-                                                                              ?.noteRestored ??
-                                                                          '笔记已恢复',
-                                                                      style:
-                                                                          const TextStyle(
-                                                                        color: Colors
-                                                                            .white,
-                                                                        fontSize:
-                                                                            14,
-                                                                        fontWeight:
-                                                                            FontWeight.w500,
-                                                                      ),
-                                                                      overflow:
-                                                                          TextOverflow
-                                                                              .ellipsis,
-                                                                    ),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                              backgroundColor:
-                                                                  Colors.blue
-                                                                      .shade600,
-                                                              behavior:
-                                                                  SnackBarBehavior
-                                                                      .floating,
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                horizontal: 50,
-                                                                vertical: 20,
-                                                              ),
-                                                              shape:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                  25,
-                                                                ),
-                                                              ),
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                horizontal: 16,
-                                                                vertical: 8,
-                                                              ),
-                                                              duration:
-                                                                  const Duration(
-                                                                seconds: 2,
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ),
-                                                ); */
-                                              }
-                                            } catch (e) {
-                                              if (kDebugMode) {
-                                                debugPrint(
-                                                  'HomeScreen: 删除笔记失败: $e',
-                                                );
-                                              }
-                                              if (context.mounted) {
-                                                SnackBarUtils.showError(
-                                                  context,
-                                                  '删除失败: $e',
-                                                );
-                                              }
-                                            }
-                                          },
-                                          onPin: () async {
+                                          'card_${note.id}',
+                                        ), // 🚀 为NoteCard添加key
+                                        note: note, // 🚀 直接传递Note对象，避免内部查找
+                                        highlightQuery: showSearchSummary
+                                            ? searchQuery
+                                            : null,
+                                        onEdit: () {
+                                          // 🚀 编辑笔记（静默）
+                                          _showEditNoteForm(note);
+                                        },
+                                        onDelete: () async {
+                                          // 🚀 乐观删除笔记（立即更新UI）
+                                          try {
                                             final appProvider =
                                                 Provider.of<AppProvider>(
                                               context,
                                               listen: false,
                                             );
-                                            // 🔥 保存切换前的状态
-                                            final willPin = !note.isPinned;
                                             await appProvider
-                                                .togglePinStatus(note);
+                                                .deleteNote(note.id);
+
                                             if (context.mounted) {
-                                              SnackBarUtils.showSuccess(
-                                                context,
-                                                // 🔥 显示切换后的状态
-                                                willPin 
-                                                    ? (AppLocalizationsSimple.of(context)?.pinned ?? '已置顶')
-                                                    : (AppLocalizationsSimple.of(context)?.unpinned ?? '已取消置顶'),
+                                              _showDeleteUndoSnackBar(
+                                                appProvider,
                                               );
                                             }
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  ), // ListView.builder 结束
-                          ), // SlidableAutoCloseBehavior 结束
-                        ), // RefreshIndicator 结束
-                      ), // GestureDetector 结束 - 点击空白处退出搜索
+                                          } on Object catch (e) {
+                                            if (kDebugMode) {
+                                              debugPrint(
+                                                'HomeScreen: 删除笔记失败: $e',
+                                              );
+                                            }
+                                            if (context.mounted) {
+                                              SnackBarUtils.showError(
+                                                context,
+                                                '删除失败: $e',
+                                              );
+                                            }
+                                          }
+                                        },
+                                        onPin: () async {
+                                          final appProvider =
+                                              Provider.of<AppProvider>(
+                                            context,
+                                            listen: false,
+                                          );
+                                          // 🔥 保存切换前的状态
+                                          final willPin = !note.isPinned;
+                                          await appProvider
+                                              .togglePinStatus(note);
+                                          if (context.mounted) {
+                                            SnackBarUtils.showSuccess(
+                                              context,
+                                              // 🔥 显示切换后的状态
+                                              willPin
+                                                  ? (AppLocalizationsSimple.of(
+                                                        context,
+                                                      )?.pinned ??
+                                                      '已置顶')
+                                                  : (AppLocalizationsSimple.of(
+                                                        context,
+                                                      )?.unpinned ??
+                                                      '已取消置顶'),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ), // ListView.builder 结束
+                        ), // SlidableAutoCloseBehavior 结束
+                      ), // RefreshIndicator 结束
+                    ), // GestureDetector 结束 - 点击空白处退出搜索
 
-                      // 移除全屏同步覆盖层，改为后台静默同步
-                    ],
-                  ), // Stack 结束
-                ), // Expanded 结束
-              ],
-            ); // Column 结束
-          }, // Consumer builder 结束
-        ), // Consumer 结束
-        floatingActionButton: GestureDetector(
-          onTapDown: (_) => _fabAnimationController.forward(),
-          onTapUp: (_) => _fabAnimationController.reverse(),
-          onTapCancel: () => _fabAnimationController.reverse(),
-          child: ScaleTransition(
-            scale: _fabScaleAnimation,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppTheme.primaryColor,
-                    AppTheme.primaryLightColor,
+                    // 移除全屏同步覆盖层，改为后台静默同步
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
-                    spreadRadius: 1,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _showAddNoteForm,
-                  borderRadius: BorderRadius.circular(30),
-                  splashColor: Colors.white.withOpacity(0.2),
-                  child: const Center(
-                    child: Icon(
-                      Icons.add_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-  // 平板布局
-  Widget _buildTabletLayout(
-    Color backgroundColor,
-    Color cardColor,
-    Color textColor,
-    Color secondaryTextColor,
-    Color iconColor,
-    Color hintColor,
-    bool isDarkMode,
-  ) =>
-      Scaffold(
-        // 🔧 修复GlobalKey冲突：tablet布局不需要key
-        drawer: const Sidebar(),
-        // 🎯 大厂标准：侧滑区域设为屏幕20%（参考微信/支付宝）
-        // 80-100px 在大多数设备上约等于 15-20% 屏幕宽度
-        drawerEdgeDragWidth: MediaQuery.of(context).size.width * 0.2,
-        backgroundColor: backgroundColor,
-        appBar: _buildResponsiveAppBar(
-          backgroundColor,
-          cardColor,
-          textColor,
-          iconColor,
-          hintColor,
-          isDarkMode,
-        ),
-        body: ResponsiveContainer(
-          maxWidth: 800,
-          child: _buildMainContent(
-            backgroundColor,
-            cardColor,
-            textColor,
-            secondaryTextColor,
-            iconColor,
-            hintColor,
-            isDarkMode,
-          ),
-        ),
-        floatingActionButton: _buildResponsiveFAB(isDarkMode),
-      );
-  }
-
-  // 桌面布局
-  Widget _buildDesktopLayout(
-    Color backgroundColor,
-    Color cardColor,
-    Color textColor,
-    Color secondaryTextColor,
-    Color iconColor,
-    Color hintColor,
-    bool isDarkMode,
-  ) =>
-      Scaffold(
-        backgroundColor: backgroundColor,
-        body: Row(
-          children: [
-            // 左侧可调整宽度的侧边栏
-            Container(
-              width: _sidebarWidth,
-              decoration: BoxDecoration(
-                color:
-                    isDarkMode ? AppTheme.darkCardColor : AppTheme.surfaceColor,
-              ),
-              child: const Sidebar(isDrawer: false), // 桌面端侧边栏固定显示
-            ),
-            // 可拖动的分隔条
-            MouseRegion(
-              cursor: SystemMouseCursors.resizeColumn,
-              child: GestureDetector(
-                onHorizontalDragUpdate: (details) {
-                  setState(() {
-                    _sidebarWidth = (_sidebarWidth + details.delta.dx).clamp(200.0, 400.0);
-                  });
-                },
-                child: Container(
-                  width: 1,
-                  color: isDarkMode
-                      ? AppTheme.darkDividerColor
-                      : AppTheme.dividerColor,
-                ),
-              ),
-            ),
-            // 右侧主内容区域
-            Expanded(
-              child: Scaffold(
-                backgroundColor: backgroundColor,
-                appBar: _buildResponsiveAppBar(
-                  backgroundColor,
-                  cardColor,
-                  textColor,
-                  iconColor,
-                  hintColor,
-                  isDarkMode,
-                  showDrawerButton: false,
-                ),
-                body: ResponsiveContainer(
-                  maxWidth: 1000,
-                  child: _buildMainContent(
-                    backgroundColor,
-                    cardColor,
-                    textColor,
-                    secondaryTextColor,
-                    iconColor,
-                    hintColor,
-                    isDarkMode,
-                  ),
-                ),
-                floatingActionButton: _buildResponsiveFAB(isDarkMode),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  // 响应式AppBar
-  PreferredSizeWidget _buildResponsiveAppBar(
-    Color backgroundColor,
-    Color cardColor,
-    Color textColor,
-    Color iconColor,
-    Color hintColor,
-    bool isDarkMode, {
-    bool showDrawerButton = true,
-  }) =>
-      AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: showDrawerButton
-            ? IconButton(
-                icon: Container(
-                  padding: ResponsiveUtils.responsivePadding(context, all: 8),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: ResponsiveUtils.responsive<double>(
-                          context,
-                          mobile: 16,
-                          tablet: 18,
-                          desktop: 20,
-                        ),
-                        height: 2,
-                        decoration: BoxDecoration(
-                          color: iconColor,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      ),
-                      SizedBox(
-                        height: ResponsiveUtils.responsiveSpacing(context, 4),
-                      ),
-                      Container(
-                        width: ResponsiveUtils.responsive<double>(
-                          context,
-                          mobile: 10,
-                          tablet: 12,
-                          desktop: 14,
-                        ),
-                        height: 2,
-                        decoration: BoxDecoration(
-                          color: iconColor,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                onPressed: _openDrawer,
-              )
-            : null,
-        title: _isSearchActive
-            ? Container(
-                height: ResponsiveUtils.responsive<double>(
-                  context,
-                  mobile: 40,
-                  tablet: 44,
-                  desktop: 48,
-                ),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(
-                    ResponsiveUtils.responsive<double>(
-                      context,
-                      mobile: 12,
-                      tablet: 14,
-                      desktop: 16,
-                    ),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
-                      offset: const Offset(0, 2),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  onChanged: _performSearch,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: ResponsiveUtils.responsiveFontSize(context, 16),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: AppLocalizationsSimple.of(context)?.searchNotes ??
-                        '搜索笔记...',
-                    hintStyle: TextStyle(
-                      color: hintColor,
-                      fontSize: ResponsiveUtils.responsiveFontSize(context, 16),
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: ResponsiveUtils.responsivePadding(
-                      context,
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: hintColor,
-                      size: ResponsiveUtils.responsiveIconSize(context, 20),
-                    ),
-                  ),
-                ),
-              )
-            : GestureDetector(
-                onTap: _showAppSelector,
-                child: Container(
-                  padding: ResponsiveUtils.responsivePadding(
-                    context,
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        AppConfig.appName,
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize:
-                              ResponsiveUtils.responsiveFontSize(context, 18),
-                        ),
-                      ),
-                      SizedBox(
-                        width: ResponsiveUtils.responsiveSpacing(context, 4),
-                      ),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: textColor,
-                        size: ResponsiveUtils.responsiveIconSize(context, 20),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: ResponsiveUtils.responsivePadding(context, all: 8),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                _isSearchActive ? Icons.close : Icons.search,
-                size: ResponsiveUtils.responsiveIconSize(context, 20),
-                color: iconColor,
-              ),
-            ),
-            onPressed: () {
-              setState(() {
-                _isSearchActive = !_isSearchActive;
-                if (!_isSearchActive) {
-                  _searchController.clear();
-                  _searchResults.clear();
-                }
-              });
-            },
-          ),
-          SizedBox(width: ResponsiveUtils.responsiveSpacing(context, 8)),
-        ],
-      );
-
-  // 响应式悬浮操作按钮
-  Widget _buildResponsiveFAB(bool isDarkMode) {
-    final fabSize = ResponsiveUtils.responsive<double>(
-      context,
-      mobile: 60,
-      tablet: 68,
-      desktop: 72,
-    );
-
-    return GestureDetector(
-      onTapDown: (_) => _fabAnimationController.forward(),
-      onTapUp: (_) => _fabAnimationController.reverse(),
-      onTapCancel: () => _fabAnimationController.reverse(),
-      child: ScaleTransition(
-        scale: _fabScaleAnimation,
-        child: Container(
-          width: fabSize,
-          height: fabSize,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                AppTheme.primaryColor,
-                AppTheme.primaryLightColor,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(fabSize / 2),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.4),
-                blurRadius: ResponsiveUtils.responsive<double>(
-                  context,
-                  mobile: 16,
-                  tablet: 20,
-                  desktop: 24,
-                ),
-                offset: const Offset(0, 8),
-              ),
+                ), // Stack 结束
+              ), // Expanded 结束
             ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _showAddNoteForm,
-              borderRadius: BorderRadius.circular(fabSize / 2),
-              splashColor: Colors.white.withOpacity(0.2),
-              child: Center(
-                child: Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: ResponsiveUtils.responsiveIconSize(context, 32),
+          ); // Column 结束
+        }, // Consumer builder 结束
+      ), // Consumer 结束
+      floatingActionButton: GestureDetector(
+        onTapDown: (_) => _fabAnimationController.forward(),
+        onTapUp: (_) => _fabAnimationController.reverse(),
+        onTapCancel: () => _fabAnimationController.reverse(),
+        child: ScaleTransition(
+          scale: _fabScaleAnimation,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  AppTheme.primaryColor,
+                  AppTheme.primaryLightColor,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _showAddNoteForm,
+                borderRadius: BorderRadius.circular(30),
+                splashColor: Colors.white.withValues(alpha: 0.2),
+                child: const Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
                 ),
               ),
             ),
@@ -1902,464 +1454,142 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // 主内容区域
-  Widget _buildMainContent(
-    Color backgroundColor,
-    Color cardColor,
-    Color textColor,
-    Color secondaryTextColor,
-    Color iconColor,
-    Color hintColor,
-    bool isDarkMode,
-  ) =>
-      GestureDetector(
-        onTap: _exitSearch, // 🎯 点击空白处退出搜索（统一使用_exitSearch方法）
-        child: Consumer<AppProvider>(
-          builder: (context, appProvider, child) {
-            if (appProvider.isLoading) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: ResponsiveUtils.responsive<double>(
-                        context,
-                        mobile: 50,
-                        tablet: 60,
-                        desktop: 70,
-                      ),
-                      height: ResponsiveUtils.responsive<double>(
-                        context,
-                        mobile: 50,
-                        tablet: 60,
-                        desktop: 70,
-                      ),
-                      child: CircularProgressIndicator(
-                        color: iconColor,
-                        strokeWidth: 3,
-                      ),
-                    ),
-                    SizedBox(
-                      height: ResponsiveUtils.responsiveSpacing(context, 16),
-                    ),
-                    Text(
-                      AppLocalizationsSimple.of(context)?.loading ?? '加载中...',
-                      style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize:
-                            ResponsiveUtils.responsiveFontSize(context, 16),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+  Widget _buildSearchSummary(int count) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizationsSimple.of(context);
+    final textColor = isDarkMode
+        ? AppTheme.darkTextSecondaryColor
+        : AppTheme.textSecondaryColor;
+    final accentColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
 
-            final notes = _isSearchActive
-                ? (_searchController.text.isEmpty
-                    ? appProvider.notes
-                    : _searchResults)
-                : appProvider.notes;
-
-            // 🔧 修复：确保至少显示一些笔记，避免创建后不显示
-            if (!_isSearchActive &&
-                notes.isNotEmpty &&
-                _visibleItemsCount == 0) {
-              // 使用 post frame callback 避免在 build 中调用 setState
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    // 至少显示 10 条笔记（如果有的话）
-                    _visibleItemsCount = notes.length >= 10 ? 10 : notes.length;
-                  });
-                }
-              });
-            }
-            
-            // 🔥 大厂标准：动态更新可见数量（同步完成后自动显示全部）
-            if (!_isSearchActive && notes.length > _visibleItemsCount) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    // 如果笔记数量增加了（比如同步完成），立即显示全部
-                    _visibleItemsCount = notes.length;
-                  });
-                }
-              });
-            }
-
-            // 🚀 分帧渲染：限制可见笔记数量（搜索时不限制）
-            final visibleNotes = _isSearchActive
-                ? notes.length
-                : _visibleItemsCount.clamp(0, notes.length);
-
-            return Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: _exitSearch, // 🎯 点击空白处退出搜索
-                        behavior: HitTestBehavior.translucent, // 确保空白区域也能响应点击
-                        child: RefreshIndicator(
-                          onRefresh: _refreshNotes,
-                          color: AppTheme.primaryColor,
-                          child: SlidableAutoCloseBehavior(
-                            // 🔥 类似微信：同时只能打开一个侧滑项
-                            child: notes.isEmpty
-                                ? ListView(
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(),
-                                    children: [
-                                      _buildNotificationBanner(),
-                                      SizedBox(
-                                        height:
-                                            MediaQuery.of(context).size.height -
-                                                200,
-                                        child: _buildEmptyState(),
-                                      ),
-                                    ],
-                                  )
-                                : ListView.builder(
-                                    controller: _scrollController, // 🚀 添加滚动控制器
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(), // 🎯 确保下拉刷新可用
-                                    itemCount: visibleNotes +
-                                        3, // 🚀 使用可见数量 +1通知栏 +1加载指示器 +1底部间距
-                                    padding: EdgeInsets.zero,
-                                    cacheExtent: 1000, // 🚀 增加缓存区域，减少重建
-                                    itemBuilder: (context, index) {
-                                      if (index == 0) {
-                                        return _buildNotificationBanner();
-                                      }
-
-                                      // 倒数第二个item是加载更多指示器
-                                      if (index == visibleNotes + 1) {
-                                        return _buildLoadMoreIndicator(
-                                          appProvider,
-                                        );
-                                      }
-
-                                      // 最后一个item是底部间距
-                                      if (index == visibleNotes + 2) {
-                                        return SizedBox(
-                                          height:
-                                              ResponsiveUtils.responsiveSpacing(
-                                            context,
-                                            120,
-                                          ),
-                                        );
-                                      }
-
-                                      final noteIndex =
-                                          index - 1; // 调整索引，因为第一个是通知栏
-
-                                      // 🚀 显示骨架屏占位符（分帧渲染未到达的item）
-                                      if (noteIndex >= visibleNotes) {
-                                        return _buildSkeletonCard();
-                                      }
-
-                                      final note = notes[noteIndex];
-                                      return RepaintBoundary(
-                                        key: ValueKey(
-                                          note.id,
-                                        ), // 🚀 添加key避免不必要的重建
-                                        child: NoteCard(
-                                          key: ValueKey(
-                                            'card_${note.id}',
-                                          ), // 🚀 为NoteCard添加key
-                                          note: note, // 🚀 直接传递Note对象，避免内部查找
-                                          onEdit: () {
-                                            // 🚀 编辑笔记（静默）
-                                            _showEditNoteForm(note);
-                                          },
-                                          onDelete: () async {
-                                            // 🚀 乐观删除笔记（立即更新UI）
-                                            try {
-                                              final appProvider =
-                                                  Provider.of<AppProvider>(
-                                                context,
-                                                listen: false,
-                                              );
-                                              await appProvider
-                                                  .deleteNote(note.id);
-
-                                              if (context.mounted) {
-                                                // 🎯 清除之前的通知，避免累积
-                                                ScaffoldMessenger.of(context).clearSnackBars();
-                                                // 🔇 已禁用删除成功通知
-                                                /* 显示带撤销按钮的美化提示
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    content: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        const Icon(
-                                                          Icons.check,
-                                                          color: Colors.white,
-                                                          size: 20,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 8,
-                                                        ),
-                                                        Expanded(
-                                                          child: Text(
-                                                            AppLocalizationsSimple
-                                                                    .of(
-                                                                  context,
-                                                                )?.noteDeleted ??
-                                                                '笔记已删除',
-                                                            style:
-                                                                const TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                            ),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    backgroundColor:
-                                                        AppTheme.successColor,
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                    margin: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 50,
-                                                      vertical: 20,
-                                                    ),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        25,
-                                                      ),
-                                                    ),
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6,
-                                                    ),
-                                                    duration: const Duration(
-                                                      seconds: 3,
-                                                    ),
-                                                    action: SnackBarAction(
-                                                      label:
-                                                          AppLocalizationsSimple
-                                                                      .of(context)
-                                                                  ?.undo ??
-                                                              '撤销',
-                                                      textColor: Colors.white,
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      disabledTextColor:
-                                                          Colors.white70,
-                                                      onPressed: () async {
-                                                        // 撤销删除
-                                                        await appProvider
-                                                            .restoreNote();
-                                                        if (context.mounted) {
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Row(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                children: [
-                                                                  const Icon(
-                                                                    Icons
-                                                                        .restore,
-                                                                    color: Colors
-                                                                        .white,
-                                                                    size: 20,
-                                                                  ),
-                                                                  const SizedBox(
-                                                                    width: 8,
-                                                                  ),
-                                                                  Expanded(
-                                                                    child: Text(
-                                                                      AppLocalizationsSimple.of(context)
-                                                                              ?.noteRestored ??
-                                                                          '笔记已恢复',
-                                                                      style:
-                                                                          const TextStyle(
-                                                                        color: Colors
-                                                                            .white,
-                                                                        fontSize:
-                                                                            14,
-                                                                        fontWeight:
-                                                                            FontWeight.w500,
-                                                                      ),
-                                                                      overflow:
-                                                                          TextOverflow
-                                                                              .ellipsis,
-                                                                    ),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                              backgroundColor:
-                                                                  Colors.blue
-                                                                      .shade600,
-                                                              behavior:
-                                                                  SnackBarBehavior
-                                                                      .floating,
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                horizontal: 50,
-                                                                vertical: 20,
-                                                              ),
-                                                              shape:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                  25,
-                                                                ),
-                                                              ),
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                horizontal: 16,
-                                                                vertical: 8,
-                                                              ),
-                                                              duration:
-                                                                  const Duration(
-                                                                seconds: 2,
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ),
-                                                ); */
-                                              }
-                                            } catch (e) {
-                                              if (kDebugMode) {
-                                                debugPrint(
-                                                  'HomeScreen: 删除笔记失败: $e',
-                                                );
-                                              }
-                                              if (context.mounted) {
-                                                SnackBarUtils.showError(
-                                                  context,
-                                                  '删除失败: $e',
-                                                );
-                                              }
-                                            }
-                                          },
-                                          onPin: () async {
-                                            final appProvider =
-                                                Provider.of<AppProvider>(
-                                              context,
-                                              listen: false,
-                                            );
-                                            // 🔥 保存切换前的状态
-                                            final willPin = !note.isPinned;
-                                            await appProvider
-                                                .togglePinStatus(note);
-                                            if (context.mounted) {
-                                              SnackBarUtils.showSuccess(
-                                                context,
-                                                // 🔥 显示切换后的状态
-                                                willPin 
-                                                    ? (AppLocalizationsSimple.of(context)?.pinned ?? '已置顶')
-                                                    : (AppLocalizationsSimple.of(context)?.unpinned ?? '已取消置顶'),
-                                              );
-                                            }
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  ), // ListView.builder 结束
-                          ), // SlidableAutoCloseBehavior 结束
-                        ), // RefreshIndicator 结束
-                      ), // GestureDetector 结束 - 点击空白处退出搜索
-                    ],
-                  ), // Stack 结束
-                ), // Expanded 结束
-              ],
-            ); // Column 结束
-          }, // Consumer builder 结束
-        ), // Consumer 结束
-      );
-
-  // 执行搜索（带防抖优化）
-  void _performSearch(String query) {
-    // 🚀 防抖：取消之前的搜索请求
-    _searchDebounce?.cancel();
-
-    if (query.isEmpty) {
-      // 搜索框为空时，清空搜索结果，这样会显示所有笔记
-      setState(() {
-        _searchResults.clear();
-      });
-      return;
-    }
-
-    // 🚀 延迟300ms执行搜索，避免每次输入都查询
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      _executeSearch(query);
-    });
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search_rounded,
+            size: ResponsiveUtils.fontScaledIconSize(context, 16),
+            color: accentColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n?.searchResultsCount(count) ?? '找到 $count 条结果',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: textColor,
+                fontSize: ResponsiveUtils.responsiveFontSize(context, 13),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  // 实际执行搜索
-  Future<void> _executeSearch(String query) async {
-    // 🚀 改用数据库搜索，确保搜索全部笔记
-    try {
-      final appProvider = Provider.of<AppProvider>(context, listen: false);
-      final results = await appProvider.databaseService.searchNotes(query);
+  Widget _buildSearchEmptyState(String query) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizationsSimple.of(context);
+    final textColor =
+        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
+    final secondaryTextColor = isDarkMode
+        ? AppTheme.darkTextSecondaryColor
+        : AppTheme.textSecondaryColor;
+    final iconColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
 
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('HomeScreen: 搜索失败: $e');
-      // 如果数据库搜索失败，回退到内存搜索
-      final appProvider = Provider.of<AppProvider>(context, listen: false);
-      final results = appProvider.notes
-          .where(
-            (note) =>
-                note.content.toLowerCase().contains(query.toLowerCase()) ||
-                note.tags.any(
-                  (tag) => tag.toLowerCase().contains(query.toLowerCase()),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: isDarkMode ? 0.14 : 0.08),
+                borderRadius: BorderRadius.circular(44),
+              ),
+              child: Icon(
+                Icons.search_off_rounded,
+                size: ResponsiveUtils.fontScaledIconSize(context, 36),
+                color: iconColor.withValues(alpha: 0.72),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              l10n?.noSearchResults ?? '没有找到相关笔记',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: textColor,
+                fontSize: ResponsiveUtils.responsiveFontSize(context, 17),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (query.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                query,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: secondaryTextColor,
+                  fontSize: ResponsiveUtils.responsiveFontSize(context, 14),
+                  height: 1.4,
                 ),
-          )
-          .toList();
-
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-        });
-      }
-    }
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
-  // 显示应用选择器（占位方法）
-  void _showAppSelector() {
-    // 这是一个占位方法，可以根据需要实现应用选择功能
-    // 暂时不做任何操作
+  Widget _buildSearchLoadingState() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDarkMode
+        ? AppTheme.darkTextSecondaryColor
+        : AppTheme.textSecondaryColor;
+    final accentColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.6,
+              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '搜索中...',
+            style: TextStyle(
+              color: textColor,
+              fontSize: ResponsiveUtils.responsiveFontSize(context, 14),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // 🚀 构建骨架屏占位符（分帧渲染）
   Widget _buildSkeletonCard() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final skeletonColor = isDarkMode
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.08);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -2369,7 +1599,7 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -2458,10 +1688,11 @@ class _HomeScreenState extends State<HomeScreen>
         padding: const EdgeInsets.symmetric(vertical: 16),
         alignment: Alignment.center,
         child: Text(
-          (AppLocalizationsSimple.of(context)?.loadedAll ?? '已加载全部 {count} 条笔记').replaceAll('{count}', '${appProvider.notes.length}'),
+          (AppLocalizationsSimple.of(context)?.loadedAll ?? '已加载全部 {count} 条笔记')
+              .replaceAll('{count}', '${appProvider.notes.length}'),
           style: TextStyle(
             fontSize: 12,
-            color: textColor.withOpacity(0.6),
+            color: textColor.withValues(alpha: 0.6),
           ),
         ),
       );
@@ -2548,13 +1779,19 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
           final noteDate = note.createdAt;
           switch (_timeRange) {
             case 'week':
-              if (now.difference(noteDate).inDays > 7) return false;
+              if (now.difference(noteDate).inDays > 7) {
+                return false;
+              }
               break;
             case 'month':
-              if (now.difference(noteDate).inDays > 30) return false;
+              if (now.difference(noteDate).inDays > 30) {
+                return false;
+              }
               break;
             case 'year':
-              if (now.difference(noteDate).inDays > 365) return false;
+              if (now.difference(noteDate).inDays > 365) {
+                return false;
+              }
               break;
           }
         }
@@ -2568,7 +1805,9 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
 
         // 排除标签
         if (_excludedTags.isNotEmpty) {
-          if (_excludedTags.any((tag) => note.tags.contains(tag))) return false;
+          if (_excludedTags.any((tag) => note.tags.contains(tag))) {
+            return false;
+          }
         }
 
         // 关键词筛选
@@ -2650,7 +1889,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                     decoration: InputDecoration(
                       hintText: '例如：工作、学习、思考...',
                       hintStyle:
-                          TextStyle(color: subTextColor.withOpacity(0.5)),
+                          TextStyle(color: subTextColor.withValues(alpha: 0.5)),
                       prefixIcon: const Icon(
                         Icons.search,
                         color: AppTheme.primaryColor,
@@ -2745,9 +1984,11 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -2779,7 +2020,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
               border: Border(
                 top: BorderSide(
                   color: (isDarkMode ? Colors.white : Colors.black)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -2798,10 +2039,10 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                     elevation: 0,
                   ),
                   child: _isAnalyzing
-                      ? const Row(
+                      ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -2810,8 +2051,11 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                                     AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Text('AI正在分析中...'),
+                            const SizedBox(width: 12),
+                            Text(
+                              AppLocalizationsSimple.of(context)?.aiAnalyzing ??
+                                  'AI正在分析中...',
+                            ),
                           ],
                         )
                       : Row(
@@ -2819,7 +2063,13 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                           children: [
                             const Icon(Icons.auto_awesome, size: 20),
                             const SizedBox(width: 8),
-                            Text('开始洞察 (${_filteredNotes.length} 条笔记)'),
+                            Text(
+                              AppLocalizationsSimple.of(context)
+                                      ?.startInsightWithCount(
+                                    _filteredNotes.length,
+                                  ) ??
+                                  '开始洞察 (${_filteredNotes.length} 条笔记)',
+                            ),
                           ],
                         ),
                 ),
@@ -2996,8 +2246,8 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                 color: isSelected
                     ? (isInclude ? AppTheme.primaryColor : Colors.red)
                     : (isDarkMode
-                        ? Colors.white.withOpacity(0.2)
-                        : Colors.black.withOpacity(0.1)),
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : Colors.black.withValues(alpha: 0.1)),
               ),
             ),
             child: Row(
@@ -3031,7 +2281,6 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
 
   // 构建展开/收起按钮
   Widget _buildExpandButton({required bool isInclude}) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isExpanded =
         isInclude ? _isIncludeTagsExpanded : _isExcludeTagsExpanded;
     final tagCount = _availableTags.length;
@@ -3074,11 +2323,6 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor =
         isDarkMode ? AppTheme.darkSurfaceColor : AppTheme.surfaceColor;
-    final textColor =
-        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
-    final subTextColor = isDarkMode
-        ? AppTheme.darkTextSecondaryColor
-        : AppTheme.textSecondaryColor;
 
     final totalNotes = widget.notes.length;
     final filteredCount = _filteredNotes.length;
@@ -3105,7 +2349,8 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
           Container(
             width: 1,
             height: 40,
-            color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.1),
+            color: (isDarkMode ? Colors.white : Colors.black)
+                .withValues(alpha: 0.1),
           ),
           _buildStatItem(
             icon: Icons.text_fields,
@@ -3116,7 +2361,8 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
           Container(
             width: 1,
             height: 40,
-            color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.1),
+            color: (isDarkMode ? Colors.white : Colors.black)
+                .withValues(alpha: 0.1),
           ),
           _buildStatItem(
             icon: Icons.label_outlined,
@@ -3168,7 +2414,9 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
 
   // 🎯 大厂标准：只统计实际文字（去除Markdown语法、标点、空格）
   int _getActualWordCount(String content) {
-    if (content.isEmpty) return 0;
+    if (content.isEmpty) {
+      return 0;
+    }
 
     var cleaned = content;
 
@@ -3211,7 +2459,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.08),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.08),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -3260,13 +2508,17 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
   void _scrollToResult() {
     // 延迟一下，确保Widget已经渲染完成
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       try {
         // 获取结果区域的RenderBox
         final resultBox =
             _insightResultKey.currentContext?.findRenderObject() as RenderBox?;
-        if (resultBox == null) return;
+        if (resultBox == null) {
+          return;
+        }
 
         // 计算需要滚动的位置（结果区域顶部 - 一些padding）
         final position = resultBox.localToGlobal(Offset.zero).dy;
@@ -3279,7 +2531,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOutCubic,
         );
-      } catch (e) {
+      } on Object {
         // 如果出错，直接滚动到底部
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -3442,7 +2694,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
           }
         });
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         setState(() {
           _isAnalyzing = false;

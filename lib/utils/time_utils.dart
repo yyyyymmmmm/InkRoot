@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 class TimeUtils {
   /// 将时间戳转换为DateTime对象
   /// 支持多种格式：毫秒时间戳(int)、ISO字符串(String)
-  static DateTime parseTimeStamp(timestamp) {
+  static DateTime parseTimeStamp(Object? timestamp) {
     if (timestamp == null) {
       return DateTime.now();
     }
@@ -27,12 +27,12 @@ class TimeUtils {
       // 尝试解析ISO格式
       try {
         return DateTime.parse(timestamp);
-      } catch (e) {
+      } on Object {
         // 尝试解析数字字符串
         try {
           final numTimestamp = int.parse(timestamp);
           return parseTimeStamp(numTimestamp);
-        } catch (e) {
+        } on Object {
           // 无法解析，返回当前时间
           debugPrint('无法解析时间戳: $timestamp');
           return DateTime.now();
