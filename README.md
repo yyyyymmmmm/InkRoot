@@ -6,12 +6,15 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 
 ## 当前版本
 
-`1.1.1`
+`1.1.2`
 
-本版本重点改进了编辑体验、首页渲染、图片查看、WebDAV 备份、Memos 兼容、时间线合并、国际化和项目发布流程。
+本版本重点修复 Memos 登录后读取账号信息失败的问题，并继续改进编辑体验、首页渲染、图片查看、WebDAV 备份、Memos 兼容、时间线合并、国际化和项目发布流程。
 
 主要变化：
 
+- Memos 登录成功后读取账号信息会自动兼容 v0.21、v0.22-v0.25 和 v0.26+ 接口。
+- 请求同时兼容 Bearer Token 与 Memos Cookie 鉴权，减少自部署服务器和反向代理差异导致的登录失败。
+- 登录失败提示会区分账号密码、Token、网络、TLS 和服务器返回异常。
 - 首页笔记渲染保留用户输入的换行和排版。
 - 展开按钮按渲染后的可见内容判断，减少误显示。
 - 图片查看支持点击退出、原图查看和多图浏览。
@@ -71,13 +74,13 @@ dart tool/inkroot.dart build linux-debug
 版本号统一维护在 `pubspec.yaml`：
 
 ```yaml
-version: 1.1.1+10101
+version: 1.1.2+10102
 ```
 
 发布入口：
 
 ```bash
-dart tool/inkroot.dart release v1.1.1
+dart tool/inkroot.dart release v1.1.2
 ```
 
 这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android、iOS、macOS、Windows 和 Linux 产物。

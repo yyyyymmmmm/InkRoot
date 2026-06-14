@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.2] - 2026-06-15
+
+### Fixed
+- Fixed account profile loading failures after a successful Memos login on some servers
+- User profile loading now falls back across v0.21, v0.22-v0.25, and v0.26+ account APIs instead of relying on a single detected version
+- Requests now send both Bearer Token and Memos Cookie credentials for better compatibility with official and self-hosted servers
+- Login errors now distinguish credential, token, network, TLS, and server response failures instead of showing one generic network message
+
+### Verified
+- Verified official server login on the iOS simulator and synced 279 notes successfully
+- `flutter analyze` passed
+- Memos API unit tests passed
+
+---
+
+## [1.1.1] - 2026-06-15
+
+### Fixed
+- Improved Memos login compatibility when servers hide version information before login
+- Fixed Flutter default icons still appearing on Windows desktop builds
+- Unified macOS and Windows desktop icon generation
+
+### Maintenance
+- Added `scripts/generate_desktop_icons.py` for desktop icon asset generation
+
+---
+
 ## [1.1.0] - 2026-06-14
 
 ### Maintenance and Release Workflow

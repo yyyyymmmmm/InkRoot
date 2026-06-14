@@ -412,6 +412,40 @@ void main() {
       expect(method, 'POST');
     });
 
+    test('API-15b 版本误判时自动回退到 /api/v1/auth/me', () async {
+      await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+      final calledPaths = <String>[];
+      final mock = MockClient((req) async {
+        calledPaths.add('${req.method} ${req.url.path}');
+        if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+          return http.Response(jsonEncode({'version': 'v0.22.0'}), 200);
+        }
+        if (req.url.path.endsWith('/api/v1/auth/status')) {
+          return http.Response('Not Found', 404);
+        }
+        if (req.url.path.endsWith('/api/v1/auth/me')) {
+          return http.Response(
+            jsonEncode({
+              'user': {
+                'id': '42',
+                'username': 'alice',
+                'role': 'ADMIN',
+              },
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+
+      final svc = MemosApiServiceFixed(baseUrl: baseUrl, token: 'tok');
+      final user = await http.runWithClient(svc.getUserInfo, () => mock);
+
+      expect(user.username, 'alice');
+      expect(calledPaths, contains('POST /api/v1/auth/status'));
+      expect(calledPaths, contains('GET /api/v1/auth/me'));
+    });
+
     test('API-16 401 → TokenExpiredException', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       final mock = MockClient((req) async {
@@ -464,7 +498,7 @@ void main() {
       expect(capturedHeaders?.containsKey('Authorization'), isFalse);
     });
 
-    test('API-20 有 token 时 Authorization 头格式正确', () async {
+    test('API-20 有 token 时 Authorization 和 Cookie 头格式正确', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       Map<String, String>? capturedHeaders;
       final mock = MockClient((req) async {
@@ -478,6 +512,7 @@ void main() {
       final svc = MemosApiServiceFixed(baseUrl: baseUrl, token: 'my-jwt');
       await http.runWithClient(() => svc.getMemos(pageSize: 1), () => mock);
       expect(capturedHeaders?['Authorization'], 'Bearer my-jwt');
+      expect(capturedHeaders?['Cookie'], 'memos.access-token=my-jwt');
     });
   });
 

@@ -6,12 +6,15 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.1`
+`1.1.2`
 
-This release improves editing, home feed rendering, image preview, WebDAV backup, Memos compatibility, timeline merging, localization, and the release workflow.
+This release fixes Memos account profile loading after login and continues to improve editing, home feed rendering, image preview, WebDAV backup, Memos compatibility, timeline merging, localization, and the release workflow.
 
 Highlights:
 
+- Memos profile loading now falls back across v0.21, v0.22-v0.25, and v0.26+ account APIs after login.
+- Requests support both Bearer Token and Memos Cookie authentication to reduce self-hosted server and reverse-proxy compatibility failures.
+- Login errors now distinguish credential, token, network, TLS, and server response failures.
 - Home feed rendering keeps user line breaks and spacing.
 - Expand controls are based on rendered visible content.
 - Image preview supports tap-to-dismiss, original image viewing, and multi-image browsing.
@@ -71,13 +74,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.1+10101
+version: 1.1.2+10102
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.1
+dart tool/inkroot.dart release v1.1.2
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android, iOS, macOS, Windows, and Linux assets.

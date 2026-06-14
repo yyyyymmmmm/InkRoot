@@ -1548,21 +1548,38 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     } on Object catch (e) {
       debugPrint('AppProvider: 账号密码登录失败: $e');
       String userFriendlyMessage;
+      final errorText = e.toString();
 
       // 根据异常类型给出通俗易懂的错误提示
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('NetworkException')) {
+      if (errorText.contains('账号或密码错误') ||
+          errorText.contains('Incorrect login credentials') ||
+          errorText.contains('Invalid username or password') ||
+          errorText.contains('wrong password')) {
+        userFriendlyMessage = '账号或密码错误，请检查后重试';
+      } else if (errorText.contains('TokenExpiredException') ||
+          errorText.contains('Invalid or expired access token') ||
+          errorText.contains('Token无效或已过期')) {
+        userFriendlyMessage = '登录凭证已失效，请重新登录';
+      } else if (errorText.contains('Missing access token')) {
+        userFriendlyMessage = '服务器没有返回有效登录凭证，请稍后重试';
+      } else if (errorText.contains('登录成功但无法获取 Token')) {
+        userFriendlyMessage = '服务器登录成功但未返回有效凭证，请联系服务器管理员检查认证配置';
+      } else if (errorText.contains('获取用户信息失败')) {
+        userFriendlyMessage = '登录凭证已获取，但读取账号信息失败，请稍后重试';
+      } else if (errorText.contains('SocketException') ||
+          errorText.contains('NetworkException')) {
         userFriendlyMessage = '网络连接失败，请检查手机网络是否正常，或切换 Wi-Fi / 移动网络后重试';
-      } else if (e.toString().contains('TimeoutException')) {
+      } else if (errorText.contains('TimeoutException')) {
         userFriendlyMessage = '连接超时，服务器响应太慢了，请检查网络后重试';
-      } else if (e.toString().contains('FormatException') ||
-          e.toString().contains('Invalid')) {
+      } else if (errorText.contains('FormatException') ||
+          errorText.contains('Invalid URI')) {
         userFriendlyMessage = '服务器地址可能不对，请确认地址格式正确，例如：https://demo.memos.app';
-      } else if (e.toString().contains('HandshakeException') ||
-          e.toString().contains('TlsException')) {
+      } else if (errorText.contains('HandshakeException') ||
+          errorText.contains('TlsException')) {
         userFriendlyMessage = '连接服务器时安全验证失败，请检查服务器地址是否使用了 https://';
       } else {
-        userFriendlyMessage = '登录时出现问题，请检查网络和服务器地址后重试';
+        userFriendlyMessage =
+            '登录失败：${errorText.replaceFirst('Exception: ', '').split('\n').first}';
       }
 
       return (false, userFriendlyMessage);

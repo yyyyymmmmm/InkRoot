@@ -20,6 +20,11 @@ typedef _AuthAttempt = ({
   Future<String> Function(String username, String password) signIn,
 });
 
+typedef _UserInfoAttempt = ({
+  int version,
+  Future<User> Function() fetch,
+});
+
 /// Memos API service – fully compatible with v0.21.0 → v0.27.x+
 ///
 /// Auth & endpoint behaviour differs significantly across versions:
@@ -55,8 +60,9 @@ class MemosApiServiceFixed {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-    if (token != null) {
+    if (token != null && token!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
+      headers['Cookie'] = 'memos.access-token=$token';
     }
     return headers;
   }
@@ -384,13 +390,42 @@ class MemosApiServiceFixed {
   ///   v0.26+: GET /api/v1/auth/me → {user: {...}}
   Future<User> getUserInfo() async {
     final v = await _version;
-    if (v >= 26) {
-      return _getUserV26();
+    final attempts = v >= 26
+        ? <_UserInfoAttempt>[
+            (version: 26, fetch: _getUserV26),
+            (version: 22, fetch: _getUserV22),
+            (version: 21, fetch: _getUserV21),
+          ]
+        : v >= 22
+            ? <_UserInfoAttempt>[
+                (version: 22, fetch: _getUserV22),
+                (version: 26, fetch: _getUserV26),
+                (version: 21, fetch: _getUserV21),
+              ]
+            : <_UserInfoAttempt>[
+                (version: 21, fetch: _getUserV21),
+                (version: 26, fetch: _getUserV26),
+                (version: 22, fetch: _getUserV22),
+              ];
+
+    final errors = <String>[];
+    for (final attempt in attempts) {
+      try {
+        final user = await attempt.fetch();
+        await _cacheServerVersion(baseUrl, attempt.version);
+        return user;
+      } on Object catch (e) {
+        errors.add(e.toString());
+      }
     }
-    if (v >= 22) {
-      return _getUserV22();
+
+    if (errors.any((error) => error.contains('TokenExpiredException'))) {
+      throw TokenExpiredException('Token无效或已过期，请重新登录');
     }
-    return _getUserV21();
+
+    throw Exception(
+      errors.isEmpty ? '获取用户信息失败' : errors.last,
+    );
   }
 
   Future<User> _getUserV26() async {
@@ -407,7 +442,7 @@ class MemosApiServiceFixed {
     if (resp.statusCode == 401) {
       throw TokenExpiredException('Token无效或已过期，请重新登录');
     }
-    throw Exception('获取用户信息失败: ${resp.statusCode}');
+    throw Exception('获取用户信息失败: ${resp.statusCode} – ${_parseError(resp.body)}');
   }
 
   Future<User> _getUserV22() async {
@@ -423,7 +458,7 @@ class MemosApiServiceFixed {
     if (resp.statusCode == 401) {
       throw TokenExpiredException('Token无效或已过期，请重新登录');
     }
-    throw Exception('获取用户信息失败: ${resp.statusCode}');
+    throw Exception('获取用户信息失败: ${resp.statusCode} – ${_parseError(resp.body)}');
   }
 
   Future<User> _getUserV21() async {
@@ -439,7 +474,7 @@ class MemosApiServiceFixed {
     if (resp.statusCode == 401) {
       throw TokenExpiredException('Token无效或已过期，请重新登录');
     }
-    throw Exception('获取用户信息失败: ${resp.statusCode}');
+    throw Exception('获取用户信息失败: ${resp.statusCode} – ${_parseError(resp.body)}');
   }
 
   // ── Memo list ──────────────────────────────────────────────────────────────
@@ -929,7 +964,9 @@ class MemosApiServiceFixed {
   String _parseError(String body) {
     try {
       final data = json.decode(body) as Map<String, dynamic>;
-      return _extractErrorMessage(data);
+      final message = _extractErrorMessage(data);
+      final grpcMatch = RegExp('message=([^,}]+)').firstMatch(message);
+      return grpcMatch?.group(1)?.trim() ?? message;
     } on Object catch (_) {
       return body.length > 200 ? body.substring(0, 200) : body;
     }
