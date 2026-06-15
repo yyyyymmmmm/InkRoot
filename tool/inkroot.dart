@@ -105,6 +105,11 @@ class InkRootCli {
       'versionName flutter.versionName',
       'Android versionName must come from pubspec.yaml.',
     );
+    await _assertFileContains(
+      'android/app/build.gradle',
+      'applicationName: "android.app.Application"',
+      'Android manifest placeholders must keep Flutter applicationName.',
+    );
     await _assertFileDoesNotContain(
       'android/app/src/main/AndroidManifest.xml',
       'android.permission.SCHEDULE_EXACT_ALARM',
