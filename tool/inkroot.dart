@@ -7,6 +7,10 @@ Future<void> main(List<String> args) async {
 }
 
 class InkRootCli {
+  static const String _cloudVerifyAppId = '10002';
+  static const String _androidReleaseCertSha256 =
+      '7A:00:C9:A1:AC:E1:AC:15:0E:79:0C:9D:7A:5B:FC:37:A3:F1:A1:2F:0D:F5:9D:ED:86:27:17:93:C8:40:99:8D';
+
   Future<int> run(List<String> args) async {
     if (args.isEmpty || args.first == 'help' || args.first == '--help') {
       _printHelp();
@@ -172,8 +176,13 @@ class InkRootCli {
     );
     await _assertFileContains(
       '.github/workflows/release.yml',
-      'CLOUD_VERIFY_APP_ID',
-      'Release workflow must inject the cloud verification app id.',
+      _androidReleaseCertSha256,
+      'Release workflow must verify the Android release signing certificate.',
+    );
+    await _assertFileContains(
+      'lib/config/app_config.dart',
+      "static const String appId = '$_cloudVerifyAppId';",
+      'Cloud verification AppID must stay fixed in source.',
     );
     await _assertFileContains(
       '.github/workflows/release.yml',
@@ -394,14 +403,13 @@ class InkRootCli {
 
   List<String> _dartDefines({required bool isRelease}) {
     final defines = <String>[];
-    final cloudVerifyAppId = _envValue('CLOUD_VERIFY_APP_ID');
     final cloudVerifyAppKey = _envValue('CLOUD_VERIFY_APP_KEY');
     final environment = _envValue('ENVIRONMENT');
 
-    if (isRelease && (cloudVerifyAppId == null || cloudVerifyAppKey == null)) {
+    if (isRelease && cloudVerifyAppKey == null) {
       throw ToolExit(
         2,
-        'Release builds require CLOUD_VERIFY_APP_ID and CLOUD_VERIFY_APP_KEY.',
+        'Release builds require CLOUD_VERIFY_APP_KEY.',
       );
     }
 
@@ -409,9 +417,6 @@ class InkRootCli {
       '--dart-define=ENVIRONMENT=${environment ?? (isRelease ? 'production' : 'development')}',
     );
 
-    if (cloudVerifyAppId != null) {
-      defines.add('--dart-define=CLOUD_VERIFY_APP_ID=$cloudVerifyAppId');
-    }
     if (cloudVerifyAppKey != null) {
       defines.add('--dart-define=CLOUD_VERIFY_APP_KEY=$cloudVerifyAppKey');
     }
@@ -428,15 +433,13 @@ class InkRootCli {
   Map<String, String>? _dartDefineEnvironment() {
     final values = <String, String>{};
     values['ENVIRONMENT'] = _envValue('ENVIRONMENT') ?? 'production';
-    if (_envValue('CLOUD_VERIFY_APP_ID') == null ||
-        _envValue('CLOUD_VERIFY_APP_KEY') == null) {
+    if (_envValue('CLOUD_VERIFY_APP_KEY') == null) {
       throw ToolExit(
         2,
-        'Release builds require CLOUD_VERIFY_APP_ID and CLOUD_VERIFY_APP_KEY.',
+        'Release builds require CLOUD_VERIFY_APP_KEY.',
       );
     }
     for (final key in [
-      'CLOUD_VERIFY_APP_ID',
       'CLOUD_VERIFY_APP_KEY',
       ..._optionalBuildDefineKeys,
     ]) {

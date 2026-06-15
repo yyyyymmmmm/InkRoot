@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.5] - 2026-06-15
+
+### 修复
+- 将官方云验证 AppID 固定为源码默认值，避免 Release 环境缺少 AppID 时生成未绑定官方云配置的包
+- Android Release 新增签名证书指纹校验，签名证书不一致时直接失败，避免破坏覆盖安装链路
+
+### 维护
+- Release 构建继续要求云验证 AppKey 和 Android 签名密钥通过 GitHub Secrets 注入，源码不保存私钥或密钥
+
+---
+
 ## [1.1.4] - 2026-06-15
 
 ### 修复

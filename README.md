@@ -6,17 +6,17 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 
 ## 当前版本
 
-`1.1.4`
+`1.1.5`
 
-本版本修复正式发布包未注入云验证 AppID 的问题，并补齐 Release 构建密钥防呆，避免后续发布出没有官方公告、云配置和更新检查能力的包。
+本版本固定官方云验证 AppID，并为 Android 发布签名加入证书指纹门禁，避免后续发布出未绑定官方云配置或签名不一致的安装包。
 
 主要变化：
 
 - Memos 登录成功后读取账号信息会自动兼容 v0.21、v0.22-v0.25 和 v0.26+ 接口。
 - 请求同时兼容 Bearer Token 与 Memos Cookie 鉴权，减少自部署服务器和反向代理差异导致的登录失败。
 - 登录失败提示会区分账号密码、Token、网络、TLS 和服务器返回异常。
-- Release 包现在会强制注入云验证 AppID / AppKey。
-- GitHub Actions 会在缺少必要发布密钥时直接失败，不再生成未绑定官方云配置的包。
+- 官方云验证 AppID 现在固定在源码默认值中，Release 包不再依赖外部 AppID 配置。
+- GitHub Actions 会在缺少必要发布密钥或 Android 签名证书不匹配时直接失败。
 - Android 构建恢复 Flutter manifest 占位符与 BuildConfig 生成，避免云端 CLI 构建失败。
 - Release workflow 会生成 Android APK/AAB、iOS 测试包、macOS、Windows 和 Linux 产物。
 - 首页笔记渲染保留用户输入的换行和排版。
@@ -81,13 +81,13 @@ dart tool/inkroot.dart build linux-debug
 版本号统一维护在 `pubspec.yaml`：
 
 ```yaml
-version: 1.1.4+10104
+version: 1.1.5+10105
 ```
 
 发布入口：
 
 ```bash
-dart tool/inkroot.dart release v1.1.4
+dart tool/inkroot.dart release v1.1.5
 ```
 
 这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android APK/AAB、iOS、macOS、Windows 和 Linux 产物。

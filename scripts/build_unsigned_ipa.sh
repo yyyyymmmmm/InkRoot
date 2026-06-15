@@ -51,9 +51,6 @@ cd "$PROJECT_DIR"
 
 BUILD_DEFINES=()
 BUILD_DEFINES+=("--dart-define=ENVIRONMENT=${ENVIRONMENT:-production}")
-if [ -n "${CLOUD_VERIFY_APP_ID:-}" ]; then
-    BUILD_DEFINES+=("--dart-define=CLOUD_VERIFY_APP_ID=${CLOUD_VERIFY_APP_ID}")
-fi
 if [ -n "${CLOUD_VERIFY_APP_KEY:-}" ]; then
     BUILD_DEFINES+=("--dart-define=CLOUD_VERIFY_APP_KEY=${CLOUD_VERIFY_APP_KEY}")
 fi

@@ -25,9 +25,7 @@ class AppConfig {
   static int get buildNumber => int.tryParse(AppInfoService.buildNumber) ?? 0;
 
   /// 应用ID
-  static const String appId = String.fromEnvironment(
-    'CLOUD_VERIFY_APP_ID',
-  );
+  static const String appId = '10002';
 
   /// 应用密钥
   static const String appKey = String.fromEnvironment(

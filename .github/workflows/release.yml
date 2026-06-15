@@ -11,7 +11,7 @@ permissions:
 env:
   FLUTTER_CHANNEL: stable
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  CLOUD_VERIFY_APP_ID: ${{ secrets.CLOUD_VERIFY_APP_ID }}
+  ANDROID_RELEASE_CERT_SHA256: "7A:00:C9:A1:AC:E1:AC:15:0E:79:0C:9D:7A:5B:FC:37:A3:F1:A1:2F:0D:F5:9D:ED:86:27:17:93:C8:40:99:8D"
   CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
   UMENG_ANDROID_APPKEY: ${{ secrets.UMENG_ANDROID_APPKEY }}
   UMENG_CHANNEL: ${{ secrets.UMENG_CHANNEL }}
@@ -75,7 +75,6 @@ jobs:
       - name: Verify required release secrets
         shell: bash
         env:
-          CLOUD_VERIFY_APP_ID: ${{ secrets.CLOUD_VERIFY_APP_ID }}
           CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
@@ -84,7 +83,6 @@ jobs:
         run: |
           set -euo pipefail
           required=(
-            CLOUD_VERIFY_APP_ID
             CLOUD_VERIFY_APP_KEY
             ANDROID_KEYSTORE_BASE64
             ANDROID_STORE_PASSWORD
@@ -142,8 +140,55 @@ jobs:
             echo "keyPassword=$ANDROID_KEY_PASSWORD"
           } > android/key.properties
           chmod 600 android/inkroot-new-release.keystore android/key.properties
+          keytool -exportcert \
+            -keystore android/inkroot-new-release.keystore \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -storepass "$ANDROID_STORE_PASSWORD" \
+            -rfc > android/release-cert.pem
+          actual="$(
+            openssl x509 -in android/release-cert.pem -noout -fingerprint -sha256 \
+              | cut -d= -f2
+          )"
+          if [ "$actual" != "$ANDROID_RELEASE_CERT_SHA256" ]; then
+            echo "Android release certificate fingerprint mismatch." >&2
+            echo "Expected: $ANDROID_RELEASE_CERT_SHA256" >&2
+            echo "Actual:   $actual" >&2
+            exit 1
+          fi
+          openssl x509 -in android/release-cert.pem -outform DER -out android/release-cert.der
       - run: dart tool/inkroot.dart build android-release
       - run: dart tool/inkroot.dart build android-aab
+      - name: Verify Android package certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(echo "$ANDROID_RELEASE_CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          apksigner="$(find "$sdk_root/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          if [ -z "$apksigner" ]; then
+            echo "apksigner was not found in Android build-tools." >&2
+            exit 1
+          fi
+          apk_actual="$(
+            "$apksigner" verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
+              | awk -F': ' '/certificate SHA-256 digest/{print $2; exit}' \
+              | tr -d ':' \
+              | tr '[:upper:]' '[:lower:]'
+          )"
+          aab_actual="$(
+            keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab \
+              | awk -F'SHA256: ' '/SHA256:/{print $2; exit}' \
+              | tr -d ':' \
+              | tr '[:upper:]' '[:lower:]'
+          )"
+          if [ "$apk_actual" != "$expected" ]; then
+            echo "Android APK certificate fingerprint mismatch." >&2
+            exit 1
+          fi
+          if [ "$aab_actual" != "$expected" ]; then
+            echo "Android AAB certificate fingerprint mismatch." >&2
+            exit 1
+          fi
       - name: Rename Android package
         shell: bash
         run: |

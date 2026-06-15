@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.5] - 2026-06-15
+
+### Fixed
+- Fixed the official cloud verification AppID as a source default so Release packages cannot be built without the official cloud binding
+- Added an Android release certificate fingerprint gate so mismatched signing certificates fail before packaging and do not break upgrade installs
+
+### Maintenance
+- Release builds still require the cloud verification AppKey and Android signing credentials through GitHub Secrets; private keys and secrets stay out of source control
+
+---
+
 ## [1.1.4] - 2026-06-15
 
 ### Fixed
