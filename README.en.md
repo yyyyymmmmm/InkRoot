@@ -6,7 +6,7 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.6`
+`1.1.7`
 
 This release fixes the official cloud verification AppID in source and tightens Android Release signing: official packages must use the fixed release certificate, and both APK and AAB artifacts are checked during publishing.
 
@@ -81,13 +81,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.6+10106
+version: 1.1.7+10107
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.6
+dart tool/inkroot.dart release v1.1.7
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

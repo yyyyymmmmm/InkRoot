@@ -6,7 +6,7 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 
 ## 当前版本
 
-`1.1.6`
+`1.1.7`
 
 本版本固定官方云验证 AppID，并收紧 Android Release 签名链路：正式包必须使用固定发布证书，APK/AAB 都会在发布流程中做证书校验。
 
@@ -81,13 +81,13 @@ dart tool/inkroot.dart build linux-debug
 版本号统一维护在 `pubspec.yaml`：
 
 ```yaml
-version: 1.1.6+10106
+version: 1.1.7+10107
 ```
 
 发布入口：
 
 ```bash
-dart tool/inkroot.dart release v1.1.6
+dart tool/inkroot.dart release v1.1.7
 ```
 
 这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android APK/AAB、iOS、macOS、Windows 和 Linux 产物。

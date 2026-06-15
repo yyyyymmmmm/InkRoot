@@ -162,22 +162,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          expected="$(echo "$ANDROID_RELEASE_CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           python3 - <<'PY'
           from pathlib import Path
 
           cert = Path('android/release-cert.der').read_bytes()
-          artifacts = [
-              Path('build/app/outputs/flutter-apk/app-release.apk'),
-              Path('build/app/outputs/bundle/release/app-release.aab'),
-          ]
-          for artifact in artifacts:
-              data = artifact.read_bytes()
-              if cert not in data:
-                  raise SystemExit(
-                      f'{artifact} does not contain the expected release certificate.'
-                  )
-              print(f'{artifact}: expected release certificate found')
+          apk = Path('build/app/outputs/flutter-apk/app-release.apk')
+          if cert not in apk.read_bytes():
+              raise SystemExit(
+                  f'{apk} does not contain the expected release certificate.'
+              )
+          print(f'{apk}: expected release certificate found')
           PY
+          aab_actual="$(
+            keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab \
+              | awk -F'SHA256: ' '/SHA256:/{print $2; exit}' \
+              | tr -d ':' \
+              | tr '[:upper:]' '[:lower:]'
+          )"
+          if [ "$aab_actual" != "$expected" ]; then
+            echo "Android AAB certificate fingerprint mismatch." >&2
+            exit 1
+          fi
+          echo "build/app/outputs/bundle/release/app-release.aab: expected release certificate found"
       - name: Rename Android package
         shell: bash
         run: |

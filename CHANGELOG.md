@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.7] - 2026-06-15
+
+### 修复
+- 修正 Android AAB 签名校验方式，使用 JAR 签名证书指纹校验 AAB，避免把 AAB 当作 APK 原始证书字节检查
+
+---
+
 ## [1.1.6] - 2026-06-15
 
 ### 修复
