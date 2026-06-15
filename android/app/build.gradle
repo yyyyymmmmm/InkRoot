@@ -34,6 +34,10 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.didichou.inkroot"
         minSdkVersion flutter.minSdkVersion

@@ -110,6 +110,11 @@ class InkRootCli {
       'applicationName: "android.app.Application"',
       'Android manifest placeholders must keep Flutter applicationName.',
     );
+    await _assertFileContains(
+      'android/app/build.gradle',
+      'buildConfig true',
+      'Android native code requires generated BuildConfig.',
+    );
     await _assertFileDoesNotContain(
       'android/app/src/main/AndroidManifest.xml',
       'android.permission.SCHEDULE_EXACT_ALARM',
