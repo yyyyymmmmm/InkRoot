@@ -6,15 +6,17 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.3`
+`1.1.4`
 
-This release completes the native build, store-readiness checks, and automated Release publishing path for commercial distribution, while continuing to improve Memos compatibility, login, sync, and desktop packaging.
+This release fixes Release packages missing the cloud verification AppID and adds release-secret guardrails so future builds cannot publish without official notices, cloud configuration, and update-check support.
 
 Highlights:
 
 - Memos profile loading now falls back across v0.21, v0.22-v0.25, and v0.26+ account APIs after login.
 - Requests support both Bearer Token and Memos Cookie authentication to reduce self-hosted server and reverse-proxy compatibility failures.
 - Login errors now distinguish credential, token, network, TLS, and server response failures.
+- Release packages now require the cloud verification AppID and AppKey at build time.
+- GitHub Actions now fails early when required release secrets are missing.
 - Android builds now keep the required Flutter manifest placeholder and generated BuildConfig support for cloud CLI builds.
 - The Release workflow publishes Android APK/AAB, iOS test packages, macOS, Windows, and Linux assets.
 - Home feed rendering keeps user line breaks and spacing.
@@ -79,13 +81,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.3+10103
+version: 1.1.4+10104
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.3
+dart tool/inkroot.dart release v1.1.4
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

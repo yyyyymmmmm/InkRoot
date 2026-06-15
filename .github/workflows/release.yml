@@ -67,6 +67,37 @@ jobs:
       - run: dart tool/inkroot.dart store-check
       - run: dart tool/inkroot.dart verify --coverage
 
+  release-secrets:
+    name: Release secrets
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Verify required release secrets
+        shell: bash
+        env:
+          CLOUD_VERIFY_APP_ID: ${{ secrets.CLOUD_VERIFY_APP_ID }}
+          CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          required=(
+            CLOUD_VERIFY_APP_ID
+            CLOUD_VERIFY_APP_KEY
+            ANDROID_KEYSTORE_BASE64
+            ANDROID_STORE_PASSWORD
+            ANDROID_KEY_ALIAS
+            ANDROID_KEY_PASSWORD
+          )
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required release secret: $name" >&2
+              exit 1
+            fi
+          done
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-latest
@@ -82,7 +113,7 @@ jobs:
   android:
     name: Android
     runs-on: ubuntu-latest
-    needs: [quality, secret-scan]
+    needs: [quality, secret-scan, release-secrets]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -129,7 +160,7 @@ jobs:
   ios:
     name: iOS
     runs-on: macos-latest
-    needs: [quality, secret-scan]
+    needs: [quality, secret-scan, release-secrets]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -152,7 +183,7 @@ jobs:
   macos:
     name: macOS
     runs-on: macos-latest
-    needs: [quality, secret-scan]
+    needs: [quality, secret-scan, release-secrets]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -177,7 +208,7 @@ jobs:
   windows:
     name: Windows
     runs-on: windows-2022
-    needs: [quality, secret-scan]
+    needs: [quality, secret-scan, release-secrets]
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -199,7 +230,7 @@ jobs:
   linux:
     name: Linux
     runs-on: ubuntu-latest
-    needs: [quality, secret-scan]
+    needs: [quality, secret-scan, release-secrets]
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux desktop dependencies

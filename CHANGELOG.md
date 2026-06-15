@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2026-06-15
+
+### 修复
+- 修复正式 Release 包未注入云验证 AppID / AppKey，导致官方公告、云配置和更新检查不可用的问题
+
+### 维护
+- GitHub Actions Release 流程新增必要密钥校验，缺少云验证或 Android 签名密钥时直接失败
+- 统一 CLI 发布构建校验，release 构建缺少 `CLOUD_VERIFY_APP_ID` 或 `CLOUD_VERIFY_APP_KEY` 时不再继续打包
+
+---
+
 ## [1.1.3] - 2026-06-15
 
 ### 修复

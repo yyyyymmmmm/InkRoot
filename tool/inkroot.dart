@@ -165,6 +165,21 @@ class InkRootCli {
       'android-aab',
       'Release workflow must build the Play Store AAB.',
     );
+    await _assertFileContains(
+      '.github/workflows/release.yml',
+      r'Missing required release secret: $name',
+      'Release workflow must fail when required release secrets are missing.',
+    );
+    await _assertFileContains(
+      '.github/workflows/release.yml',
+      'CLOUD_VERIFY_APP_ID',
+      'Release workflow must inject the cloud verification app id.',
+    );
+    await _assertFileContains(
+      '.github/workflows/release.yml',
+      'CLOUD_VERIFY_APP_KEY',
+      'Release workflow must inject the cloud verification app key.',
+    );
 
     stdout.writeln('Store checks passed for $version.');
   }
@@ -383,6 +398,13 @@ class InkRootCli {
     final cloudVerifyAppKey = _envValue('CLOUD_VERIFY_APP_KEY');
     final environment = _envValue('ENVIRONMENT');
 
+    if (isRelease && (cloudVerifyAppId == null || cloudVerifyAppKey == null)) {
+      throw ToolExit(
+        2,
+        'Release builds require CLOUD_VERIFY_APP_ID and CLOUD_VERIFY_APP_KEY.',
+      );
+    }
+
     defines.add(
       '--dart-define=ENVIRONMENT=${environment ?? (isRelease ? 'production' : 'development')}',
     );
@@ -406,6 +428,13 @@ class InkRootCli {
   Map<String, String>? _dartDefineEnvironment() {
     final values = <String, String>{};
     values['ENVIRONMENT'] = _envValue('ENVIRONMENT') ?? 'production';
+    if (_envValue('CLOUD_VERIFY_APP_ID') == null ||
+        _envValue('CLOUD_VERIFY_APP_KEY') == null) {
+      throw ToolExit(
+        2,
+        'Release builds require CLOUD_VERIFY_APP_ID and CLOUD_VERIFY_APP_KEY.',
+      );
+    }
     for (final key in [
       'CLOUD_VERIFY_APP_ID',
       'CLOUD_VERIFY_APP_KEY',

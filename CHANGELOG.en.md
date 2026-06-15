@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2026-06-15
+
+### Fixed
+- Fixed Release packages missing the cloud verification AppID / AppKey, which disabled official notices, cloud configuration, and update checks
+
+### Maintenance
+- Added required-secret validation to the GitHub Actions Release workflow so missing cloud verification or Android signing secrets fail before packaging
+- Hardened the CLI so release builds stop when `CLOUD_VERIFY_APP_ID` or `CLOUD_VERIFY_APP_KEY` is missing
+
+---
+
 ## [1.1.3] - 2026-06-15
 
 ### Fixed
