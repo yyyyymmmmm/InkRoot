@@ -5,7 +5,7 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = 墨鸣笔记
+PRODUCT_NAME = InkRoot
 
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = com.didichou.inkroot

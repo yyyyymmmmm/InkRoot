@@ -11,6 +11,11 @@ permissions:
 env:
   FLUTTER_CHANNEL: stable
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CLOUD_VERIFY_APP_ID: ${{ secrets.CLOUD_VERIFY_APP_ID }}
+  CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
+  UMENG_ANDROID_APPKEY: ${{ secrets.UMENG_ANDROID_APPKEY }}
+  UMENG_CHANNEL: ${{ secrets.UMENG_CHANNEL }}
+  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
 jobs:
   prepare:
@@ -59,6 +64,7 @@ jobs:
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
+      - run: dart tool/inkroot.dart store-check
       - run: dart tool/inkroot.dart verify --coverage
 
   secret-scan:
@@ -106,15 +112,19 @@ jobs:
           } > android/key.properties
           chmod 600 android/inkroot-new-release.keystore android/key.properties
       - run: dart tool/inkroot.dart build android-release
+      - run: dart tool/inkroot.dart build android-aab
       - name: Rename Android package
         shell: bash
         run: |
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-release.apk "dist/InkRoot-${GITHUB_REF_NAME}-android.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "dist/InkRoot-${GITHUB_REF_NAME}-android.aab"
       - uses: actions/upload-artifact@v4
         with:
           name: android-release
-          path: dist/*.apk
+          path: |
+            dist/*.apk
+            dist/*.aab
 
   ios:
     name: iOS
@@ -133,6 +143,7 @@ jobs:
         run: |
           mkdir -p dist
           cp build/ios/unsigned/*.ipa dist/
+          test -f build/ios/iphoneos/Runner.app/PrivacyInfo.xcprivacy
       - uses: actions/upload-artifact@v4
         with:
           name: ios-unsigned
@@ -149,13 +160,13 @@ jobs:
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
       - run: dart tool/inkroot.dart deps
-      - run: dart tool/inkroot.dart build macos-debug
+      - run: dart tool/inkroot.dart build macos-release
       - name: Package macOS app
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
-          app_path="$(find build/macos/Build/Products/Debug -maxdepth 1 -name '*.app' -type d | head -n 1)"
+          app_path="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' -type d | head -n 1)"
           test -n "$app_path"
           ditto -c -k --sequesterRsrc --keepParent "$app_path" "dist/InkRoot-${GITHUB_REF_NAME}-macos.zip"
       - uses: actions/upload-artifact@v4
@@ -225,7 +236,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           find artifacts -type f \
-            \( -name '*.apk' -o -name '*.ipa' -o -name '*.zip' -o -name '*.tar.gz' -o -name 'release_notes.md' \) \
+            \( -name '*.apk' -o -name '*.aab' -o -name '*.ipa' -o -name '*.zip' -o -name '*.tar.gz' -o -name 'release_notes.md' \) \
             -exec cp {} dist/ \;
           find dist -maxdepth 1 -type f -print | sort
       - uses: softprops/action-gh-release@v2
@@ -235,6 +246,7 @@ jobs:
           body_path: dist/release_notes.md
           files: |
             dist/*.apk
+            dist/*.aab
             dist/*.ipa
             dist/*.zip
             dist/*.tar.gz

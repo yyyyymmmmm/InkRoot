@@ -22,6 +22,11 @@ concurrency:
 env:
   FLUTTER_CHANNEL: stable
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CLOUD_VERIFY_APP_ID: ${{ secrets.CLOUD_VERIFY_APP_ID }}
+  CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
+  UMENG_ANDROID_APPKEY: ${{ secrets.UMENG_ANDROID_APPKEY }}
+  UMENG_CHANNEL: ${{ secrets.UMENG_CHANNEL }}
+  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
 jobs:
   quality:
@@ -33,6 +38,7 @@ jobs:
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
           cache: true
+      - run: dart tool/inkroot.dart store-check
       - run: dart tool/inkroot.dart verify --coverage
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -53,7 +59,7 @@ jobs:
         run: gitleaks detect --no-git --redact -v --exit-code=2
 
   android:
-    name: Android APK
+    name: Android
     runs-on: ubuntu-latest
     needs: [quality, secret-scan]
     steps:
@@ -91,12 +97,16 @@ jobs:
       - name: Build release APK
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_build }}
         run: dart tool/inkroot.dart build android-release
+      - name: Build release AAB
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_build }}
+        run: dart tool/inkroot.dart build android-aab
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
+          name: android-package
           path: |
             build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
 
   ios:
     name: iOS simulator
@@ -110,6 +120,9 @@ jobs:
           cache: true
       - run: dart tool/inkroot.dart deps
       - run: dart tool/inkroot.dart build ios-sim
+      - name: Verify iOS privacy manifest is packaged
+        shell: bash
+        run: test -f build/ios/iphonesimulator/Runner.app/PrivacyInfo.xcprivacy
       - name: Upload iOS simulator app
         uses: actions/upload-artifact@v4
         with:

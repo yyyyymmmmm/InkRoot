@@ -4,22 +4,18 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
-    <!-- 存储权限 - 用于文件导入导出和图片保存 -->
-    <!-- Android 10及以下版本 -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+    <!-- 存储权限 - 仅用于 Android 12 及以下版本的导入导出兼容。 -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     
     <!-- 相机权限 - 用于拍照插入图片 -->
     <uses-permission android:name="android.permission.CAMERA" />
     
     <!-- 麦克风权限 - 用于语音识别 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    
-    <!-- 图片库权限 - 用于选择和保存图片 -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Android 13+保存图片权限 -->
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     
     <!-- 唤醒锁权限 - 用于后台同步 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -30,34 +26,19 @@
     <!-- Android 13+推送通知权限 (备用) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
-    <!-- 精确闹钟权限 - 用于提醒通知 (Android 12+) -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    
-    <!-- 前台服务权限 - 用于后台通知 -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    
-    <!-- 小米设备特殊权限 -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    
-    <!-- 全屏通知权限 - 用于抬头显示提醒 -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    
 
     <application
         android:label="InkRoot"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:requestLegacyExternalStorage="true">
+        android:icon="@mipmap/ic_launcher">
         
         <!-- 友盟统计配置 -->
         <meta-data
             android:name="UMENG_APPKEY"
-            android:value="68f40dfe644c9e2c20597ea5" />
+            android:value="${UMENG_ANDROID_APPKEY}" />
         <meta-data
             android:name="UMENG_CHANNEL"
-            android:value="default" />
+            android:value="${UMENG_CHANNEL}" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -114,31 +95,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
         
-        <!-- 🔥 提醒Activity（全屏弹出，有声音和振动） -->
-        <activity
-            android:name=".ReminderActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleInstance"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true"
-            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
-        
         <!-- 🔔 原生闹钟接收器 - 用于定时提醒 -->
         <receiver
             android:name=".AlarmReceiver"
             android:enabled="true"
-            android:exported="true"
-            android:directBootAware="true">
-            <!-- 🔥 关键：监听系统启动，确保闹钟不丢失 -->
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <!-- 小米设备 -->
-                <action android:name="android.intent.action.REBOOT" />
-            </intent-filter>
-        </receiver>
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

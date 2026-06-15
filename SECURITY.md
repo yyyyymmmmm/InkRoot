@@ -53,26 +53,22 @@ We release security updates for the following versions:
 - Sensitive tokens are stored in secure storage (iOS Keychain / Android Keystore)
 
 #### Server Sync Mode
-- Data is synced to your self-hosted Memos server
+- Data is synced to the official server or the Memos server you configure
 - Connections use HTTPS encryption (recommended)
 - Authentication tokens are stored securely
-- No data passes through third-party servers
+- Data in self-hosted Memos, WebDAV, AI, or other third-party services is processed by the service you choose
 
 ### Privacy
 
 #### What We Collect
-- **Analytics**: Basic usage statistics (via Umeng SDK)
-  - App start count
-  - Feature usage frequency
-  - Device model and OS version
-  - Crash and error logs
+- Official server account profile and user content only when you choose to sign in to the official server
+- Feedback content and diagnostic context only when you submit feedback or enable related diagnostics
+- Android analytics or crash diagnostics only when enabled by the build and app settings
 
 #### What We DON'T Collect
-- ❌ Note content
-- ❌ Personal information
-- ❌ Account credentials
-- ❌ Server addresses
-- ❌ Any sensitive data
+- ❌ We do not sell personal information
+- ❌ We do not read private notes for advertising profiles
+- ❌ We do not access self-hosted Memos, WebDAV, or AI service data unless you configure and use those features in the app
 
 For more details, see our [Privacy Policy](https://inkroot.cn/privacy.html)
 
@@ -80,7 +76,7 @@ For more details, see our [Privacy Policy](https://inkroot.cn/privacy.html)
 
 InkRoot uses the following third-party services:
 
-1. **Umeng Analytics** (Android & iOS)
+1. **Umeng Analytics** (Android only when enabled)
    - Purpose: Usage statistics and crash reporting
    - Privacy Policy: [https://www.umeng.com/policy](https://www.umeng.com/policy)
 

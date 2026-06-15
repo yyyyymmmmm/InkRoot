@@ -20,6 +20,7 @@ Use the project CLI for repeatable local work:
 dart tool/inkroot.dart doctor
 dart tool/inkroot.dart verify
 dart tool/inkroot.dart verify --coverage
+dart tool/inkroot.dart store-check
 dart tool/inkroot.dart build android-debug
 dart tool/inkroot.dart build ios-sim
 dart tool/inkroot.dart build macos-debug
@@ -50,7 +51,7 @@ Pull requests and pushes run:
 - Static analysis.
 - Automated tests.
 - Secret scanning.
-- Android APK build.
+- Android APK build, and signed AAB build when `release_build` is enabled.
 - iOS simulator build.
 - macOS build.
 - Windows build.
@@ -58,13 +59,27 @@ Pull requests and pushes run:
 
 The current CI and release workflows intentionally skip the Web platform.
 
+## Store Compliance
+
+Before submitting a commercial release to App Store Connect or Google Play,
+check [`docs/STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md).
+
+Required public URLs:
+
+- Privacy Policy: https://inkroot.cn/privacy.html
+- User Agreement: https://inkroot.cn/agreement.html
+- Account and Data Deletion: https://inkroot.cn/account-deletion.html
+
+The in-app deletion path is `Settings > Account and Data Deletion`. Keep the
+website pages and the in-app legal text aligned whenever the data flow changes.
+
 ## Release
 
 Release flow:
 
 1. Update `pubspec.yaml`.
 2. Update `CHANGELOG.md` and `CHANGELOG.en.md`.
-3. Run `dart tool/inkroot.dart verify`.
+3. Run `dart tool/inkroot.dart store-check` and `dart tool/inkroot.dart verify`.
 4. Commit and push the changes.
 5. Run `dart tool/inkroot.dart release vX.Y.Z`.
 6. Wait for the GitHub Actions Release workflow to finish.
@@ -72,6 +87,10 @@ Release flow:
 The tag must match the version in `pubspec.yaml`. For `version: 1.1.2+10102`, the release tag is `v1.1.2`.
 
 GitHub Actions publishes the release assets after all release jobs pass.
+
+GitHub Releases are for test and desktop distribution assets. Store submission
+packages are prepared separately: iOS through Xcode archive/App Store Connect,
+and Android through a signed AAB for Google Play.
 
 ## Security
 

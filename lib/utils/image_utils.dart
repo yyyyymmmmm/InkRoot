@@ -189,22 +189,28 @@ class ImageUtils {
         return true;
       }
 
-      Permission permission;
       if (Platform.isAndroid) {
         final androidInfo = await DeviceInfoPlugin().androidInfo;
-        permission = androidInfo.version.sdkInt >= 33
-            ? Permission.photos
-            : Permission.storage;
-      } else {
-        permission = Permission.photos;
-      }
-
-      final status = await permission.request();
-      if (!status.isGranted) {
-        if (context.mounted) {
-          SnackBarUtils.showError(context, storagePermissionRequiredForImage);
+        if (androidInfo.version.sdkInt <= 28) {
+          final status = await Permission.storage.request();
+          if (!status.isGranted) {
+            if (context.mounted) {
+              SnackBarUtils.showError(
+                context,
+                storagePermissionRequiredForImage,
+              );
+            }
+            return false;
+          }
         }
-        return false;
+      } else {
+        final status = await Permission.photosAddOnly.request();
+        if (!status.isGranted && !status.isLimited) {
+          if (context.mounted) {
+            SnackBarUtils.showError(context, storagePermissionRequiredForImage);
+          }
+          return false;
+        }
       }
 
       final result = await ImageGallerySaverPlus.saveImage(

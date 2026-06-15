@@ -40,14 +40,6 @@ class _LoginScreenState extends State<LoginScreen>
   final ScrollController _announcementScrollController = ScrollController();
   Timer? _autoScrollTimer;
 
-  // 🚀 默认静态公告（跑马灯）
-  final List<String> _staticAnnouncements = [
-    '✨ 已全面兼容 Memos v0.21 至最新版本',
-    '☁️ 支持官方服务器与自建服务器',
-    '🔄 登录后自动同步，多端数据实时一致',
-    '📝 Markdown 格式、图片、标签一应俱全',
-  ];
-
   // 🎬 动画控制器
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -147,6 +139,16 @@ class _LoginScreenState extends State<LoginScreen>
 
   /// 加载云通知（使用 AppProvider 的公告数据）
   Future<void> _loadAnnouncements() async {
+    if (!AppConfig.enableCloudVerification) {
+      if (mounted) {
+        setState(() {
+          _announcements = [];
+          _isLoadingAnnouncements = false;
+        });
+      }
+      return;
+    }
+
     try {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
 
@@ -162,18 +164,17 @@ class _LoginScreenState extends State<LoginScreen>
           _isLoadingAnnouncements = false;
         });
 
-        // 🚀 总是启动跑马灯滚动（云通知或默认静态公告都需要）
-        _startAutoScroll();
+        if (_announcements.isNotEmpty) {
+          _startAutoScroll();
+        }
       }
     } on Object catch (e) {
       debugPrint('LoginScreen: 加载云通知失败: $e');
       if (mounted) {
         setState(() {
+          _announcements = [];
           _isLoadingAnnouncements = false;
         });
-
-        // 🚀 即使加载失败，也启动跑马灯显示默认公告
-        _startAutoScroll();
       }
     }
   }
@@ -1100,16 +1101,10 @@ class _LoginScreenState extends State<LoginScreen>
       );
     }
 
-    // 🚀 统一使用跑马灯效果展示公告（无论是否有云通知）
-    // 如果有云通知，显示云通知；否则显示默认的静态公告
-    String announcementText;
     if (_announcements.isEmpty) {
-      // 使用静态公告（默认内容）
-      announcementText = _staticAnnouncements.join('  •  ');
-    } else {
-      // 使用云通知内容
-      announcementText = _announcements.map((a) => a.content).join('  •  ');
+      return const SizedBox.shrink();
     }
+    final announcementText = _announcements.map((a) => a.content).join('  •  ');
 
     return Container(
       height: ResponsiveUtils.responsive<double>(

@@ -238,26 +238,11 @@ java.lang.SecurityException: Permission denied
 ```
 
 **Solution**:
-```xml
-<!-- android/app/src/main/AndroidManifest.xml -->
-<!-- Add required permissions -->
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
-<!-- For Android 11+, also add: -->
-<application
-    android:requestLegacyExternalStorage="true">
-```
-
-```dart
-// Request permission at runtime
-import 'package:permission_handler/permission_handler.dart';
-
-final status = await Permission.storage.request();
-if (status.isGranted) {
-  // Proceed
-}
-```
+Use the Android system photo picker, file picker, MediaStore, or app-specific
+storage APIs instead of broad external-storage access. Do not add
+legacy external storage flags or broad Android 13+ photo/video permissions for
+store builds unless the feature is policy-eligible and has a clear user-facing
+need.
 
 ### iOS: Code signing issues
 
@@ -676,4 +661,3 @@ If you can't find a solution here:
 [Back to Development Docs](README.md) | [Debugging Guide](debugging.md)
 
 </div>
-

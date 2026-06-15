@@ -605,7 +605,7 @@ class _HomeScreenState extends State<HomeScreen>
             try {
               final appProvider =
                   Provider.of<AppProvider>(context, listen: false);
-              final note = await appProvider.createNote(content);
+              await appProvider.createNote(content);
               // 🚀 笔记创建成功（静默）
 
               // 🔧 修复：退出搜索模式，确保新笔记显示
@@ -640,11 +640,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   );
                 }
-              }
-
-              // 如果用户已登录但笔记未同步，尝试再次同步
-              if (appProvider.isLoggedIn && !note.isSynced) {
-                unawaited(appProvider.syncNotesWithServer());
               }
             } on Object catch (e) {
               if (kDebugMode) {
@@ -678,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen>
             try {
               final appProvider =
                   Provider.of<AppProvider>(context, listen: false);
-              final note = await appProvider.createNote(content);
+              await appProvider.createNote(content);
               // 🚀 笔记创建成功（静默）
 
               // 🔧 修复：退出搜索模式，确保新笔记显示
@@ -713,11 +708,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   );
                 }
-              }
-
-              // 如果用户已登录但笔记未同步，尝试再次同步
-              if (appProvider.isLoggedIn && !note.isSynced) {
-                unawaited(appProvider.syncNotesWithServer());
               }
 
               // 显示成功提示
@@ -1199,7 +1189,13 @@ class _HomeScreenState extends State<HomeScreen>
           final notes = _isSearchActive
               ? (_searchController.text.isEmpty
                   ? appProvider.notes
-                  : _searchResults)
+                  : _searchResults
+                      .where(
+                        (note) =>
+                            note.content.trim().isNotEmpty ||
+                            note.resourceList.isNotEmpty,
+                      )
+                      .toList())
               : appProvider.notes;
 
           // 🔧 修复：确保至少显示一些笔记，避免创建后不显示
@@ -1343,6 +1339,14 @@ class _HomeScreenState extends State<HomeScreen>
                                             );
                                             await appProvider
                                                 .deleteNote(note.id);
+                                            if (mounted && _isSearchActive) {
+                                              setState(() {
+                                                _searchResults.removeWhere(
+                                                  (result) =>
+                                                      result.id == note.id,
+                                                );
+                                              });
+                                            }
 
                                             if (context.mounted) {
                                               _showDeleteUndoSnackBar(

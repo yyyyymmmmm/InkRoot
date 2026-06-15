@@ -35,6 +35,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   // 需要在任何平台通道调用前初始化（package_info_plus 等）
   WidgetsFlutterBinding.ensureInitialized();
+  if (Config.AppConfig.isReleaseBuild) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
 
   // 🚀 大厂标准：初始化错误监控
   GlobalErrorCatcher.initialize();

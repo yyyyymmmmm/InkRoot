@@ -34,11 +34,8 @@ class IOSPermissionService {
     // 4. 相机权限
     results['camera'] = await _checkAndRequestCamera();
 
-    // 5. 相册权限
-    results['photos'] = await _checkAndRequestPhotos();
-
-    // 6. 位置权限
-    results['location'] = await _checkAndRequestLocation();
+    // 5. 相册权限只在用户主动保存/选择图片时请求，避免首次启动批量弹权限。
+    results['photos'] = false;
 
     return results;
   }
@@ -139,8 +136,8 @@ class IOSPermissionService {
     }
   }
 
-  /// 检查并请求相册权限
-  Future<bool> _checkAndRequestPhotos() async {
+  /// 检查并请求相册权限。只应在用户主动保存/选择图片时调用。
+  Future<bool> checkAndRequestPhotos() async {
     try {
       final status = await Permission.photos.status;
       if (status.isGranted) {
@@ -149,25 +146,6 @@ class IOSPermissionService {
 
       if (status.isDenied) {
         final result = await Permission.photos.request();
-        return result.isGranted;
-      }
-
-      return false;
-    } on Object {
-      return false;
-    }
-  }
-
-  /// 检查并请求位置权限
-  Future<bool> _checkAndRequestLocation() async {
-    try {
-      final status = await Permission.locationWhenInUse.status;
-      if (status.isGranted) {
-        return true;
-      }
-
-      if (status.isDenied) {
-        final result = await Permission.locationWhenInUse.request();
         return result.isGranted;
       }
 

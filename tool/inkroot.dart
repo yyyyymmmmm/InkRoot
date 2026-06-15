@@ -33,12 +33,18 @@ class InkRootCli {
         case 'verify':
           await _verify(coverage: args.contains('--coverage'));
           return 0;
+        case 'store-check':
+          await _storeCheck();
+          return 0;
         case 'ci':
           await _verify(coverage: args.contains('--coverage'));
           await _build(args.length > 1 ? args[1] : 'all');
           return 0;
         case 'build':
           await _build(args.length > 1 ? args[1] : 'all');
+          return 0;
+        case 'run':
+          await _runApp(args.length > 1 ? args[1] : 'default');
           return 0;
         case 'release':
           await _release(args);
@@ -73,6 +79,84 @@ class InkRootCli {
       args.add('--coverage');
     }
     return _run(args);
+  }
+
+  Future<void> _storeCheck() async {
+    final version = _readVersion();
+    if (!RegExp(r'^\d+\.\d+\.\d+\+\d+$').hasMatch(version)) {
+      throw ToolExit(
+        2,
+        'pubspec version must be semver plus integer build number, got $version.',
+      );
+    }
+
+    await _assertFileContains(
+      'android/app/build.gradle',
+      'applicationId "com.didichou.inkroot"',
+      'Android applicationId must stay com.didichou.inkroot.',
+    );
+    await _assertFileContains(
+      'android/app/build.gradle',
+      'versionCode flutter.versionCode',
+      'Android versionCode must come from pubspec.yaml.',
+    );
+    await _assertFileContains(
+      'android/app/build.gradle',
+      'versionName flutter.versionName',
+      'Android versionName must come from pubspec.yaml.',
+    );
+    await _assertFileDoesNotContain(
+      'android/app/src/main/AndroidManifest.xml',
+      'android.permission.SCHEDULE_EXACT_ALARM',
+      'Do not request exact-alarm special access for store builds.',
+    );
+    await _assertFileDoesNotContain(
+      'android/app/src/main/AndroidManifest.xml',
+      'android.permission.READ_MEDIA_IMAGES',
+      'Do not request broad Android 13+ photo-library access.',
+    );
+    await _assertFileDoesNotContain(
+      'android/app/src/main/AndroidManifest.xml',
+      'android:requestLegacyExternalStorage="true"',
+      'Do not use legacy external storage in store builds.',
+    );
+
+    if (Platform.isMacOS) {
+      await _run([
+        'plutil',
+        '-lint',
+        'ios/Runner/Info.plist',
+        'ios/Runner/Runner.entitlements',
+        'ios/Runner/PrivacyInfo.xcprivacy',
+      ]);
+    }
+    await _assertFileContains(
+      'ios/Runner/Info.plist',
+      'CFBundleShortVersionString',
+      'iOS Info.plist must expose bundle version metadata.',
+    );
+    await _assertFileContains(
+      'ios/Runner.xcodeproj/project.pbxproj',
+      'PrivacyInfo.xcprivacy in Resources',
+      'PrivacyInfo.xcprivacy must be copied into Runner.app.',
+    );
+    await _assertFileContains(
+      'lib/config/app_config.dart',
+      'accountDeletionUrl',
+      'Account deletion URL must stay centrally configured.',
+    );
+    await _assertFileContains(
+      'lib/routes/app_router.dart',
+      '/account-deletion',
+      'Account deletion route must be available in app.',
+    );
+    await _assertFileContains(
+      '.github/workflows/release.yml',
+      'android-aab',
+      'Release workflow must build the Play Store AAB.',
+    );
+
+    stdout.writeln('Store checks passed for $version.');
   }
 
   Future<void> _release(List<String> args) async {
@@ -120,57 +204,68 @@ class InkRootCli {
         return;
       case 'android':
       case 'android-debug':
-        await _run(['flutter', 'build', 'apk', '--debug']);
+        await _run(_flutterBuildCommand(['apk', '--debug']));
         return;
       case 'android-release':
-        await _run(['flutter', 'build', 'apk', '--release']);
+        await _run(_flutterBuildCommand(['apk', '--release']));
+        return;
+      case 'android-aab':
+      case 'android-appbundle':
+        await _run(_flutterBuildCommand(['appbundle', '--release']));
         return;
       case 'ios':
       case 'ios-sim':
         _requireHost(target, Platform.isMacOS, 'macOS with Xcode');
+        await _clearAppleExtendedAttributes();
         await _disableSwiftPackageManager();
         await _podInstall('ios');
-        await _run(['flutter', 'build', 'ios', '--simulator', '--debug']);
+        await _run(_flutterBuildCommand(['ios', '--simulator', '--debug']));
         return;
       case 'ios-unsigned-ipa':
         _requireHost(target, Platform.isMacOS, 'macOS with Xcode');
+        await _clearAppleExtendedAttributes();
         await _disableSwiftPackageManager();
-        await _run(['bash', 'scripts/build_unsigned_ipa.sh']);
+        await _run(
+          ['bash', 'scripts/build_unsigned_ipa.sh'],
+          environment: _dartDefineEnvironment(),
+        );
         return;
-      case 'macos':
       case 'macos-debug':
         _requireHost(target, Platform.isMacOS, 'macOS');
+        await _clearAppleExtendedAttributes();
         await _run(['flutter', 'config', '--enable-macos-desktop']);
         await _disableSwiftPackageManager();
-        await _run(['flutter', 'build', 'macos', '--debug']);
+        await _run(_flutterBuildCommand(['macos', '--debug']));
         return;
+      case 'macos':
       case 'macos-release':
         _requireHost(target, Platform.isMacOS, 'macOS');
+        await _clearAppleExtendedAttributes();
         await _run(['flutter', 'config', '--enable-macos-desktop']);
         await _disableSwiftPackageManager();
-        await _run(['flutter', 'build', 'macos', '--release']);
+        await _run(_flutterBuildCommand(['macos', '--release']));
         return;
-      case 'windows':
       case 'windows-debug':
         _requireHost(target, Platform.isWindows, 'Windows');
         await _run(['flutter', 'config', '--enable-windows-desktop']);
-        await _run(['flutter', 'build', 'windows', '--debug']);
+        await _run(_flutterBuildCommand(['windows', '--debug']));
         return;
+      case 'windows':
       case 'windows-release':
         _requireHost(target, Platform.isWindows, 'Windows');
         await _run(['flutter', 'config', '--enable-windows-desktop']);
-        await _run(['flutter', 'build', 'windows', '--release']);
+        await _run(_flutterBuildCommand(['windows', '--release']));
         return;
-      case 'linux':
       case 'linux-debug':
         _requireHost(target, Platform.isLinux, 'Linux');
         await _run(['flutter', 'config', '--enable-linux-desktop']);
-        await _run(['flutter', 'build', 'linux', '--debug']);
+        await _run(_flutterBuildCommand(['linux', '--debug']));
         return;
+      case 'linux':
       case 'linux-release':
         _requireHost(target, Platform.isLinux, 'Linux');
         await _run(['flutter', 'config', '--enable-linux-desktop']);
-        await _run(['flutter', 'build', 'linux', '--release']);
+        await _run(_flutterBuildCommand(['linux', '--release']));
         return;
       default:
         throw ToolExit(2, 'Unknown build target: $target');
@@ -218,6 +313,123 @@ class InkRootCli {
 
   Future<void> _disableSwiftPackageManager() {
     return _run(['flutter', 'config', '--no-enable-swift-package-manager']);
+  }
+
+  Future<void> _clearAppleExtendedAttributes() async {
+    if (!Platform.isMacOS) {
+      return;
+    }
+
+    final script = File('scripts/clean_apple_xattrs.sh');
+    if (await script.exists()) {
+      await _run(['bash', script.path]);
+    }
+  }
+
+  Future<void> _runApp(String target) async {
+    switch (target) {
+      case 'default':
+        await _run(_flutterRunCommand(<String>[]));
+        return;
+      case 'ios':
+      case 'ios-sim':
+        _requireHost(target, Platform.isMacOS, 'macOS with Xcode');
+        await _clearAppleExtendedAttributes();
+        await _run(
+          _flutterRunCommand([
+            '-d',
+            _envValue('IOS_SIMULATOR_ID') ?? 'iPhone',
+          ]),
+        );
+        return;
+      case 'macos':
+        _requireHost(target, Platform.isMacOS, 'macOS');
+        await _clearAppleExtendedAttributes();
+        await _run(_flutterRunCommand(['-d', 'macos']));
+        return;
+      default:
+        await _run(_flutterRunCommand(['-d', target]));
+        return;
+    }
+  }
+
+  List<String> _flutterBuildCommand(List<String> args) => [
+        'flutter',
+        'build',
+        ...args,
+        ..._dartDefines(isRelease: _isReleaseBuildArgs(args)),
+      ];
+
+  List<String> _flutterRunCommand(List<String> args) => [
+        'flutter',
+        'run',
+        ...args,
+        ..._dartDefines(isRelease: args.contains('--release')),
+      ];
+
+  List<String> _dartDefines({required bool isRelease}) {
+    final defines = <String>[];
+    final cloudVerifyAppId = _envValue('CLOUD_VERIFY_APP_ID');
+    final cloudVerifyAppKey = _envValue('CLOUD_VERIFY_APP_KEY');
+    final environment = _envValue('ENVIRONMENT');
+
+    defines.add(
+      '--dart-define=ENVIRONMENT=${environment ?? (isRelease ? 'production' : 'development')}',
+    );
+
+    if (cloudVerifyAppId != null) {
+      defines.add('--dart-define=CLOUD_VERIFY_APP_ID=$cloudVerifyAppId');
+    }
+    if (cloudVerifyAppKey != null) {
+      defines.add('--dart-define=CLOUD_VERIFY_APP_KEY=$cloudVerifyAppKey');
+    }
+    for (final key in _optionalBuildDefineKeys) {
+      final value = _envValue(key);
+      if (value != null) {
+        defines.add('--dart-define=$key=$value');
+      }
+    }
+
+    return defines;
+  }
+
+  Map<String, String>? _dartDefineEnvironment() {
+    final values = <String, String>{};
+    values['ENVIRONMENT'] = _envValue('ENVIRONMENT') ?? 'production';
+    for (final key in [
+      'CLOUD_VERIFY_APP_ID',
+      'CLOUD_VERIFY_APP_KEY',
+      ..._optionalBuildDefineKeys,
+    ]) {
+      final value = _envValue(key);
+      if (value != null) {
+        values[key] = value;
+      }
+    }
+    return values;
+  }
+
+  static const List<String> _optionalBuildDefineKeys = [
+    'UMENG_ANDROID_APPKEY',
+    'UMENG_IOS_APPKEY',
+    'UMENG_CHANNEL',
+    'SENTRY_DSN',
+  ];
+
+  bool _isReleaseBuildArgs(List<String> args) =>
+      args.contains('--release') ||
+      (args.isNotEmpty &&
+          (args.first == 'apk' ||
+              args.first == 'appbundle' ||
+              args.first == 'macos' ||
+              args.first == 'windows' ||
+              args.first == 'linux') &&
+          !args.contains('--debug') &&
+          !args.contains('--profile'));
+
+  String? _envValue(String key) {
+    final value = Platform.environment[key]?.trim();
+    return value == null || value.isEmpty ? null : value;
   }
 
   void _requireHost(String target, bool condition, String requirement) {
@@ -286,6 +498,36 @@ class InkRootCli {
     return code == 0;
   }
 
+  Future<void> _assertFileContains(
+    String path,
+    String needle,
+    String message,
+  ) async {
+    final file = File(path);
+    if (!await file.exists()) {
+      throw ToolExit(2, 'Missing required file: $path');
+    }
+    final content = await file.readAsString();
+    if (!content.contains(needle)) {
+      throw ToolExit(2, '$message ($path)');
+    }
+  }
+
+  Future<void> _assertFileDoesNotContain(
+    String path,
+    String needle,
+    String message,
+  ) async {
+    final file = File(path);
+    if (!await file.exists()) {
+      throw ToolExit(2, 'Missing required file: $path');
+    }
+    final content = await file.readAsString();
+    if (content.contains(needle)) {
+      throw ToolExit(2, '$message ($path)');
+    }
+  }
+
   void _printHelp() {
     stdout.writeln('''
 InkRoot maintenance CLI
@@ -299,15 +541,17 @@ Commands:
   analyze                        Run flutter analyze
   test [--coverage]              Run Flutter tests
   verify [--coverage]            Run deps + analyze + tests
+  store-check                    Validate store-submission critical metadata
   ci [target] [--coverage]       Run verify, then build target
   build [target]                 Build one target or all host-supported targets
+  run [target]                   Run app with shared dart-defines
   clean                          Run flutter clean
   version                        Print pubspec version
   release vX.Y.Z                 Push a release tag for GitHub Actions
 
 Build targets:
   all                            Android + host-specific desktop/mobile
-  android-debug | android-release
+  android-debug | android-release | android-aab
   ios-sim | ios-unsigned-ipa     macOS only
   macos-debug | macos-release    macOS only
   windows-debug | windows-release Windows only

@@ -16,8 +16,11 @@ extension AppProviderSyncPart on AppProvider {
       _setSyncMessage('备份本地笔记...');
 
       debugPrint('AppProvider: 获取所有本地笔记');
-      final localNotes = await _databaseService.getNotes();
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
+      final localNotes =
+          _excludePendingDeletedNotes(await _databaseService.getNotes());
+      final unsyncedNotes = _excludePendingDeletedNotes(
+        await _databaseService.getUnsyncedNotes(),
+      );
       debugPrint(
         'AppProvider: 本地共有 ${localNotes.length} 条笔记，其中 ${unsyncedNotes.length} 条未同步',
       );
@@ -33,7 +36,7 @@ extension AppProviderSyncPart on AppProvider {
       final memosList = response['memos'] as List<dynamic>;
       final serverNotes = memosList
           .map((memo) => Note.fromJson(memo as Map<String, dynamic>))
-          .where((note) => note.isNormal) // 🔥 过滤掉归档笔记
+          .where(_isVisibleNote) // 🔥 过滤掉归档和待删除笔记
           .toList();
 
       // 🚀 性能优化：批量处理标签提取，不阻塞UI
@@ -112,7 +115,9 @@ extension AppProviderSyncPart on AppProvider {
       _totalNotesCount = mergedNotes.length;
 
       // 🔥 关键修复：从数据库重新加载全部笔记（确保数据新鲜且正确排序）
-      final dbNotes = await _databaseService.getNotes(); // 加载全部数据
+      final dbNotes = _excludePendingDeletedNotes(
+        await _databaseService.getNotes(),
+      ); // 加载全部数据
 
       // ✅ 保护内存中的批注数据（批注是本地增强功能，不同步到服务器）
       final memoryNotesMap = {for (final note in _notes) note.id: note};
@@ -198,12 +203,14 @@ extension AppProviderSyncPart on AppProvider {
       // 1. 先将本地未同步的笔记上传到服务器
       _setSyncMessage('上传本地笔记...');
 
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
+      final unsyncedNotes = _excludePendingDeletedNotes(
+        await _databaseService.getUnsyncedNotes(),
+      );
       debugPrint('AppProvider: 发现 ${unsyncedNotes.length} 条未同步笔记');
 
       for (final note in unsyncedNotes) {
         try {
-          await _syncUnsyncedNoteToMemos(note);
+          await _syncUnsyncedNotesSnapshot([note]);
         } on Object catch (e) {
           debugPrint('同步笔记到服务器失败: ${note.id} - $e');
         }
@@ -218,9 +225,10 @@ extension AppProviderSyncPart on AppProvider {
       final memosList = response['memos'] as List<dynamic>;
       final serverNotes = memosList
           .map((memo) => Note.fromJson(memo as Map<String, dynamic>))
-          .where((note) => note.isNormal) // 🔥 过滤掉归档笔记
+          .where(_isVisibleNote) // 🔥 过滤掉归档和待删除笔记
           .toList();
-      final localNotes = await _databaseService.getNotes();
+      final localNotes =
+          _excludePendingDeletedNotes(await _databaseService.getNotes());
       final localNotesById = {for (final note in localNotes) note.id: note};
 
       // 3. 为所有服务器笔记重新提取标签
@@ -252,7 +260,7 @@ extension AppProviderSyncPart on AppProvider {
       }
 
       // 5. 更新内存中的列表
-      _notes = await _databaseService.getNotes();
+      _notes = _excludePendingDeletedNotes(await _databaseService.getNotes());
 
       _setSyncMessage('同步完成');
 

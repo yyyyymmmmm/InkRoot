@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/screens/about_screen.dart';
+import 'package:inkroot/screens/account_deletion_screen.dart';
 import 'package:inkroot/screens/account_info_screen.dart';
 import 'package:inkroot/screens/ai_settings_screen.dart';
 import 'package:inkroot/screens/data_cleanup_screen.dart';
@@ -287,6 +288,16 @@ class AppRouter {
       ),
 
       GoRoute(
+        path: '/account-deletion',
+        name: 'accountDeletion',
+        pageBuilder: (context, state) => buildSlideTransition(
+          context: context,
+          state: state,
+          child: const AccountDeletionScreen(),
+        ),
+      ),
+
+      GoRoute(
         path: '/onboarding',
         name: 'onboarding',
         pageBuilder: (context, state) => buildSlideTransition(
@@ -345,6 +356,16 @@ class AppRouter {
               context: context,
               state: state,
               child: const AccountInfoScreen(),
+            ),
+          ),
+
+          GoRoute(
+            path: 'account-deletion',
+            name: 'homeAccountDeletion',
+            pageBuilder: (context, state) => buildSlideTransition(
+              context: context,
+              state: state,
+              child: const AccountDeletionScreen(),
             ),
           ),
 
@@ -828,6 +849,8 @@ class AppRouter {
           '/privacy-policy',
           '/privacy-policy-detail',
           '/user-agreement',
+          '/legal-documents',
+          '/account-deletion',
         };
         if (!allowedLegalPaths.contains(state.matchedLocation)) {
           return '/privacy-policy';

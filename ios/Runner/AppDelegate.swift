@@ -13,6 +13,12 @@ import UserNotifications
   
   // 🎨 启动页视图（用于淡出动画）
   private var launchScreenView: UIView?
+
+  private func debugLog(_ message: String) {
+    #if DEBUG
+    print(message)
+    #endif
+  }
   
   override func application(
     _ application: UIApplication,
@@ -38,7 +44,7 @@ import UserNotifications
     // 🔥 监听Flutter的查询请求（和Android getInitialNoteId一样）
     methodChannel?.setMethodCallHandler { [weak self] (call, result) in
       if call.method == "getInitialPayload" {
-        print("📱 [AppDelegate] Flutter查询初始payload: \(self?.pendingPayload ?? "nil")")
+        self?.debugLog("📱 [AppDelegate] Flutter查询初始payload: \(self?.pendingPayload ?? "nil")")
         result(self?.pendingPayload)
         self?.pendingPayload = nil // 清空避免重复
       } else {
@@ -46,7 +52,7 @@ import UserNotifications
       }
     }
     
-    print("✅ [AppDelegate] MethodChannel已设置")
+    debugLog("✅ [AppDelegate] MethodChannel已设置")
     
     // 🎨 启动页动画 MethodChannel
     let launchScreenChannel = FlutterMethodChannel(
@@ -56,7 +62,7 @@ import UserNotifications
 
     launchScreenChannel.setMethodCallHandler { [weak self] (call, result) in
       if call.method == "removeLaunchScreen" {
-        print("🎨 [AppDelegate] Flutter请求移除启动页（带动画）")
+        self?.debugLog("🎨 [AppDelegate] Flutter请求移除启动页（带动画）")
         self?.removeLaunchScreenWithAnimation()
         result(nil)
       } else {
@@ -73,7 +79,6 @@ import UserNotifications
 
     umengChannel.setMethodCallHandler { (call, result) in
       // iOS平台所有友盟调用返回false（未启用）
-      print("⚠️ [UmengAnalytics iOS] iOS平台已禁用友盟统计")
       result(false)
     }
   }
@@ -95,7 +100,7 @@ import UserNotifications
       rootViewController.view.addSubview(launchScreenView!)
       rootViewController.view.bringSubviewToFront(launchScreenView!)
       
-      print("✅ [LaunchScreen] 启动页覆盖层已创建")
+      debugLog("✅ [LaunchScreen] 启动页覆盖层已创建")
     }
   }
 
@@ -114,11 +119,11 @@ import UserNotifications
   // 🎨 移除启动页（带淡出动画，模仿支付宝/小红书）
   func removeLaunchScreenWithAnimation() {
     guard let launchView = launchScreenView else {
-      print("⚠️ [LaunchScreen] 启动页视图不存在")
+      debugLog("⚠️ [LaunchScreen] 启动页视图不存在")
       return
     }
     
-    print("🎨 [LaunchScreen] 开始淡出动画...")
+    debugLog("🎨 [LaunchScreen] 开始淡出动画...")
     
     // 支付宝/小红书的做法：400ms 淡出动画
     UIView.animate(withDuration: 0.4, delay: 0, options: .curveEaseOut, animations: {
@@ -126,7 +131,7 @@ import UserNotifications
     }) { _ in
       launchView.removeFromSuperview()
       self.launchScreenView = nil
-      print("✅ [LaunchScreen] 启动页已移除（带动画）")
+      self.debugLog("✅ [LaunchScreen] 启动页已移除（带动画）")
     }
   }
   
@@ -149,34 +154,34 @@ import UserNotifications
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    print("════════════════════════════════")
-    print("🔥 [AppDelegate] 用户点击了通知！")
+    debugLog("════════════════════════════════")
+    debugLog("🔥 [AppDelegate] 用户点击了通知！")
     
     // 🔥 从notification的userInfo中获取payload
     let userInfo = response.notification.request.content.userInfo
     let payload = userInfo["payload"] as? String ?? userInfo["noteIdString"] as? String
     
-    print("📱 [AppDelegate] payload: \(payload ?? "nil")")
-    print("📱 [AppDelegate] userInfo: \(userInfo)")
+    debugLog("📱 [AppDelegate] payload: \(payload ?? "nil")")
+    debugLog("📱 [AppDelegate] userInfo: \(userInfo)")
     
     if let payload = payload {
       // 🔥 方式1：立即通过MethodChannel发送（和Android一样）
       if let channel = methodChannel {
-        print("📱 [AppDelegate] 尝试通过MethodChannel发送openNote...")
+        debugLog("📱 [AppDelegate] 尝试通过MethodChannel发送openNote...")
         channel.invokeMethod("openNote", arguments: payload)
-        print("✅ [AppDelegate] MethodChannel已调用")
+        debugLog("✅ [AppDelegate] MethodChannel已调用")
       } else {
-        print("⚠️ [AppDelegate] MethodChannel未初始化")
+        debugLog("⚠️ [AppDelegate] MethodChannel未初始化")
       }
       
       // 🔥 方式2：保存payload等待Flutter查询（和Android的pendingNoteId一样）
       pendingPayload = payload
-      print("📱 [AppDelegate] pendingPayload已设置: \(payload)")
+      debugLog("📱 [AppDelegate] pendingPayload已设置: \(payload)")
     } else {
-      print("❌ [AppDelegate] payload为空！")
+      debugLog("❌ [AppDelegate] payload为空！")
     }
     
-    print("════════════════════════════════")
+    debugLog("════════════════════════════════")
     
     // 🔥 仍然调用父类方法，让flutter_local_notifications也处理
     super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)

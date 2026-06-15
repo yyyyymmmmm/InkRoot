@@ -34,6 +34,10 @@ class LoggerService {
 
   /// 信息日志
   static void info(String message, {String? tag, Map<String, dynamic>? data}) {
+    if (kReleaseMode) {
+      return;
+    }
+
     final logTag = tag ?? _tag;
     final logMessage = _formatMessage(message, data);
 
@@ -70,13 +74,15 @@ class LoggerService {
     final logTag = tag ?? _tag;
     final logMessage = _formatMessage(message, data);
 
-    developer.log(
-      logMessage,
-      name: logTag,
-      level: 900, // Warning level
-      error: error,
-      stackTrace: stackTrace,
-    );
+    if (!kReleaseMode) {
+      developer.log(
+        logMessage,
+        name: logTag,
+        level: 900, // Warning level
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
 
     if (kDebugMode) {
       // ignore: avoid_print
@@ -113,23 +119,22 @@ class LoggerService {
     final logTag = tag ?? _tag;
     final logMessage = _formatMessage(message, data);
 
-    developer.log(
-      logMessage,
-      name: logTag,
-      level: 1000, // Error level
-      error: error,
-      stackTrace: stackTrace,
-    );
+    if (!kReleaseMode) {
+      developer.log(
+        logMessage,
+        name: logTag,
+        level: 1000, // Error level
+        error: error,
+        stackTrace: stackTrace,
+      );
 
-    // ignore: avoid_print
-    debugPrint('❌ [$logTag] $logMessage');
-    if (error != null) {
-      // ignore: avoid_print
-      debugPrint('   Error: $error');
-    }
-    if (stackTrace != null && kDebugMode) {
-      // ignore: avoid_print
-      debugPrint('   Stack: $stackTrace');
+      debugPrint('❌ [$logTag] $logMessage');
+      if (error != null) {
+        debugPrint('   Error: $error');
+      }
+      if (stackTrace != null && kDebugMode) {
+        debugPrint('   Stack: $stackTrace');
+      }
     }
 
     // 上报到 Sentry

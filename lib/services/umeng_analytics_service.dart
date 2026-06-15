@@ -17,6 +17,11 @@ class UmengAnalyticsService {
   /// 1. 只有用户同意隐私政策后才能调用此方法
   /// 2. 仅在Android平台有效，iOS平台会直接返回false
   static Future<bool> init() async {
+    if (!AppConfig.enableUmengAnalytics) {
+      debugPrint('⚠️ [UmengAnalytics] 未配置统计 AppKey，跳过初始化');
+      return false;
+    }
+
     // ⚠️ iOS平台不使用友盟统计
     if (Platform.isIOS) {
       debugPrint('⚠️ [UmengAnalytics] iOS平台已禁用友盟统计（符合App Store审核要求）');

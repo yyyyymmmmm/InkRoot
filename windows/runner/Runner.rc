@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "InkRoot" "\0"
-            VALUE "FileDescription", "墨鸣笔记" "\0"
+            VALUE "FileDescription", "InkRoot" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "InkRoot" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 InkRoot. All rights reserved." "\0"
             VALUE "OriginalFilename", "inkroot.exe" "\0"
-            VALUE "ProductName", "墨鸣笔记" "\0"
+            VALUE "ProductName", "InkRoot" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# ============================================
-# InkRoot iOS 未签名 IPA 构建脚本
-# 用于真机测试（需要通过第三方工具如爱思助手安装）
-# ============================================
+# InkRoot iOS unsigned archive helper.
+# This artifact is for CI smoke checks and internal packaging only.
+# App Store/TestFlight submission must use a signed Xcode archive.
 
 set -e  # 遇到错误立即退出
 
@@ -22,46 +21,59 @@ BUILD_NUMBER=$(grep "version:" "$PROJECT_DIR/pubspec.yaml" | awk '{print $2}' | 
 OUTPUT_DIR="$PROJECT_DIR/build/ios/unsigned"
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  InkRoot iOS 未签名 IPA 构建${NC}"
+echo -e "${BLUE}  InkRoot iOS unsigned build${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
-echo -e "${GREEN}应用名称:${NC} $APP_NAME"
-echo -e "${GREEN}版本号:${NC} $VERSION ($BUILD_NUMBER)"
-echo -e "${GREEN}输出目录:${NC} $OUTPUT_DIR"
+echo -e "${GREEN}App:${NC} $APP_NAME"
+echo -e "${GREEN}Version:${NC} $VERSION ($BUILD_NUMBER)"
+echo -e "${GREEN}Output:${NC} $OUTPUT_DIR"
 echo ""
 
 # 步骤1: 清理旧的构建
-echo -e "${YELLOW}[1/6] 清理旧的构建文件...${NC}"
+echo -e "${YELLOW}[1/6] Cleaning previous build...${NC}"
 cd "$PROJECT_DIR"
 flutter clean
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
 # 步骤2: 获取依赖
-echo -e "${YELLOW}[2/6] 获取 Flutter 依赖...${NC}"
+echo -e "${YELLOW}[2/6] Resolving Flutter dependencies...${NC}"
 flutter pub get
 
 # 步骤3: 安装 CocoaPods 依赖
-echo -e "${YELLOW}[3/6] 安装 CocoaPods 依赖...${NC}"
+echo -e "${YELLOW}[3/6] Installing CocoaPods dependencies...${NC}"
 cd "$PROJECT_DIR/ios"
 pod install
 
 # 步骤4: 构建 iOS Release 版本（不签名）
-echo -e "${YELLOW}[4/6] 构建 iOS Release 版本...${NC}"
+echo -e "${YELLOW}[4/6] Building iOS release without codesigning...${NC}"
 cd "$PROJECT_DIR"
 
-# 使用 flutter build ios 命令，不进行代码签名
-flutter build ios --release --no-codesign
+BUILD_DEFINES=()
+BUILD_DEFINES+=("--dart-define=ENVIRONMENT=${ENVIRONMENT:-production}")
+if [ -n "${CLOUD_VERIFY_APP_ID:-}" ]; then
+    BUILD_DEFINES+=("--dart-define=CLOUD_VERIFY_APP_ID=${CLOUD_VERIFY_APP_ID}")
+fi
+if [ -n "${CLOUD_VERIFY_APP_KEY:-}" ]; then
+    BUILD_DEFINES+=("--dart-define=CLOUD_VERIFY_APP_KEY=${CLOUD_VERIFY_APP_KEY}")
+fi
+
+flutter build ios --release --no-codesign "${BUILD_DEFINES[@]}"
 
 # 步骤5: 创建 Payload 目录并打包
-echo -e "${YELLOW}[5/6] 打包 IPA 文件...${NC}"
+echo -e "${YELLOW}[5/6] Packaging IPA...${NC}"
 
 # 找到构建的 .app 文件
 APP_PATH="$PROJECT_DIR/build/ios/iphoneos/Runner.app"
 
 if [ ! -d "$APP_PATH" ]; then
-    echo -e "${RED}错误: 找不到 Runner.app 文件${NC}"
-    echo -e "${RED}路径: $APP_PATH${NC}"
+    echo -e "${RED}Error: Runner.app was not found${NC}"
+    echo -e "${RED}Path: $APP_PATH${NC}"
+    exit 1
+fi
+
+if [ ! -f "$APP_PATH/PrivacyInfo.xcprivacy" ]; then
+    echo -e "${RED}Error: PrivacyInfo.xcprivacy was not copied into Runner.app${NC}"
     exit 1
 fi
 
@@ -83,34 +95,26 @@ zip -r "$IPA_NAME" Payload
 rm -rf Payload
 
 # 步骤6: 验证 IPA 文件
-echo -e "${YELLOW}[6/6] 验证 IPA 文件...${NC}"
+echo -e "${YELLOW}[6/6] Verifying IPA...${NC}"
 
 if [ -f "$IPA_PATH" ]; then
     FILE_SIZE=$(du -h "$IPA_PATH" | cut -f1)
     echo ""
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}  ✅ IPA 构建成功！${NC}"
+    echo -e "${GREEN}  IPA build succeeded${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
-    echo -e "${GREEN}文件名称:${NC} $IPA_NAME"
-    echo -e "${GREEN}文件大小:${NC} $FILE_SIZE"
-    echo -e "${GREEN}文件路径:${NC} $IPA_PATH"
+    echo -e "${GREEN}File:${NC} $IPA_NAME"
+    echo -e "${GREEN}Size:${NC} $FILE_SIZE"
+    echo -e "${GREEN}Path:${NC} $IPA_PATH"
     echo ""
-    echo -e "${BLUE}📱 安装说明:${NC}"
-    echo -e "  1. 使用爱思助手、iMazing 或其他第三方工具"
-    echo -e "  2. 连接 iPhone 到电脑"
-    echo -e "  3. 导入并安装此 IPA 文件"
-    echo ""
-    echo -e "${YELLOW}⚠️  注意事项:${NC}"
-    echo -e "  - 此 IPA 未签名，无法通过 Xcode 或 TestFlight 安装"
-    echo -e "  - 需要使用第三方工具（如爱思助手）进行安装"
-    echo -e "  - 安装后可能需要在设置中信任开发者证书"
+    echo -e "${YELLOW}Note:${NC} This IPA is unsigned and is not an App Store/TestFlight submission artifact."
     echo ""
     
     if command -v open >/dev/null 2>&1 && [ -z "${CI:-}" ]; then
         open "$OUTPUT_DIR"
     fi
 else
-    echo -e "${RED}错误: IPA 文件创建失败${NC}"
+    echo -e "${RED}Error: IPA was not created${NC}"
     exit 1
 fi

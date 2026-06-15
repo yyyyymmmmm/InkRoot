@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:inkroot/config/app_identity.dart';
 import 'package:inkroot/services/app_info_service.dart';
 
@@ -52,6 +53,10 @@ class AppConfig {
 
   /// 是否开发环境
   static bool get isDevelopment => environment == 'development';
+
+  /// 是否为正式发布构建。
+  /// Release 包必须默认关闭调试输出，不能依赖额外 dart-define。
+  static bool get isReleaseBuild => kReleaseMode;
 
   // ==================== 服务器配置 ====================
 
@@ -128,16 +133,15 @@ class AppConfig {
 
   // ==================== 🚀 友盟统计配置 ====================
 
-  /// 友盟Android AppKey（从MainActivity.kt里找到的）
+  /// 友盟 Android AppKey。正式构建通过 dart-define/Gradle 属性注入；
+  /// 源码不保留生产统计密钥。
   static const String umengAndroidAppKey = String.fromEnvironment(
     'UMENG_ANDROID_APPKEY',
-    defaultValue: '68f40dfe644c9e2c20597ea5', // 已配置好的Android AppKey
   );
 
-  /// 友盟iOS AppKey（从AppDelegate.swift里找到的）
+  /// 友盟 iOS AppKey。当前 iOS 端不启用友盟统计。
   static const String umengIOSAppKey = String.fromEnvironment(
     'UMENG_IOS_APPKEY',
-    defaultValue: '68f40e8c8560e34772cdfc9e', // 已配置好的iOS AppKey
   );
 
   /// 友盟渠道号
@@ -442,17 +446,17 @@ class AppConfig {
   static const String helpDocUrl = '$officialWebsite/help';
 
   /// GitHub仓库地址
-  static const String githubRepo = 'https://github.com/yyyyymmmmm/IntRoot';
+  static const String githubRepo = 'https://github.com/yyyyymmmmm/InkRoot';
 
   // ==================== 法律文档 ====================
 
   /// 当前法律文档版本。修改协议或隐私政策时更新该值，用于触发重新确认。
-  static const String legalDocumentVersion = '2026-06-14';
+  static const String legalDocumentVersion = '2026-06-15';
 
   /// 法律文档固定更新日期，避免页面每天显示伪更新。
   static const int legalUpdatedYear = 2026;
   static const int legalUpdatedMonth = 6;
-  static const int legalUpdatedDay = 14;
+  static const int legalUpdatedDay = 15;
 
   /// 隐私政策地址
   static const String privacyPolicyUrl = '${officialWebsite}privacy.html';
@@ -465,6 +469,13 @@ class AppConfig {
 
   /// 用户协议 Uri
   static Uri get userAgreementUri => Uri.parse(userAgreementUrl);
+
+  /// 账号与数据删除说明/申请地址
+  static const String accountDeletionUrl =
+      '${officialWebsite}account-deletion.html';
+
+  /// 账号与数据删除 Uri
+  static Uri get accountDeletionUri => Uri.parse(accountDeletionUrl);
 
   /// 开源协议地址
   static const String licenseUrl = '$githubRepo/blob/main/LICENSE';
@@ -500,9 +511,10 @@ class AppConfig {
   // ==================== 功能开关 ====================
 
   /// 是否启用云验证
-  /// ⚠️ iOS平台禁用，Android平台可用
+  /// 公告/配置接口依赖构建时注入的应用 ID 和密钥。
+  /// iOS 仍不使用自有更新检查，但可以读取后端公告。
   static bool get enableCloudVerification =>
-      Platform.isAndroid && appId.isNotEmpty && appKey.isNotEmpty;
+      appId.isNotEmpty && appKey.isNotEmpty;
 
   /// 是否启用自动更新检查
   /// ⚠️ iOS平台禁用（Apple要求更新必须通过App Store）

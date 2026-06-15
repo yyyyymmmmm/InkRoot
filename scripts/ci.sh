@@ -17,10 +17,10 @@ esac
 
 case "$MODE" in
   ios) MODE="ios-sim" ;;
-  macos) MODE="macos-debug" ;;
-  windows) MODE="windows-debug" ;;
-  linux) MODE="linux-debug" ;;
-  android) MODE="android-debug" ;;
+  macos) MODE="macos-release" ;;
+  windows) MODE="windows-release" ;;
+  linux) MODE="linux-release" ;;
+  android) MODE="android-release" ;;
 esac
 
 dart tool/inkroot.dart ci "$MODE"

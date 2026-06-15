@@ -10,7 +10,7 @@
 			<string>en</string>
 		</array>
 		<key>CFBundleDisplayName</key>
-		<string>Inkroot</string>
+		<string>InkRoot</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -107,11 +107,6 @@
 		<string>InkRoot需要访问相册以保存图片</string>
 		<key>NSCameraUsageDescription</key>
 		<string>InkRoot需要访问相机以拍摄图片</string>
-		<!-- 后台模式（仅保留必需的remote-notification用于本地通知） -->
-		<key>UIBackgroundModes</key>
-		<array>
-			<string>remote-notification</string>
-		</array>
 		<!-- 支持时间敏感通知 (iOS 15+) -->
 		<key>UIUserNotificationSettings</key>
 		<dict>

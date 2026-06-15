@@ -184,7 +184,11 @@ class PreferencesService {
   // 清除用户信息（退出登录时使用）
   Future<void> clearUser() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_userKey);
+    await Future.wait([
+      prefs.remove(_userKey),
+      _storage.delete(key: _authTokenKey),
+      _storage.delete(key: _refreshTokenKey),
+    ]);
   }
 
   // 检查是否是第一次启动应用

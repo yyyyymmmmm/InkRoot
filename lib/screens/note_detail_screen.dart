@@ -56,7 +56,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   Future<void> _loadNote() async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    final note = appProvider.getNoteById(widget.noteId);
+    final note = appProvider.getNoteById(widget.noteId) ??
+        await appProvider.databaseService.getNoteById(widget.noteId);
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _note = note;
     });

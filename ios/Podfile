@@ -31,6 +31,19 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+def clear_ios_codesign_detritus(path)
+  return unless File.exist?(path)
+
+  attrs = [
+    'com.apple.FinderInfo',
+    'com.apple.ResourceFork',
+    'com.apple.fileprovider.fpfs#P',
+  ]
+  attrs.each do |attr|
+    system('xattr', '-dr', attr, path, out: File::NULL, err: File::NULL)
+  end
+end
+
 target 'Runner' do
   use_frameworks! :linkage => :static
 
@@ -50,6 +63,11 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  engine_root = File.join(flutter_root, 'bin/cache/artifacts/engine')
+  Dir.glob(File.join(engine_root, 'ios*/**/Flutter.framework')).each do |framework_path|
+    clear_ios_codesign_detritus(framework_path)
+  end
+
   # SDWebImage：部分 Core 源码用引号 import Private 头文件（例如 SDInternalMacros.h）。
   # 某些安装方式下 header search path 不稳定，会导致编译报错。
   # 这里直接改为相对路径引用，避免依赖 Xcode 的 Header Search Paths。

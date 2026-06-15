@@ -220,19 +220,6 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
             );
           },
           builders: {
-            if (widget.highlightQuery?.trim().isNotEmpty ?? false)
-              'p': HighlightParagraphBuilder(
-                query: widget.highlightQuery!.trim(),
-                baseStyle: AppTextStyles.bodyLarge(
-                  context,
-                  height: 1.6,
-                  color: isDarkMode ? const Color(0xFFE4E1DA) : Colors.black87,
-                ),
-                highlightColor: isDarkMode
-                    ? AppTheme.primaryLightColor.withValues(alpha: 0.35)
-                    : AppTheme.primaryLightColor.withValues(alpha: 0.22),
-                textScaler: MediaQuery.textScalerOf(context),
-              ),
             'u': UnderlineBuilder(),
           },
           onTapText: () {
@@ -803,72 +790,6 @@ class UnderlineBuilder extends MarkdownElementBuilder {
           ),
         ),
       );
-}
-
-class HighlightParagraphBuilder extends MarkdownElementBuilder {
-  HighlightParagraphBuilder({
-    required this.query,
-    required this.baseStyle,
-    required this.highlightColor,
-    required this.textScaler,
-  });
-
-  final String query;
-  final TextStyle baseStyle;
-  final Color highlightColor;
-  final TextScaler textScaler;
-
-  @override
-  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    final text = element.textContent;
-    final children = element.children ?? const <md.Node>[];
-    final hasInlineElements = children.any((node) => node is md.Element);
-    if (text.isEmpty || query.isEmpty || hasInlineElements) {
-      return null;
-    }
-
-    final style = preferredStyle ?? baseStyle;
-    final spans = _highlightSpans(text, style);
-    if (spans.length == 1) {
-      return null;
-    }
-
-    return RichText(
-      text: TextSpan(style: style, children: spans),
-      textScaler: textScaler,
-    );
-  }
-
-  List<TextSpan> _highlightSpans(String text, TextStyle style) {
-    final lowerText = text.toLowerCase();
-    final lowerQuery = query.toLowerCase();
-    final spans = <TextSpan>[];
-    var cursor = 0;
-
-    while (cursor < text.length) {
-      final index = lowerText.indexOf(lowerQuery, cursor);
-      if (index < 0) {
-        spans.add(TextSpan(text: text.substring(cursor), style: style));
-        break;
-      }
-      if (index > cursor) {
-        spans.add(TextSpan(text: text.substring(cursor, index), style: style));
-      }
-      final end = index + query.length;
-      spans.add(
-        TextSpan(
-          text: text.substring(index, end),
-          style: style.copyWith(
-            backgroundColor: highlightColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-      cursor = end;
-    }
-
-    return spans.isEmpty ? [TextSpan(text: text, style: style)] : spans;
-  }
 }
 
 class UnderlineSyntax extends md.InlineSyntax {

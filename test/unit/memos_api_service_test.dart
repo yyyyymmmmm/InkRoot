@@ -563,8 +563,58 @@ void main() {
     });
   });
 
+  group('MemosApiServiceFixed — deleteMemo', () {
+    test('API-22 删除接口把 200/204/404 视为成功', () async {
+      for (final status in [200, 204, 404]) {
+        await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+        final mock = MockClient((req) async {
+          if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+            return http.Response(jsonEncode({'version': 'v0.28.0'}), 200);
+          }
+          if (req.method == 'DELETE' &&
+              req.url.path.endsWith('/api/v1/memos/42')) {
+            return http.Response('', status);
+          }
+          return http.Response('{}', 404);
+        });
+
+        final svc = MemosApiServiceFixed(baseUrl: baseUrl, token: 'tok');
+        await http.runWithClient(() => svc.deleteMemo('42'), () => mock);
+      }
+    });
+
+    test('API-23 删除接口非幂等错误保留服务端错误信息', () async {
+      await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+      final mock = MockClient((req) async {
+        if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+          return http.Response(jsonEncode({'version': 'v0.28.0'}), 200);
+        }
+        if (req.method == 'DELETE' &&
+            req.url.path.endsWith('/api/v1/memos/42')) {
+          return http.Response(
+            jsonEncode({'message': 'permission denied'}),
+            500,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+
+      final svc = MemosApiServiceFixed(baseUrl: baseUrl, token: 'tok');
+      await expectLater(
+        http.runWithClient(() => svc.deleteMemo('42'), () => mock),
+        throwsA(
+          isA<Exception>().having(
+            (error) => error.toString(),
+            'message',
+            contains('permission denied'),
+          ),
+        ),
+      );
+    });
+  });
+
   group('MemosApiServiceFixed — relations', () {
-    test('API-22 v0.24 新增引用使用 List + Set relations', () async {
+    test('API-24 v0.24 新增引用使用 List + Set relations', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       final called = <String>[];
       Map<String, dynamic>? patchBody;
@@ -606,7 +656,7 @@ void main() {
       );
     });
 
-    test('API-23 v0.27 删除全部引用使用 Set relations 空列表', () async {
+    test('API-25 v0.27 删除全部引用使用 Set relations 空列表', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       Map<String, dynamic>? patchBody;
 
@@ -633,7 +683,7 @@ void main() {
       expect(patchBody?['relations'], isEmpty);
     });
 
-    test('API-24 v0.21 新增引用保留 legacy relation 接口', () async {
+    test('API-26 v0.21 新增引用保留 legacy relation 接口', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       String? calledPath;
       Map<String, dynamic>? body;

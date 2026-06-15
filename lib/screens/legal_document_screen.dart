@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/themes/app_theme.dart';
@@ -73,6 +74,18 @@ class LegalDocumentsHubScreen extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: 12),
+            _buildEntry(
+              context,
+              icon: Icons.delete_forever_outlined,
+              title: isZh ? '账号与数据删除' : 'Account and Data Deletion',
+              subtitle: isZh
+                  ? '删除本机数据或发起官方服务器账号删除'
+                  : 'Delete local data or request official account deletion',
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+              onTap: () => context.push('/account-deletion'),
             ),
           ],
         ),
@@ -262,21 +275,27 @@ class LegalDocumentScreen extends StatelessWidget {
         _LegalSection(
           title: isZh ? '我们如何处理数据' : 'How We Handle Data',
           content: isZh
-              ? '${AppConfig.appName} 默认以本地优先方式运行。笔记内容、图片、标签和配置主要保存在你的设备或你自行配置的 Memos/WebDAV/AI 服务中。\n\n我们不会运营集中式笔记服务器，也不会主动收集、读取、出售或分析你的个人笔记内容。'
-              : '${AppConfig.appName} is local-first by default. Notes, images, tags, and settings are primarily stored on your device or in the Memos, WebDAV, or AI services you configure.\n\nWe do not operate a centralized note server and do not proactively collect, read, sell, or analyze your personal note content.',
+              ? '${AppConfig.appName} 默认以本地优先方式运行。笔记、图片、标签和配置优先保存在你的设备上；当你登录官方服务器、连接自部署 Memos、配置 WebDAV、启用 AI 或提交反馈时，相关数据会按你的操作发送到对应服务。\n\n我们不会出售个人信息，也不会为了广告画像读取或分析你的私人笔记内容。'
+              : '${AppConfig.appName} is local-first by default. Notes, images, tags, and settings are stored on your device first. When you sign in to the official server, connect a self-hosted Memos server, configure WebDAV, enable AI, or submit feedback, relevant data is sent to the corresponding service based on your action.\n\nWe do not sell personal information or read/analyze your private notes for advertising profiles.',
           highlight: true,
         ),
         _LegalSection(
           title: isZh ? '可能使用的信息' : 'Information That May Be Used',
           content: isZh
-              ? '• 服务器地址、用户名、访问令牌：用于连接你选择的 Memos 服务\n• WebDAV 地址、用户名、密码：用于备份和恢复数据\n• AI API 地址、模型名、API Key：用于你主动触发的 AI 功能\n• 图片和文件访问权限：用于选择、保存、上传或备份图片\n• 通知权限：用于本地提醒\n• 反馈内容：仅在你主动提交反馈时发送'
-              : '• Server address, username, and access token: used to connect to the Memos service you choose\n• WebDAV address, username, and password: used for backup and restore\n• AI API URL, model name, and API key: used only for AI features you trigger\n• Image and file permissions: used to select, save, upload, or back up images\n• Notification permission: used for local reminders\n• Feedback content: sent only when you submit feedback',
+              ? '• 账号资料、邮箱、服务器地址、访问令牌：用于登录和同步你选择的 Memos 服务\n• 笔记、图片、标签、提醒和附件：用于本地记录、同步、备份、导入导出和图片预览\n• WebDAV 地址、用户名、密码：用于你主动配置的备份和恢复\n• AI API 地址、模型名、API Key、待处理文本：用于你主动触发的 AI 功能\n• 相机、相册、麦克风、语音识别、通知权限：用于拍照、选择/保存图片、语音输入和本地提醒\n• 设备、应用版本、错误或反馈内容：仅在你主动反馈或启用相应服务时用于排查问题'
+              : '• Account profile, email, server address, and access token: used for sign-in and sync with the Memos service you choose\n• Notes, images, tags, reminders, and attachments: used for local capture, sync, backup, import/export, and image preview\n• WebDAV address, username, and password: used for backup and restore you configure\n• AI API URL, model name, API key, and selected text: used only for AI features you trigger\n• Camera, photo library, microphone, speech recognition, and notification permissions: used for photos, image selection/saving, voice input, and local reminders\n• Device, app version, error, or feedback content: used only when you submit feedback or enable the related service',
+        ),
+        _LegalSection(
+          title: isZh ? '官方服务器与自部署服务' : 'Official and Self-Hosted Services',
+          content: isZh
+              ? '使用官方服务器时，账号资料、笔记、附件和同步记录会保存在官方服务器上，用于提供登录、同步、公告和必要的服务维护。使用自部署 Memos、WebDAV 或第三方 AI 服务时，相关数据由你选择的服务处理，InkRoot 无法直接管理这些服务中的账号和数据。'
+              : 'When you use the official server, account profile, notes, attachments, and sync records are stored on the official server to provide sign-in, sync, notices, and necessary service maintenance. When you use self-hosted Memos, WebDAV, or third-party AI services, the selected service processes the related data, and InkRoot cannot directly manage accounts or data in those services.',
         ),
         _LegalSection(
           title: isZh ? '第三方服务' : 'Third-Party Services',
           content: isZh
-              ? '当你配置 Memos、WebDAV、AI 服务、系统分享或图片保存能力时，相关数据会发送到你选择的第三方或自建服务。请自行确认这些服务的隐私政策、安全性和可用性。'
-              : 'When you configure Memos, WebDAV, AI services, system sharing, or image saving, relevant data may be sent to the third-party or self-hosted services you choose. Please review their privacy policies, security, and availability.',
+              ? 'Android 版本可能接入崩溃诊断或统计 SDK，具体以应用设置和构建配置为准。iOS 版本不启用友盟统计；如构建时配置 Sentry 或其他错误上报服务，将仅用于诊断崩溃和稳定性问题。你配置的 Memos、WebDAV、AI 服务、系统分享或图片保存能力，也可能由相应平台或服务处理数据。'
+              : 'The Android version may integrate crash diagnostics or analytics SDKs depending on app settings and build configuration. The iOS version does not enable Umeng analytics. If Sentry or another error reporting service is configured at build time, it is used only for crash and stability diagnostics. Memos, WebDAV, AI services, system sharing, or image saving features you configure may also process data through the corresponding platform or service.',
         ),
         _LegalSection(
           title: isZh ? '本地安全' : 'Local Security',
@@ -287,8 +306,8 @@ class LegalDocumentScreen extends StatelessWidget {
         _LegalSection(
           title: isZh ? '你的控制权' : 'Your Control',
           content: isZh
-              ? '你可以在应用中导出、删除和迁移笔记，也可以随时关闭同步、AI、通知等功能。卸载应用可能会删除本地数据，请先自行备份重要内容。'
-              : 'You can export, delete, and migrate notes in the app, and you may disable sync, AI, notifications, and related features at any time. Uninstalling the app may remove local data, so back up important content first.',
+              ? '你可以在应用中导出、删除和迁移笔记，也可以随时关闭同步、AI、通知等功能。你可以在“设置 - 账号与数据删除”中删除本机数据，或通过 ${AppConfig.accountDeletionUrl} 发起官方服务器账号删除。自部署或第三方服务中的数据，需要到对应服务中删除。卸载应用可能会删除本地数据，请先自行备份重要内容。'
+              : 'You can export, delete, and migrate notes in the app, and may disable sync, AI, notifications, and related features at any time. You can delete local data in Settings > Account and Data Deletion, or request official server account deletion at ${AppConfig.accountDeletionUrl}. Data in self-hosted or third-party services must be deleted in those services. Uninstalling the app may remove local data, so back up important content first.',
         ),
         _LegalSection(
           title: isZh ? '联系我们' : 'Contact',
@@ -309,8 +328,8 @@ class LegalDocumentScreen extends StatelessWidget {
         _LegalSection(
           title: isZh ? '服务说明' : 'Service Description',
           content: isZh
-              ? '${AppConfig.appName} 是面向 Memos 用户的跨平台客户端，提供笔记创建、编辑、标签、图片、离线记录、同步、备份、导入导出和可选 AI 辅助功能。'
-              : '${AppConfig.appName} is a cross-platform client for Memos users, providing note creation, editing, tags, images, offline capture, sync, backup, import/export, and optional AI assistance.',
+              ? '${AppConfig.appName} 是面向个人记录和 Memos 用户的跨平台客户端，提供笔记创建、编辑、标签、图片、离线记录、同步、备份、导入导出、提醒和可选 AI 辅助功能。你可以使用本地模式、官方服务器或自部署服务。'
+              : '${AppConfig.appName} is a cross-platform client for personal capture and Memos users, providing note creation, editing, tags, images, offline capture, sync, backup, import/export, reminders, and optional AI assistance. You can use local mode, the official server, or self-hosted services.',
         ),
         _LegalSection(
           title: isZh ? '用户责任' : 'User Responsibilities',
@@ -321,8 +340,14 @@ class LegalDocumentScreen extends StatelessWidget {
         _LegalSection(
           title: isZh ? '数据所有权' : 'Data Ownership',
           content: isZh
-              ? '你的笔记和附件归你所有。应用不会声明对你的内容拥有权利。你应自行备份重要数据，第三方或自建服务中的数据安全由相应服务提供方或你本人负责。'
-              : 'Your notes and attachments belong to you. The app does not claim ownership of your content. You should back up important data, and data security in third-party or self-hosted services is the responsibility of that provider or yourself.',
+              ? '你的笔记和附件归你所有。应用不会声明对你的内容拥有权利。你应自行备份重要数据；官方服务器、自部署服务、WebDAV、AI 或其他第三方服务中的数据安全和可用性，分别由对应服务规则、服务提供方或你本人负责。'
+              : 'Your notes and attachments belong to you. The app does not claim ownership of your content. You should back up important data. Data security and availability in the official server, self-hosted services, WebDAV, AI, or other third-party services are governed by the corresponding service rules, provider, or yourself.',
+        ),
+        _LegalSection(
+          title: isZh ? '账号与数据删除' : 'Account and Data Deletion',
+          content: isZh
+              ? '你可以在“设置 - 账号与数据删除”中删除本机数据。官方服务器账号删除需通过 ${AppConfig.accountDeletionUrl} 发起申请并完成身份确认。自部署 Memos、WebDAV、AI 或其他第三方服务中的账号和数据，应在对应服务中处理。'
+              : 'You can delete local data in Settings > Account and Data Deletion. Official server account deletion must be requested at ${AppConfig.accountDeletionUrl} with identity confirmation. Accounts and data in self-hosted Memos, WebDAV, AI, or other third-party services must be handled in those services.',
         ),
         _LegalSection(
           title: isZh ? '免责声明' : 'Disclaimer',

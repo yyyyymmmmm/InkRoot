@@ -6,6 +6,7 @@ This directory contains project documentation for users and maintainers.
 
 - New users: [Getting Started](user-guide/getting-started.md)
 - Maintainers: [Maintenance](MAINTENANCE.md)
+- Store review: [Store Compliance](STORE_COMPLIANCE.md)
 - Contributors: [Contributing](../CONTRIBUTING.md)
 - Security: [Security Policy](../SECURITY.md)
 - Changelog: [Chinese](../CHANGELOG.md), [English](../CHANGELOG.en.md)

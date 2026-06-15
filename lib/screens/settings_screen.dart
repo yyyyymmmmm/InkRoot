@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/screens/about_screen.dart';
+import 'package:inkroot/screens/account_deletion_screen.dart';
 import 'package:inkroot/screens/account_info_screen.dart';
 import 'package:inkroot/screens/ai_settings_screen.dart';
 import 'package:inkroot/screens/data_cleanup_screen.dart';
@@ -22,6 +23,7 @@ import 'package:inkroot/utils/responsive_utils.dart';
 enum SettingsPage {
   none,
   accountInfo,
+  accountDeletion,
   serverInfo,
   preferences,
   aiSettings,
@@ -45,6 +47,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   SettingsPage _selectedPage = SettingsPage.none;
   double _menuWidth = 240; // 左侧菜单宽度（可拖动调整）
+
+  bool _isZh(BuildContext context) =>
+      Localizations.localeOf(context).languageCode == 'zh';
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +116,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           isSelected: _selectedPage == SettingsPage.accountInfo,
                           onTap: () => setState(
                             () => _selectedPage = SettingsPage.accountInfo,
+                          ),
+                        ),
+                        _buildMasterMenuItem(
+                          context,
+                          icon: Icons.delete_forever_outlined,
+                          title:
+                              _isZh(context) ? '账号与数据删除' : 'Account deletion',
+                          isSelected:
+                              _selectedPage == SettingsPage.accountDeletion,
+                          onTap: () => setState(
+                            () => _selectedPage = SettingsPage.accountDeletion,
                           ),
                         ),
                         _buildMasterMenuItem(
@@ -352,6 +368,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _buildSettingsItem(
                 context,
+                icon: Icons.delete_forever_outlined,
+                title: _isZh(context) ? '账号与数据删除' : 'Account deletion',
+                onTap: () => context.push('/account-deletion'),
+              ),
+              _buildSettingsItem(
+                context,
                 icon: Icons.cloud,
                 title: l10n?.serverUrl ?? '服务器连接',
                 onTap: () => context.push('/server-info'),
@@ -501,6 +523,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     switch (_selectedPage) {
       case SettingsPage.accountInfo:
         return const AccountInfoScreen();
+      case SettingsPage.accountDeletion:
+        return const AccountDeletionScreen();
       case SettingsPage.serverInfo:
         return const ServerInfoScreen();
       case SettingsPage.preferences:

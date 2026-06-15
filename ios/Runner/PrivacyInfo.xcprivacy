@@ -2,51 +2,33 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- 
-		🔒 InkRoot 隐私清单文件
-		符合Apple要求的隐私清单，用于iOS 17+
-		详见：https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
-	-->
-	
-	<!-- 需要声明的API使用情况 -->
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- 1. 文件时间戳API -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
-				<!-- C617.1: 访问应用自己创建的文件时间戳 -->
 				<string>C617.1</string>
-				<!-- 0A2A.1: 用于判断文件是否需要同步或更新 -->
 				<string>0A2A.1</string>
 			</array>
 		</dict>
-		
-		<!-- 2. 系统启动时间API -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
-				<!-- 35F9.1: 测量应用内事件的时间间隔 -->
 				<string>35F9.1</string>
 			</array>
 		</dict>
-		
-		<!-- 3. 磁盘空间API -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
-				<!-- E174.1: 显示可用磁盘空间给用户，用于决定是否可以保存文件 -->
 				<string>E174.1</string>
 			</array>
 		</dict>
-		
-		<!-- 4. 用户默认设置API -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
@@ -57,26 +39,74 @@
 			</array>
 		</dict>
 	</array>
-	
-	<!-- 收集的数据类型 -->
+
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- ⚠️ InkRoot iOS版本不收集任何用户数据 -->
-		<!-- 所有数据仅存储在用户设备本地，或用户自己的Memos服务器 -->
-		<!-- 不使用第三方分析SDK（友盟、Sentry等） -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCustomerSupport</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 	</array>
-	
-	<!-- 是否进行跟踪 -->
+
 	<key>NSPrivacyTracking</key>
 	<false/>
-	
-	<!-- 跟踪域名列表（空，因为不进行跟踪） -->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	
-	<!-- 数据使用说明 -->
-	<key>NSPrivacyDataUsage</key>
-	<string>InkRoot仅在本地存储笔记数据。如果用户选择连接Memos服务器，数据将同步到用户自己的服务器。应用不会将数据上传到开发者服务器或第三方服务器。</string>
 </dict>
 </plist>
-

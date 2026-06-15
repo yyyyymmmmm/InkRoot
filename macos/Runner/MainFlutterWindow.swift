@@ -32,7 +32,7 @@ class MainFlutterWindow: NSWindow {
     self.minSize = NSSize(width: 800, height: 600)
     
     // 设置窗口标题
-    self.title = "墨鸣笔记"
+    self.title = "InkRoot"
     
     // 启用全屏按钮
     self.collectionBehavior = [.fullScreenPrimary]

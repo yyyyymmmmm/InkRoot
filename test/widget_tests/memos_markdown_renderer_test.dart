@@ -120,6 +120,37 @@ https://gpt-agent.cc/v1
         contains('模型地址：claude-sonnet-4-6\n网站 https://gpt-agent.cc/v1'),
       );
     });
+
+    testWidgets(
+      'search rendering keeps full note structure around checkbox matches',
+      (tester) async {
+        const content = '''
+1.同步到webdav能否同步图片？或者增加一个选项让用户选择？
+- [x] 2.首页现在长按是没有功能的，能否可以考虑直接长按复制？
+3.同步到memos后，再同步到思源笔记，通过inkroot发布的图片不显示
+''';
+
+        await tester.pumpWidget(
+          _wrap(
+            const MemosMarkdownRenderer(
+              content: content,
+              selectable: false,
+              highlightQuery: '知道',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderedText = tester
+            .widgetList<RichText>(find.byType(RichText))
+            .map((widget) => widget.text.toPlainText())
+            .join('\n');
+
+        expect(renderedText, contains('同步到webdav能否同步图片'));
+        expect(renderedText, contains('首页现在长按是没有功能的'));
+        expect(renderedText, contains('同步到memos后'));
+      },
+    );
   });
 }
 

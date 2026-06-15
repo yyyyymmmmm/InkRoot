@@ -92,6 +92,8 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   Timer? _syncTimer;
   bool _isSyncing = false;
   String? _syncMessage;
+  Future<void>? _syncNotesInFlight;
+  final Set<String> _syncingNoteIds = {};
 
   void _setSyncUi({bool? syncing, String? message, bool notify = true}) {
     if (syncing != null) {
@@ -112,6 +114,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
   // 🚀 删除队列相关（大厂级批量处理）
   final List<String> _deleteQueue = [];
+  final Set<String> _pendingDeleteIds = {};
   bool _isProcessingDelete = false;
   Timer? _deleteDebounceTimer;
   static const Duration deleteUndoWindow = Duration(milliseconds: 3200);
@@ -160,8 +163,9 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   // Getters
   User? get user => _user;
   // 🔥 过滤掉归档笔记，只返回正常笔记
-  List<Note> get notes =>
-      _getSortedNotes().where((note) => note.isNormal).toList();
+  List<Note> get notes => _excludePendingDeletedNotes(
+        _getSortedNotes().where(_isVisibleNote).toList(),
+      );
 
   // 🚀 大厂标准：细粒度状态访问
   bool get isLoadingMore => _pagingState.loadMoreState.isLoading;
@@ -205,8 +209,13 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   CloudAppConfigData? get cloudAppConfig => _cloudAppConfig;
   CloudNoticeData? get cloudNotice => _cloudNotice;
 
-  Future<List<Note>> searchNotes(String query) async =>
-      _databaseService.searchNotes(query);
+  Future<List<Note>> searchNotes(String query) async {
+    final results = await _databaseService.searchNotes(query);
+    return _excludePendingDeletedNotes(results)
+        .map((note) => getNoteById(note.id) ?? note)
+        .where(_isSearchVisibleNote)
+        .toList();
+  }
 
   Future<List<Note>> getAllNotesForStats() async => _databaseService.getNotes();
 
@@ -420,7 +429,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
       // 🚀 延迟5秒加载云验证和公告（进一步降低启动负担）
       Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) {
+        if (mounted && Config.AppConfig.enableCloudVerification) {
           if (kDebugMode) {
             debugPrint('AppProvider: 延迟加载通知和云验证');
           }
@@ -584,7 +593,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       // 🔥 修复：完整加载所有笔记（用于刷新场景，如导入后）
       // 这是刷新操作，需要显示最新的完整数据
       _pagingState = paging.initialNotesPaginationState();
-      _notes = await _databaseService.getNotes();
+      _notes = _excludePendingDeletedNotes(await _databaseService.getNotes());
 
       // 更新总数统计
       _totalNotesCount = _notes.length;
@@ -635,7 +644,9 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       _totalNotesCount = await _databaseService.getNotesCount();
 
       // SQLite 本地读取极快（< 10ms），直接加载完整第一页，无需分步延迟
-      final firstPage = await _databaseService.getNotesPaged();
+      final firstPage = _excludePendingDeletedNotes(
+        await _databaseService.getNotesPaged(),
+      );
 
       _notes = firstPage;
       _pagingState = _pagingState.copyWith(
@@ -689,8 +700,10 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       );
 
       // 6️⃣ 执行数据加载
-      final moreNotes = await _databaseService.getNotesPaged(
-        page: _pagingState.currentPage,
+      final moreNotes = _excludePendingDeletedNotes(
+        await _databaseService.getNotesPaged(
+          page: _pagingState.currentPage,
+        ),
       );
 
       // 7️⃣ 处理加载结果
@@ -995,6 +1008,38 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   bool _isLocalOnlyNoteId(String id) =>
       id.startsWith('local_') || id.contains('-');
 
+  List<Note> _excludePendingDeletedNotes(List<Note> notes) {
+    if (_pendingDeleteIds.isEmpty) {
+      return notes;
+    }
+    return notes.where((note) => !_pendingDeleteIds.contains(note.id)).toList();
+  }
+
+  bool _isVisibleNote(Note note) =>
+      note.isNormal && !_pendingDeleteIds.contains(note.id);
+
+  bool _isSearchVisibleNote(Note note) =>
+      _isVisibleNote(note) &&
+      (note.content.trim().isNotEmpty || note.resourceList.isNotEmpty);
+
+  Future<int> _syncUnsyncedNotesSnapshot(List<Note> notes) async {
+    var successCount = 0;
+    for (final note in notes) {
+      if (_pendingDeleteIds.contains(note.id) ||
+          _syncingNoteIds.contains(note.id)) {
+        continue;
+      }
+      _syncingNoteIds.add(note.id);
+      try {
+        await _syncUnsyncedNoteToMemos(note);
+        successCount++;
+      } finally {
+        _syncingNoteIds.remove(note.id);
+      }
+    }
+    return successCount;
+  }
+
   Note _mergeServerNoteWithLocalState(
     Note serverNote,
     Note localNote, {
@@ -1010,8 +1055,14 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     if (_memosApiService == null) {
       throw Exception('Memos API 未初始化');
     }
+    if (_pendingDeleteIds.contains(note.id)) {
+      return note;
+    }
 
     final uploadableNote = await _prepareNoteForMemosUpload(note);
+    if (_pendingDeleteIds.contains(uploadableNote.id)) {
+      return uploadableNote;
+    }
     final oldId = uploadableNote.id;
     final visibility = uploadableNote.visibility.isNotEmpty
         ? uploadableNote.visibility
@@ -1205,7 +1256,8 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
     try {
       // 获取本地笔记
-      final localNotes = await _databaseService.getNotes();
+      final localNotes =
+          _excludePendingDeletedNotes(await _databaseService.getNotes());
       if (localNotes.isEmpty) {
         return true;
       }
@@ -1239,8 +1291,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
         }
 
         try {
-          await _syncUnsyncedNoteToMemos(note);
-          syncedCount++;
+          syncedCount += await _syncUnsyncedNotesSnapshot([note]);
         } on Object catch (e) {
           debugPrint('同步笔记失败: ${note.id} - $e');
         }
@@ -1778,7 +1829,9 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
       // 获取本地未同步的笔记（后台执行）
 
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
+      final unsyncedNotes = _excludePendingDeletedNotes(
+        await _databaseService.getUnsyncedNotes(),
+      );
       debugPrint('AppProvider: 发现 ${unsyncedNotes.length} 条未同步的笔记');
 
       if (unsyncedNotes.isEmpty) {
@@ -1788,16 +1841,11 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       }
 
       var syncedCount = 0;
-      for (var i = 0; i < unsyncedNotes.length; i++) {
-        final note = unsyncedNotes[i];
-        // 正在后台同步笔记 ${i + 1}/${unsyncedNotes.length}
-
+      for (final note in unsyncedNotes) {
         try {
-          await _syncUnsyncedNoteToMemos(note);
-          syncedCount++;
+          syncedCount += await _syncUnsyncedNotesSnapshot([note]);
         } on Object catch (e) {
           debugPrint('AppProvider: 同步笔记失败: ${note.id}, 错误: $e');
-          continue;
         }
       }
 
@@ -1934,7 +1982,9 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     try {
       // 检查是否有未同步的笔记
       if (!force && !_appConfig.isLocalMode && isLoggedIn) {
-        final unsyncedNotes = await _databaseService.getUnsyncedNotes();
+        final unsyncedNotes = _excludePendingDeletedNotes(
+          await _databaseService.getUnsyncedNotes(),
+        );
         if (unsyncedNotes.isNotEmpty) {
           _setLoading(false);
           return (
@@ -2403,7 +2453,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       // 如果是在线模式且已登录，尝试同步到服务器
       if (!_appConfig.isLocalMode && isLoggedIn && _memosApiService != null) {
         try {
-          await _syncUnsyncedNoteToMemos(updatedNote);
+          await _syncUnsyncedNotesSnapshot([updatedNote]);
         } on Object catch (e) {
           debugPrint('AppProvider: 同步标签到服务器失败: $e');
         }
@@ -2421,11 +2471,12 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   // 删除笔记（本地和服务器） - 使用乐观更新策略
   Future<bool> deleteNote(String id, {bool showSnackBar = false}) async {
     try {
-      // 1. 🚀 立即从内存中删除并更新UI（乐观更新）
-      final deletedNote = _notes.firstWhere((note) => note.id == id);
       final deletedIndex = _notes.indexWhere((note) => note.id == id);
+      final deletedNote = deletedIndex == -1
+          ? await _databaseService.getNoteById(id)
+          : _notes[deletedIndex];
 
-      if (deletedIndex == -1) {
+      if (deletedNote == null) {
         debugPrint('AppProvider: 笔记不存在: $id');
         return false;
       }
@@ -2433,14 +2484,21 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       // 保存删除的笔记和位置，用于撤销
       _lastDeletedNote = deletedNote;
       _lastDeletedIndex = deletedIndex;
+      _pendingDeleteIds.add(id);
 
-      // 立即从列表中移除
-      _notes.removeAt(deletedIndex);
+      // 立即从列表和本地库中隔离，避免刷新/搜索在撤销窗口内把它带回来。
+      if (deletedIndex != -1) {
+        _notes.removeAt(deletedIndex);
+      } else {
+        _notes.removeWhere((note) => note.id == id);
+      }
+      await _databaseService.deleteNote(id);
+      await _cleanupReferencesForDeletedNote(id);
       notifyListeners(); // ⚡ UI立即刷新
 
       debugPrint('AppProvider: ⚡ UI已更新（笔记已从列表移除）');
 
-      // 2. 等撤销窗口结束后再真实删除本地和远端，避免撤销时远端已丢失。
+      // 2. 等撤销窗口结束后再提交远端删除；撤销时会把本地记录恢复回来。
       _pendingDeleteCommitTimer?.cancel();
       _pendingDeleteCommitTimer = Timer(deleteUndoWindow, () {
         _pendingDeleteCommitTimer = null;
@@ -2520,6 +2578,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
           onTimeout: () => [],
         );
       }
+      _pendingDeleteIds.removeAll(idsToDelete);
     } on Object {
       // 批量处理失败，记录但不影响UI
     }
@@ -2550,9 +2609,13 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       _pendingDeleteCommitTimer?.cancel();
       _pendingDeleteCommitTimer = null;
       _deleteQueue.remove(_lastDeletedNote!.id);
+      _pendingDeleteIds.remove(_lastDeletedNote!.id);
 
-      // 1. 恢复到内存列表
-      _notes.insert(_lastDeletedIndex!, _lastDeletedNote!);
+      // 1. 恢复到内存列表。搜索结果删除的笔记可能不在当前分页内，默认恢复到顶部。
+      final restoreIndex = _lastDeletedIndex! < 0
+          ? 0
+          : _lastDeletedIndex!.clamp(0, _notes.length);
+      _notes.insert(restoreIndex, _lastDeletedNote!);
       notifyListeners(); // ⚡ UI立即刷新
 
       debugPrint('AppProvider: ⚡ UI已更新（笔记已恢复到列表）');
@@ -2575,6 +2638,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     debugPrint('AppProvider: 从本地数据库删除笔记 ID: $id');
     try {
       // 删除本地数据库中的笔记
+      _pendingDeleteIds.remove(id);
       await _databaseService.deleteNote(id);
 
       // 从内存中的列表删除
@@ -2730,14 +2794,22 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     if (!isLoggedIn || _memosApiService == null) {
       return;
     }
+    if (_syncNotesInFlight != null) {
+      return _syncNotesInFlight;
+    }
 
-    // 🚀 大厂标准：性能监控
-    await PerformanceTracker().startTrace('sync_notes_to_server');
-    Log.sync.info('Starting sync to server');
+    final completer = Completer<void>();
+    _syncNotesInFlight = completer.future;
 
     try {
+      // 🚀 大厂标准：性能监控
+      await PerformanceTracker().startTrace('sync_notes_to_server');
+      Log.sync.info('Starting sync to server');
+
       // 获取未同步的笔记
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
+      final unsyncedNotes = _excludePendingDeletedNotes(
+        await _databaseService.getUnsyncedNotes(),
+      );
 
       if (unsyncedNotes.isEmpty) {
         Log.sync.debug('No unsynced notes');
@@ -2754,8 +2826,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       var successCount = 0;
       for (final note in unsyncedNotes) {
         try {
-          await _syncUnsyncedNoteToMemos(note);
-          successCount++;
+          successCount += await _syncUnsyncedNotesSnapshot([note]);
         } on Object catch (e, stackTrace) {
           Log.sync.error(
             'Failed to sync note',
@@ -2807,6 +2878,11 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
           'operation': 'sync_notes_to_server',
         },
       );
+    } finally {
+      _syncNotesInFlight = null;
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
     }
   }
 
@@ -2818,12 +2894,14 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
     try {
       // 获取未同步的笔记
-      final unsyncedNotes = await _databaseService.getUnsyncedNotes();
+      final unsyncedNotes = _excludePendingDeletedNotes(
+        await _databaseService.getUnsyncedNotes(),
+      );
 
       // 逐一同步到服务器
       for (final note in unsyncedNotes) {
         try {
-          await _syncUnsyncedNoteToMemos(note);
+          await _syncUnsyncedNotesSnapshot([note]);
         } on Object catch (e) {
           debugPrint('同步笔记失败: ${note.id} - $e');
         }
@@ -3205,6 +3283,13 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   /// 加载云验证数据（配置和公告）
   Future<void> _loadCloudVerificationData() async {
     try {
+      if (!Config.AppConfig.enableCloudVerification) {
+        _cloudAppConfig = null;
+        _cloudNotice = null;
+        _lastCloudVerificationTime = DateTime.now();
+        return;
+      }
+
       // 🚀 缓存检查：如果5分钟内已加载过，直接跳过
       if (_lastCloudVerificationTime != null) {
         final duration = DateTime.now().difference(_lastCloudVerificationTime!);

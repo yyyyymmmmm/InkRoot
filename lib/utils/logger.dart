@@ -8,7 +8,7 @@ class Logger {
   final String tag;
 
   /// 日志级别
-  static LogLevel _minLevel = kReleaseMode ? LogLevel.warning : LogLevel.debug;
+  static LogLevel _minLevel = kReleaseMode ? LogLevel.none : LogLevel.debug;
 
   /// 设置最小日志级别
   static void setMinLevel(LogLevel level) {
@@ -16,7 +16,7 @@ class Logger {
   }
 
   /// 是否启用日志
-  static bool get isEnabled => !kReleaseMode || _minLevel != LogLevel.none;
+  static bool get isEnabled => _minLevel != LogLevel.none;
 
   /// Debug - 调试信息（开发时使用）
   void debug(String message, {Map<String, dynamic>? data}) {

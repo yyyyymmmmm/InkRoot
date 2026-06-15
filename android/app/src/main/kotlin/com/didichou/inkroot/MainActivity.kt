@@ -4,8 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.BroadcastReceiver
-import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -31,18 +30,26 @@ class MainActivity: FlutterActivity() {
                 "init" -> {
                     if (!isUmengInitialized) {
                         try {
-                            // 初始化友盟SDK
-                            UMConfigure.init(this, "68f40dfe644c9e2c20597ea5", "default", UMConfigure.DEVICE_TYPE_PHONE, null)
-                            // 🔥 开启日志用于调试（Release 时可以关闭）
-                            UMConfigure.setLogEnabled(true)
+                            val appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+                            val appKey = appInfo.metaData?.getString("UMENG_APPKEY")?.trim().orEmpty()
+                            val channel = appInfo.metaData?.getString("UMENG_CHANNEL")?.trim().orEmpty().ifEmpty { "default" }
+
+                            if (appKey.isEmpty()) {
+                                ReleaseLog.d("UmengAnalytics", "友盟统计未配置，跳过初始化")
+                                result.success(false)
+                                return@setMethodCallHandler
+                            }
+
+                            UMConfigure.init(this, appKey, channel, UMConfigure.DEVICE_TYPE_PHONE, null)
+                            UMConfigure.setLogEnabled(BuildConfig.DEBUG)
                             // 设置场景类型
                             MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.AUTO)
                             isUmengInitialized = true
-                            android.util.Log.d("UmengAnalytics", "友盟统计初始化成功")
-                            android.util.Log.d("UmengAnalytics", "Channel: default")
+                            ReleaseLog.d("UmengAnalytics", "友盟统计初始化成功")
+                            ReleaseLog.d("UmengAnalytics", "Channel: $channel")
                             result.success(true)
                         } catch (e: Exception) {
-                            android.util.Log.e("UmengAnalytics", "友盟统计初始化失败: ${e.message}")
+                            ReleaseLog.e("UmengAnalytics", "友盟统计初始化失败: ${e.message}")
                             result.error("INIT_FAILED", e.message, null)
                         }
                     } else {
@@ -54,7 +61,7 @@ class MainActivity: FlutterActivity() {
                     val eventId = call.arguments as? String
                     if (eventId != null) {
                         MobclickAgent.onEvent(this, eventId)
-                        android.util.Log.d("UmengAnalytics", "事件已记录: $eventId")
+                        ReleaseLog.d("UmengAnalytics", "事件已记录: $eventId")
                         result.success(true)
                     } else {
                         result.error("INVALID_ARGUMENT", "eventId is required", null)
@@ -95,10 +102,6 @@ class MainActivity: FlutterActivity() {
                 }
                 "openAppSettings" -> {
                     openAppSettings()
-                    result.success(true)
-                }
-                "requestBatteryOptimization" -> {
-                    requestIgnoreBatteryOptimizations()
                     result.success(true)
                 }
                 "requestNotificationPermission" -> {
@@ -143,10 +146,10 @@ class MainActivity: FlutterActivity() {
                 val body = it.getStringExtra("body") ?: ""
                 val triggerTime = it.getLongExtra("triggerTime", 0L)
                 
-                android.util.Log.e("MainActivity", "════════════════════════════════")
-                android.util.Log.e("MainActivity", "🔥 收到保存提醒通知请求！")
-                android.util.Log.e("MainActivity", "noteId=$noteId")
-                android.util.Log.e("MainActivity", "════════════════════════════════")
+                ReleaseLog.e("MainActivity", "════════════════════════════════")
+                ReleaseLog.e("MainActivity", "🔥 收到保存提醒通知请求！")
+                ReleaseLog.e("MainActivity", "noteId=$noteId")
+                ReleaseLog.e("MainActivity", "════════════════════════════════")
                 
                 // 通过MethodChannel通知Flutter保存到数据库
                 try {
@@ -157,9 +160,9 @@ class MainActivity: FlutterActivity() {
                         "triggerTime" to triggerTime
                     )
                     methodChannel?.invokeMethod("saveReminderNotification", data)
-                    android.util.Log.e("MainActivity", "✅ 已通知Flutter保存提醒记录")
+                    ReleaseLog.e("MainActivity", "✅ 已通知Flutter保存提醒记录")
                 } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "❌ 通知Flutter失败: ${e.message}")
+                    ReleaseLog.e("MainActivity", "❌ 通知Flutter失败: ${e.message}")
                 }
                 
                 return // 处理完就返回，不继续处理openNote
@@ -168,41 +171,41 @@ class MainActivity: FlutterActivity() {
             // 🔥 处理通知点击
             val noteId = it.getIntExtra("noteId", -1)
             if (noteId != -1) {
-                android.util.Log.e("MainActivity", "════════════════════════════════")
-                android.util.Log.e("MainActivity", "🔥 收到通知点击！")
-                android.util.Log.e("MainActivity", "noteId=$noteId")
-                android.util.Log.e("MainActivity", "methodChannel is null: ${methodChannel == null}")
-                android.util.Log.e("MainActivity", "════════════════════════════════")
+                ReleaseLog.e("MainActivity", "════════════════════════════════")
+                ReleaseLog.e("MainActivity", "🔥 收到通知点击！")
+                ReleaseLog.e("MainActivity", "noteId=$noteId")
+                ReleaseLog.e("MainActivity", "methodChannel is null: ${methodChannel == null}")
+                ReleaseLog.e("MainActivity", "════════════════════════════════")
                 
                 // 如果Flutter已经准备好，直接通知
                 try {
                     methodChannel?.invokeMethod("openNote", noteId)
-                    android.util.Log.e("MainActivity", "✅ 已通过MethodChannel发送openNote消息")
+                    ReleaseLog.e("MainActivity", "✅ 已通过MethodChannel发送openNote消息")
                 } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "❌ MethodChannel调用失败: ${e.message}")
+                    ReleaseLog.e("MainActivity", "❌ MethodChannel调用失败: ${e.message}")
                 }
                 
                 // 同时保存noteId等待Flutter查询（备用）
                 pendingNoteId = noteId
-                android.util.Log.e("MainActivity", "pendingNoteId已设置为: $pendingNoteId")
+                ReleaseLog.e("MainActivity", "pendingNoteId已设置为: $pendingNoteId")
             } 
             // 🔥 处理分享内容
             else if (it.action == Intent.ACTION_SEND || it.action == Intent.ACTION_SEND_MULTIPLE) {
                 handleSharedContent(it)
             } 
             else {
-                android.util.Log.e("MainActivity", "⚠️ 未从Intent中获取到noteId或分享内容")
+                ReleaseLog.e("MainActivity", "⚠️ 未从Intent中获取到noteId或分享内容")
             }
         }
     }
     
     // 🔥 处理分享的内容
     private fun handleSharedContent(intent: Intent) {
-        android.util.Log.e("MainActivity", "════════════════════════════════")
-        android.util.Log.e("MainActivity", "🔥 收到分享内容！")
-        android.util.Log.e("MainActivity", "Action: ${intent.action}")
-        android.util.Log.e("MainActivity", "Type: ${intent.type}")
-        android.util.Log.e("MainActivity", "════════════════════════════════")
+        ReleaseLog.e("MainActivity", "════════════════════════════════")
+        ReleaseLog.e("MainActivity", "🔥 收到分享内容！")
+        ReleaseLog.e("MainActivity", "Action: ${intent.action}")
+        ReleaseLog.e("MainActivity", "Type: ${intent.type}")
+        ReleaseLog.e("MainActivity", "════════════════════════════════")
         
         try {
             when {
@@ -210,7 +213,7 @@ class MainActivity: FlutterActivity() {
                 intent.type?.startsWith("text/") == true -> {
                     val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
                     if (!sharedText.isNullOrEmpty()) {
-                        android.util.Log.e("MainActivity", "📝 收到分享的文本: ${sharedText.take(50)}...")
+                        ReleaseLog.e("MainActivity", "📝 收到分享的文本: ${sharedText.take(50)}...")
                         methodChannel?.invokeMethod("onSharedText", sharedText)
                     }
                 }
@@ -227,10 +230,10 @@ class MainActivity: FlutterActivity() {
                         imageUri?.let { uri ->
                             val path = getRealPathFromURI(uri)
                             if (path != null) {
-                                android.util.Log.e("MainActivity", "📷 收到分享的图片: $path")
+                                ReleaseLog.e("MainActivity", "📷 收到分享的图片: $path")
                                 methodChannel?.invokeMethod("onSharedImage", path)
                             } else {
-                                android.util.Log.e("MainActivity", "❌ 无法获取图片路径")
+                                ReleaseLog.e("MainActivity", "❌ 无法获取图片路径")
                             }
                         }
                     } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
@@ -245,7 +248,7 @@ class MainActivity: FlutterActivity() {
                             getRealPathFromURI(uri)
                         } ?: emptyList()
                         if (paths.isNotEmpty()) {
-                            android.util.Log.e("MainActivity", "📷 收到分享的图片: ${paths.size}张")
+                            ReleaseLog.e("MainActivity", "📷 收到分享的图片: ${paths.size}张")
                             methodChannel?.invokeMethod("onSharedImages", paths)
                         }
                     }
@@ -261,17 +264,17 @@ class MainActivity: FlutterActivity() {
                     fileUri?.let { uri ->
                         val path = getRealPathFromURI(uri)
                         if (path != null) {
-                            android.util.Log.e("MainActivity", "📎 收到分享的文件: $path")
+                            ReleaseLog.e("MainActivity", "📎 收到分享的文件: $path")
                             methodChannel?.invokeMethod("onSharedFile", path)
                         } else {
-                            android.util.Log.e("MainActivity", "❌ 无法获取文件路径")
+                            ReleaseLog.e("MainActivity", "❌ 无法获取文件路径")
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "❌ 处理分享内容失败: ${e.message}")
-            e.printStackTrace()
+            ReleaseLog.e("MainActivity", "❌ 处理分享内容失败: ${e.message}")
+            ReleaseLog.printStackTrace(e)
         }
     }
     
@@ -293,11 +296,11 @@ class MainActivity: FlutterActivity() {
             }
             
             // 如果无法获取路径，将文件复制到应用缓存目录
-            android.util.Log.e("MainActivity", "⚠️ 无法获取真实路径，将文件复制到缓存目录")
+            ReleaseLog.e("MainActivity", "⚠️ 无法获取真实路径，将文件复制到缓存目录")
             copyUriToCache(uri)
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "❌ 获取文件路径失败: ${e.message}")
-            e.printStackTrace()
+            ReleaseLog.e("MainActivity", "❌ 获取文件路径失败: ${e.message}")
+            ReleaseLog.printStackTrace(e)
             null
         }
     }
@@ -332,11 +335,11 @@ class MainActivity: FlutterActivity() {
                 }
             }
             
-            android.util.Log.e("MainActivity", "✅ 文件已复制到: ${destFile.absolutePath}")
+            ReleaseLog.e("MainActivity", "✅ 文件已复制到: ${destFile.absolutePath}")
             destFile.absolutePath
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "❌ 复制文件失败: ${e.message}")
-            e.printStackTrace()
+            ReleaseLog.e("MainActivity", "❌ 复制文件失败: ${e.message}")
+            ReleaseLog.printStackTrace(e)
             null
         }
     }
@@ -357,8 +360,8 @@ class MainActivity: FlutterActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = notificationManager.getNotificationChannel("note_reminders_v2")
             if (channel != null) {
-                android.util.Log.e("MainActivity", "通知渠道importance: ${channel.importance}")
-                android.util.Log.e("MainActivity", "通知渠道lockscreenVisibility: ${channel.lockscreenVisibility}")
+                ReleaseLog.e("MainActivity", "通知渠道importance: ${channel.importance}")
+                ReleaseLog.e("MainActivity", "通知渠道lockscreenVisibility: ${channel.lockscreenVisibility}")
                 
                 // 横幅通知：检查重要性级别（如果通知权限开了，就认为横幅也开了）
                 permissions["banner"] = channel.importance >= android.app.NotificationManager.IMPORTANCE_DEFAULT && permissions["notification"] == true
@@ -375,7 +378,7 @@ class MainActivity: FlutterActivity() {
             permissions["lockscreen"] = true
         }
         
-        // 3. 检查精确闹钟权限
+        // 3. 精确闹钟权限不作为必需项。未授权时使用普通系统闹钟兜底。
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
             permissions["alarm"] = alarmManager.canScheduleExactAlarms()
@@ -408,28 +411,7 @@ class MainActivity: FlutterActivity() {
             }
             startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-    
-    // 🔥 请求忽略电池优化（小米手机关键）
-    private fun requestIgnoreBatteryOptimizations() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = android.net.Uri.parse("package:$packageName")
-                }
-                startActivity(intent)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // 如果直接请求失败，跳转到电池优化设置页
-            try {
-                val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                startActivity(intent)
-            } catch (e2: Exception) {
-                e2.printStackTrace()
-            }
+            ReleaseLog.printStackTrace(e)
         }
     }
     
@@ -457,7 +439,7 @@ class MainActivity: FlutterActivity() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // 使用精确闹钟（Android 12+需要权限）
+            // Android 12+ 若用户未授予精确闹钟权限，使用普通系统闹钟兜底。
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setExactAndAllowWhileIdle(
@@ -474,7 +456,7 @@ class MainActivity: FlutterActivity() {
                     )
                 }
             } else {
-                alarmManager.setExactAndAllowWhileIdle(
+                alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerTime,
                     pendingIntent
@@ -483,7 +465,7 @@ class MainActivity: FlutterActivity() {
             
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            ReleaseLog.printStackTrace(e)
             false
         }
     }
@@ -501,7 +483,7 @@ class MainActivity: FlutterActivity() {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
         } catch (e: Exception) {
-            e.printStackTrace()
+            ReleaseLog.printStackTrace(e)
         }
     }
 }

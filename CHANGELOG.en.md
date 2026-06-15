@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User profile loading now falls back across v0.21, v0.22-v0.25, and v0.26+ account APIs instead of relying on a single detected version
 - Requests now send both Bearer Token and Memos Cookie credentials for better compatibility with official and self-hosted servers
 - Login errors now distinguish credential, token, network, TLS, and server response failures instead of showing one generic network message
+- Added account and data deletion entry points and a public deletion request page
+- Updated the privacy policy, user agreement, iOS privacy manifest, and iOS permission declarations to match the current official server, self-hosted sync, WebDAV, AI, and feedback data flow
 
 ### Verified
 - Verified official server login on the iOS simulator and synced 279 notes successfully

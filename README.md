@@ -20,6 +20,8 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 - 图片查看支持点击退出、原图查看和多图浏览。
 - WebDAV 备份支持图片附件选项，并改进目录创建、进度和错误处理。
 - 同步和刷新保留笔记创建时间，避免热力图被更新时间污染。
+- 设置中新增账号与数据删除入口，并提供公开删除申请页面。
+- iOS 隐私清单、权限声明和法律文档已按当前数据流更新。
 - 维护 CLI 覆盖检查、构建和发布入口。
 - GitHub Actions 覆盖 Android、iOS、macOS、Windows 和 Linux。
 
@@ -40,7 +42,7 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 
 发布包在 [GitHub Releases](https://github.com/yyyyymmmmm/InkRoot/releases) 页面提供。
 
-Android 用户下载 APK 后安装。
+GitHub Releases 的 Android APK 用于手动安装和测试分发；Google Play 上架使用发布流程生成的签名 AAB。
 Windows 用户下载压缩包后运行应用。
 Linux 用户下载压缩包后解压运行。
 iOS 和 macOS 包当前用于测试分发。
@@ -60,6 +62,7 @@ dart tool/inkroot.dart verify
 dart tool/inkroot.dart doctor
 dart tool/inkroot.dart analyze
 dart tool/inkroot.dart test
+dart tool/inkroot.dart store-check
 dart tool/inkroot.dart build android-debug
 dart tool/inkroot.dart build ios-sim
 dart tool/inkroot.dart build macos-debug
@@ -83,14 +86,21 @@ version: 1.1.2+10102
 dart tool/inkroot.dart release v1.1.2
 ```
 
-这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android、iOS、macOS、Windows 和 Linux 产物。
+这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android APK/AAB、iOS、macOS、Windows 和 Linux 产物。
 
 ## 文档
 
 - [维护指南](docs/MAINTENANCE.md)
+- [商店合规清单](docs/STORE_COMPLIANCE.md)
 - [更新日志](CHANGELOG.md)
 - [安全政策](SECURITY.md)
 - [贡献指南](CONTRIBUTING.md)
+
+## 法律与隐私
+
+- [隐私政策](https://inkroot.cn/privacy.html)
+- [用户协议](https://inkroot.cn/agreement.html)
+- [账号与数据删除](https://inkroot.cn/account-deletion.html)
 
 ## 许可证
 

@@ -395,8 +395,7 @@ class NotificationService {
       enableLights: true,
       // 🔥 关键：锁屏通知配置
       visibility: NotificationVisibility.public, // 在锁屏上完全显示
-      fullScreenIntent: true, // 全屏提示
-      category: AndroidNotificationCategory.alarm, // 闹钟类别（最高优先级）
+      category: AndroidNotificationCategory.reminder,
       when: reminderTime.millisecondsSinceEpoch,
     );
 
@@ -408,8 +407,6 @@ class NotificationService {
       presentSound: true, // 播放声音
       sound: 'default', // 使用系统默认提醒音
       threadIdentifier: 'note_reminders', // 通知分组
-      // 🔥 关键：时间敏感通知可以在专注模式下突破
-      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
     final details = NotificationDetails(
@@ -422,25 +419,13 @@ class NotificationService {
     );
 
     try {
-      // 🔥 关键：检查精确闹钟权限（仅Android小米设备必须）
+      // Android 不要求精确闹钟权限；原生层会在无权限时使用普通闹钟兜底。
       final androidPlugin =
           _notifications.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null) {
-        final canSchedule = await androidPlugin.canScheduleExactNotifications();
-
-        if (canSchedule != true) {
-          debugPrint('');
-          debugPrint('   1. 打开"设置"');
-          debugPrint('   2. 搜索"闹钟"或进入"应用设置" → "应用管理"');
-          debugPrint('   3. 找到"InkRoot" → "其他权限"');
-          debugPrint('   4. 开启"设置闹钟和提醒"权限');
-          debugPrint('   5. 返回应用重新设置提醒');
-          debugPrint('');
-          debugPrint('═══════════════════════════════════════\n');
-          return false;
-        }
+        await androidPlugin.canScheduleExactNotifications();
       }
 
       // 🔥 保存映射关系（重要：用于通知点击时反查笔记）

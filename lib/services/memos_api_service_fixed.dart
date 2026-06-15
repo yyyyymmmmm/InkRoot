@@ -645,9 +645,14 @@ class MemosApiServiceFixed {
     final base = await _memoBase();
     final resp =
         await http.delete(Uri.parse('$base/$id'), headers: _getHeaders());
-    if (resp.statusCode != 200) {
-      throw Exception('删除备忘录失败: ${resp.statusCode}');
+    if (resp.statusCode == 200 ||
+        resp.statusCode == 204 ||
+        resp.statusCode == 404) {
+      return;
     }
+    throw Exception(
+      '删除备忘录失败: ${resp.statusCode} – ${_parseError(resp.body)}',
+    );
   }
 
   // ── Memo relations ────────────────────────────────────────────────────────
