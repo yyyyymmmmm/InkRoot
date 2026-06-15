@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.3] - 2026-06-15
+
+### 修复
+- 修复云端 Android CLI 构建缺少 Flutter `applicationName` manifest 占位符的问题
+- 修复 Android 原生代码需要 `BuildConfig` 时 release 构建失败的问题
+- 修复 Android Gradle 入口文件异常导致 CI Android 构建失败的问题
+
+### 维护
+- 发布前检查新增 Android manifest 占位符和 BuildConfig 生成校验
+- 确认 main 分支 CI 覆盖 Analyze + Test、Secret scan、Android、iOS simulator、macOS、Windows 和 Linux
+- 保持 Android 应用 ID 与历史签名配置不变，避免覆盖安装签名链路被破坏
+
+---
+
 ## [1.1.2] - 2026-06-15
 
 ### 修复

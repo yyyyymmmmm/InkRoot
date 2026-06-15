@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.3] - 2026-06-15
+
+### Fixed
+- Fixed cloud Android CLI builds missing the required Flutter `applicationName` manifest placeholder
+- Fixed release build failures when Android native code requires generated `BuildConfig`
+- Fixed Android Gradle entrypoint issues that caused CI Android builds to fail
+
+### Maintenance
+- Added release-readiness checks for the Android manifest placeholder and BuildConfig generation
+- Verified main branch CI across Analyze + Test, Secret scan, Android, iOS simulator, macOS, Windows, and Linux
+- Kept the Android application ID and signing flow unchanged to preserve update compatibility
+
+---
+
 ## [1.1.2] - 2026-06-15
 
 ### Fixed
