@@ -6,9 +6,9 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.5`
+`1.1.6`
 
-This release fixes the official cloud verification AppID in source and adds an Android release certificate fingerprint gate so future packages cannot ship with missing cloud configuration or a mismatched signing certificate.
+This release fixes the official cloud verification AppID in source and tightens Android Release signing: official packages must use the fixed release certificate, and both APK and AAB artifacts are checked during publishing.
 
 Highlights:
 
@@ -16,7 +16,7 @@ Highlights:
 - Requests support both Bearer Token and Memos Cookie authentication to reduce self-hosted server and reverse-proxy compatibility failures.
 - Login errors now distinguish credential, token, network, TLS, and server response failures.
 - The official cloud verification AppID is now fixed in source and no longer depends on external AppID configuration.
-- GitHub Actions now fails early when required release secrets are missing or the Android signing certificate does not match.
+- GitHub Actions now fails early when required release secrets are missing, the Android signing certificate does not match, or official packages do not contain the release certificate.
 - Android builds now keep the required Flutter manifest placeholder and generated BuildConfig support for cloud CLI builds.
 - The Release workflow publishes Android APK/AAB, iOS test packages, macOS, Windows, and Linux assets.
 - Home feed rendering keeps user line breaks and spacing.
@@ -81,13 +81,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.5+10105
+version: 1.1.6+10106
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.5
+dart tool/inkroot.dart release v1.1.6
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

@@ -14,6 +14,16 @@ def hasReleaseSigning = keystoreProperties['storeFile'] &&
         keystoreProperties['storePassword'] &&
         keystoreProperties['keyAlias'] &&
         keystoreProperties['keyPassword']
+def isReleaseTask = gradle.startParameter.taskNames.any {
+    it.toLowerCase().contains('release')
+}
+def releaseStoreFile = hasReleaseSigning ? file(keystoreProperties['storeFile']) : null
+if (isReleaseTask && !hasReleaseSigning) {
+    throw new GradleException('Release builds require android/key.properties with complete signing credentials.')
+}
+if (isReleaseTask && releaseStoreFile != null && !releaseStoreFile.exists()) {
+    throw new GradleException("Release signing keystore was not found: ${releaseStoreFile}")
+}
 def umengAndroidAppKey = project.findProperty('UMENG_ANDROID_APPKEY') ?:
         System.getenv('UMENG_ANDROID_APPKEY') ?: ''
 def umengChannel = project.findProperty('UMENG_CHANNEL') ?:
@@ -56,7 +66,7 @@ android {
             if (hasReleaseSigning) {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
-                storeFile file(keystoreProperties['storeFile'])
+                storeFile releaseStoreFile
                 storePassword keystoreProperties['storePassword']
             }
         }
@@ -64,9 +74,7 @@ android {
     
     buildTypes {
         release {
-            if (hasReleaseSigning) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
             // 启用代码混淆和压缩
             minifyEnabled true
             // 启用资源压缩

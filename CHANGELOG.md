@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.6] - 2026-06-15
+
+### 修复
+- Android Release 构建改为强制要求完整签名配置，缺少 `android/key.properties` 或 keystore 时直接失败
+- 发布流程改为同时校验 APK 和 AAB 是否包含固定发布证书，避免正式包未按发布证书签名
+
+---
+
 ## [1.1.5] - 2026-06-15
 
 ### 修复

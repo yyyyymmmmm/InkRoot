@@ -119,6 +119,11 @@ class InkRootCli {
       'buildConfig true',
       'Android native code requires generated BuildConfig.',
     );
+    await _assertFileContains(
+      'android/app/build.gradle',
+      'Release builds require android/key.properties',
+      'Android release builds must fail when signing credentials are missing.',
+    );
     await _assertFileDoesNotContain(
       'android/app/src/main/AndroidManifest.xml',
       'android.permission.SCHEDULE_EXACT_ALARM',
@@ -178,6 +183,11 @@ class InkRootCli {
       '.github/workflows/release.yml',
       _androidReleaseCertSha256,
       'Release workflow must verify the Android release signing certificate.',
+    );
+    await _assertFileContains(
+      '.github/workflows/release.yml',
+      'expected release certificate found',
+      'Release workflow must verify Android package certificates.',
     );
     await _assertFileContains(
       'lib/config/app_config.dart',

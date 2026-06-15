@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.6] - 2026-06-15
+
+### Fixed
+- Android Release builds now require complete signing configuration and fail when `android/key.properties` or the keystore is missing
+- The release workflow now checks both APK and AAB artifacts for the fixed release certificate before publishing
+
+---
+
 ## [1.1.5] - 2026-06-15
 
 ### Fixed
