@@ -88,5 +88,51 @@ https://testflight.apple.com/join/e1v9O7jC
         expect(find.text('全文'), findsNothing);
       },
     );
+
+    testWidgets('renders text when the note only contains underline markup',
+        (tester) async {
+      final note = Note(
+        id: 'underline-only',
+        content: '<u>主页下划线文字不能消失</u>',
+        createdAt: DateTime(2026, 12, 10, 20, 52),
+        updatedAt: DateTime(2026, 12, 10, 20, 52),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          NoteCard(
+            note: note,
+            onEdit: () {},
+            onDelete: () {},
+            onPin: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderedText = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .map((widget) => widget.text.toPlainText())
+          .join('\n');
+
+      expect(renderedText, contains('主页下划线文字不能消失'));
+
+      final underlineSpan = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .map((widget) => widget.text)
+          .expand(_flattenSpans)
+          .where((span) => span.toPlainText() == '主页下划线文字不能消失')
+          .single;
+      expect(underlineSpan.style?.decoration, TextDecoration.underline);
+    });
   });
+}
+
+Iterable<TextSpan> _flattenSpans(InlineSpan span) sync* {
+  if (span is TextSpan) {
+    yield span;
+    for (final child in span.children ?? const <InlineSpan>[]) {
+      yield* _flattenSpans(child);
+    }
+  }
 }

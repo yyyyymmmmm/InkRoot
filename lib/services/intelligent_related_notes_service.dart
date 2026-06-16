@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/services/user_behavior_service.dart'; // 🧠 用户行为学习
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
+import 'package:inkroot/utils/text_analysis_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 🧠 智能相关笔记服务 - AI 革命性实现
@@ -135,9 +136,9 @@ class IntelligentRelatedNotesService {
   ) async {
     debugPrint('🚀 革命性算法启动：BM25 + 个性化 + 图分析...');
 
-    final currentTags =
-        tag_utils.extractTagsFromContent(currentNote.content).toSet();
+    final currentTags = _extractAllTags(currentNote);
     final currentLinks = _extractLinks(currentNote.content);
+    final currentDomains = _extractLinkDomains(currentNote.content);
 
     // 🧠 获取用户偏好（个性化基础）
     final userPreference = await _behaviorService.getUserPreference();
@@ -161,8 +162,9 @@ class IntelligentRelatedNotesService {
         continue;
       }
 
-      final noteTags = tag_utils.extractTagsFromContent(note.content).toSet();
+      final noteTags = _extractAllTags(note);
       final noteLinks = _extractLinks(note.content);
+      final noteDomains = _extractLinkDomains(note.content);
       final noteBM25 = bm25Model[note.id] ?? {};
 
       // 🎯 多维度评分（权重经过大量实验优化）
@@ -193,6 +195,11 @@ class IntelligentRelatedNotesService {
       }
       score += tagScore.clamp(0.0, 1.0) * 0.2;
 
+      // 显式共同标签是强关系，避免短笔记因正文太少被漏掉。
+      if (tagIntersection.isNotEmpty) {
+        score += min(0.18, tagIntersection.length * 0.09);
+      }
+
       // 3️⃣ 链接关系（20%权重）- 双向链接 + 共同链接 + 图中心性
       var linkScore = 0.0;
       if (currentLinks.contains(note.id) ||
@@ -205,6 +212,10 @@ class IntelligentRelatedNotesService {
           linkScore = 0.6 *
               (commonLinks.length / max(currentLinks.length, noteLinks.length));
         }
+      }
+      final commonDomains = currentDomains.intersection(noteDomains);
+      if (commonDomains.isNotEmpty) {
+        linkScore = max(linkScore, 0.55);
       }
       // 加入图中心性（重要笔记提权）
       final graphScore = graphScores[note.id] ?? 0.0;
@@ -231,7 +242,15 @@ class IntelligentRelatedNotesService {
       score += collaborativeScore.clamp(0.0, 1.0) * 0.1;
 
       // 🔥 最终门槛：动态调整（有个性化数据时更宽松）
-      final threshold = hasPersonalization ? 0.1 : 0.15;
+      final hasExplicitRelation = tagIntersection.isNotEmpty ||
+          currentLinks.contains(note.id) ||
+          noteLinks.contains(currentNote.id) ||
+          commonDomains.isNotEmpty;
+      final threshold = hasExplicitRelation
+          ? 0.08
+          : hasPersonalization
+              ? 0.1
+              : 0.12;
       if (score > threshold) {
         scored.add(_ScoredNote(note, score));
       }
@@ -243,8 +262,9 @@ class IntelligentRelatedNotesService {
         scored.take((topK * 1.2).toInt()).toList(); // 多取20%用于多样性选择
 
     // 保留前80%高分 + 20%随机探索（避免推荐陷入局部最优）
-    final exploitCount = (topK * 0.8).toInt();
-    final exploreCount = topK - exploitCount;
+    final exploitCount = min((topK * 0.8).toInt(), topScored.length);
+    final exploreCount =
+        max(0, min(topK - exploitCount, topScored.length - exploitCount));
 
     final result = <Note>[];
     result.addAll(topScored.take(exploitCount).map((s) => s.note));
@@ -408,11 +428,7 @@ class IntelligentRelatedNotesService {
 
   /// 📝 提取词条（分词 + 去停用词）
   List<String> _extractTerms(String text) {
-    final terms = text
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^\w\s\u4e00-\u9fa5]'), ' ')
-        .split(RegExp(r'\s+'))
-        .where((word) => word.length > 1)
+    final terms = TextAnalysisUtils.extractTerms(text)
         .where((word) => !_isStopWord(word))
         .toList();
     return terms;
@@ -646,10 +662,14 @@ class IntelligentRelatedNotesService {
 
     final relations = <IntelligentRelation>[];
 
-    for (final candidate in candidates.take(10)) {
+    for (final candidate in candidates.take(12)) {
       // 简单推断关系类型
       final relationType = _inferRelationType(currentNote, candidate);
       var similarity = _calculateBasicSimilarity(currentNote, candidate);
+      final evidence = _buildRelationEvidence(currentNote, candidate);
+      if (evidence.hasStrongSignal) {
+        similarity = max(similarity, evidence.minimumSimilarity);
+      }
 
       // 🧠 应用个性化权重加成
       if (hasPersonalization) {
@@ -667,13 +687,13 @@ class IntelligentRelatedNotesService {
         }
       }
 
-      if (similarity > 0.3) {
+      if (similarity >= 0.18 || evidence.hasStrongSignal) {
         relations.add(
           IntelligentRelation(
             note: candidate,
             similarity: similarity,
             relationType: relationType,
-            reason: _generateSimpleReason(relationType),
+            reason: evidence.reason ?? _generateSimpleReason(relationType),
           ),
         );
       }
@@ -712,13 +732,74 @@ class IntelligentRelatedNotesService {
 
   /// 📊 计算基础相似度
   double _calculateBasicSimilarity(Note note1, Note note2) {
-    final words1 =
-        _cleanText(note1.content).toLowerCase().split(RegExp(r'\s+'));
-    final words2 =
-        _cleanText(note2.content).toLowerCase().split(RegExp(r'\s+'));
-    final intersection = words1.toSet().intersection(words2.toSet());
-    final union = words1.toSet().union(words2.toSet());
-    return union.isEmpty ? 0.0 : intersection.length / union.length;
+    final words1 = _extractSemanticTerms(note1);
+    final words2 = _extractSemanticTerms(note2);
+    return TextAnalysisUtils.jaccardSimilarity(words1, words2);
+  }
+
+  Set<String> _extractSemanticTerms(Note note) {
+    final terms = TextAnalysisUtils.extractKeywords(_cleanText(note.content));
+    terms.addAll(_extractAllTags(note).map((tag) => 'tag:$tag'));
+    terms.addAll(_extractLinkDomains(note.content).map((host) => 'host:$host'));
+    return terms;
+  }
+
+  Set<String> _extractAllTags(Note note) => {
+        ...note.tags.where((tag) => tag.trim().isNotEmpty),
+        ...tag_utils.extractTagsFromContent(note.content),
+      };
+
+  _RelationEvidence _buildRelationEvidence(Note currentNote, Note candidate) {
+    final currentTags = _extractAllTags(currentNote);
+    final candidateTags = _extractAllTags(candidate);
+    final commonTags = currentTags.intersection(candidateTags);
+    if (commonTags.isNotEmpty) {
+      return _RelationEvidence(
+        reason: '共同标签：${commonTags.take(3).join('、')}',
+        minimumSimilarity: 0.42,
+      );
+    }
+
+    final currentLinks = _extractLinks(currentNote.content);
+    final candidateLinks = _extractLinks(candidate.content);
+    if (currentLinks.contains(candidate.id) ||
+        candidateLinks.contains(currentNote.id)) {
+      return const _RelationEvidence(
+        reason: '笔记之间存在直接引用',
+        minimumSimilarity: 0.72,
+      );
+    }
+
+    final commonDomains = _extractLinkDomains(currentNote.content)
+        .intersection(_extractLinkDomains(candidate.content));
+    if (commonDomains.isNotEmpty) {
+      return _RelationEvidence(
+        reason: '引用了相同来源：${commonDomains.take(2).join('、')}',
+        minimumSimilarity: 0.46,
+      );
+    }
+
+    final commonTerms = _extractSemanticTerms(currentNote)
+        .intersection(_extractSemanticTerms(candidate));
+    final meaningfulTerms =
+        commonTerms.where((term) => !term.startsWith('host:')).toList();
+    if (meaningfulTerms.length >= 2) {
+      return _RelationEvidence(
+        reason: '共同关键词：${meaningfulTerms.take(3).join('、')}',
+        minimumSimilarity: 0.32,
+      );
+    }
+
+    final daysDiff =
+        currentNote.updatedAt.difference(candidate.updatedAt).inDays.abs();
+    if (daysDiff <= 2 && meaningfulTerms.isNotEmpty) {
+      return const _RelationEvidence(
+        reason: '记录时间接近，且主题有交集',
+        minimumSimilarity: 0.24,
+      );
+    }
+
+    return const _RelationEvidence();
   }
 
   /// 📝 生成简单推荐理由
@@ -793,6 +874,24 @@ class IntelligentRelatedNotesService {
       }
     }
     return links;
+  }
+
+  Set<String> _extractLinkDomains(String content) {
+    final domains = <String>{};
+    final pattern = RegExp(r'https?:\/\/[^\s\])>]+', caseSensitive: false);
+    for (final match in pattern.allMatches(content)) {
+      final raw = match.group(0);
+      if (raw == null) {
+        continue;
+      }
+      final uri = Uri.tryParse(raw);
+      final host = uri?.host.toLowerCase();
+      if (host == null || host.isEmpty) {
+        continue;
+      }
+      domains.add(host.startsWith('www.') ? host.substring(4) : host);
+    }
+    return domains;
   }
 
   // ==================== 🔥 缓存管理 ====================
@@ -897,6 +996,18 @@ class IntelligentRelatedNotesService {
       return null;
     }
   }
+}
+
+class _RelationEvidence {
+  const _RelationEvidence({
+    this.reason,
+    this.minimumSimilarity = 0,
+  });
+
+  final String? reason;
+  final double minimumSimilarity;
+
+  bool get hasStrongSignal => reason != null;
 }
 
 /// 🎯 关系类型枚举

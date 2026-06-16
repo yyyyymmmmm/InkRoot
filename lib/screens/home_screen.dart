@@ -1975,7 +1975,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                                 '洞察结果',
                             AppLocalizationsSimple.of(context)
                                     ?.aiGeneratedAnalysis ??
-                                'AI为您生成的深度分析',
+                                '根据当前筛选生成的整理结果',
                           ),
                           const SizedBox(height: 12),
                           _buildInsightResult(),
@@ -2481,7 +2481,7 @@ class _AiInsightScreenState extends State<_AiInsightScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '专属洞察报告',
+                  '分析结果',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,

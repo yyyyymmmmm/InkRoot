@@ -1,0 +1,5 @@
+[allowlist]
+description = "Project-approved public client identifiers"
+regexes = [
+  '''RLu4EGglybXSgRzK''',
+]

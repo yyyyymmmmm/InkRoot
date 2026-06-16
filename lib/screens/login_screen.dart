@@ -1887,10 +1887,10 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '✅ 支持 Memos v0.21 ～ 最新版本，自动识别，无需手动配置\n'
+                    '✅ 支持常见 Memos 版本，并按检测结果选择接口\n'
                     '☁️ 支持官方服务器和自建服务器\n'
-                    '🔒 数据加密传输，安全可靠\n'
-                    '📱 登录后可在多个设备同步查看笔记',
+                    '🔒 建议使用 HTTPS，登录凭证会保存在系统安全存储中\n'
+                    '📱 登录并同步成功后，可在多个设备查看笔记',
                     style: TextStyle(
                       fontSize: 12,
                       color: textSecondary,
@@ -2068,7 +2068,7 @@ class _LoginScreenState extends State<LoginScreen>
                           question: '还没有账号，怎么注册？',
                           answer: '点击登录页面下方的「立即注册」按钮，填写用户名和密码即可完成注册。\n\n'
                               '注意：用户名注册后不能更改，请提前想好。\n\n'
-                              '注册后直接用该账号登录，笔记会自动同步保存到云端。',
+                              '注册后可以用该账号登录官方服务器；自部署服务器请以你的服务器规则为准。',
                           isDarkMode: isDarkMode,
                           textPrimary: textPrimary,
                           textSecondary: textSecondary,
@@ -2091,8 +2091,8 @@ class _LoginScreenState extends State<LoginScreen>
                           icon: Icons.login_outlined,
                           iconColor: primaryColor,
                           question: '什么是「记住密码」？',
-                          answer: '开启后，账号和密码会安全地保存在您的手机上。\n\n'
-                              '下次打开 App 时会自动登录，不用每次手动输入，就像微信一样方便。\n\n'
+                          answer: '开启后，账号和密码会保存在系统安全存储中。\n\n'
+                              '下次打开 App 时会自动登录，不用每次手动输入。\n\n'
                               '如果您不想保存，可以关掉这个开关，退出登录后密码不会被记住。',
                           isDarkMode: isDarkMode,
                           textPrimary: textPrimary,
@@ -2103,9 +2103,9 @@ class _LoginScreenState extends State<LoginScreen>
                           icon: Icons.cloud_sync_outlined,
                           iconColor: primaryColor,
                           question: '笔记会自动保存吗？',
-                          answer: '会的！登录后写的每一条笔记都会自动上传到服务器。\n\n'
-                              '即使换了手机或卸载重装，只要登录同一个账号，所有笔记都能找回来。\n\n'
-                              '断网时也可以记笔记，恢复网络后会自动同步。',
+                          answer: '笔记会先保存在本机。登录并同步成功后，会上传到你连接的服务器。\n\n'
+                              '离线时可以继续记录，恢复网络后再同步。同步是否成功取决于网络和服务器状态。\n\n'
+                              '重要内容建议定期使用备份功能额外保存。',
                           isDarkMode: isDarkMode,
                           textPrimary: textPrimary,
                           textSecondary: textSecondary,
@@ -2118,9 +2118,9 @@ class _LoginScreenState extends State<LoginScreen>
                           answer: 'InkRoot 是一款笔记 App，主要功能包括：\n\n'
                               '📝 随手记录想法，支持文字、图片\n'
                               '#️⃣ 用标签整理笔记，快速分类查找\n'
-                              '🔍 全文搜索，几千条笔记瞬间找到\n'
+                              '🔍 全文搜索，按关键词查找内容\n'
                               '📅 热力图，直观看到每天的记录情况\n'
-                              '🔔 设置提醒，重要的事不会忘\n'
+                              '🔔 设置提醒，减少遗漏\n'
                               '📖 支持 Markdown 格式排版（可选）',
                           isDarkMode: isDarkMode,
                           textPrimary: textPrimary,
@@ -2131,11 +2131,11 @@ class _LoginScreenState extends State<LoginScreen>
                           icon: Icons.security_outlined,
                           iconColor: primaryColor,
                           question: '我的数据安全吗？',
-                          answer: '安全。我们做了以下保护措施：\n\n'
-                              '🔐 所有数据传输均使用加密，他人无法窃取\n'
+                          answer: 'InkRoot 会尽量使用系统和服务器提供的安全能力：\n\n'
+                              '🔐 建议使用 HTTPS 服务器地址传输数据\n'
                               '📱 密码在本地安全存储，不会明文保存\n'
-                              '🏠 使用自建服务器时，数据完全在您自己的服务器上\n\n'
-                              '建议：重要笔记可以通过「备份」功能额外保存一份，以防万一。',
+                              '🏠 使用自建服务器时，远端数据由你的服务器保存和管理\n\n'
+                              '建议：重要笔记通过「备份」功能额外保存一份。',
                           isDarkMode: isDarkMode,
                           textPrimary: textPrimary,
                           textSecondary: textSecondary,

@@ -6,19 +6,16 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.7`
+`1.1.8`
 
-This release fixes the official cloud verification AppID in source and tightens Android Release signing: official packages must use the fixed release certificate, and both APK and AAB artifacts are checked during publishing.
+This release focuses on note rendering, search, todos, related notes, tag navigation, brand copy, and release-flow hardening while keeping Android Release certificate checks in place.
 
 Highlights:
 
-- Memos profile loading now falls back across v0.21, v0.22-v0.25, and v0.26+ account APIs after login.
-- Requests support both Bearer Token and Memos Cookie authentication to reduce self-hosted server and reverse-proxy compatibility failures.
-- Login errors now distinguish credential, token, network, TLS, and server response failures.
-- The official cloud verification AppID is now fixed in source and no longer depends on external AppID configuration.
-- GitHub Actions now fails early when required release secrets are missing, the Android signing certificate does not match, or official packages do not contain the release certificate.
-- Android builds now keep the required Flutter manifest placeholder and generated BuildConfig support for cloud CLI builds.
-- The Release workflow publishes Android APK/AAB, iOS test packages, macOS, Windows, and Linux assets.
+- Todo completion, home-feed underline/bold rendering, blank search cards, and mismatched search results are fixed.
+- Related notes, AI review, summary, continuation, tag recommendation, and insights are improved.
+- Tag-detail back navigation, sidebar tag behavior, and About/Help/Settings copy are tightened.
+- Brand copy is restored to "Settle patiently, then speak with force."
 - Home feed rendering keeps user line breaks and spacing.
 - Expand controls are based on rendered visible content.
 - Image preview supports tap-to-dismiss, original image viewing, and multi-image browsing.
@@ -81,13 +78,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.7+10107
+version: 1.1.8+10108
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.7
+dart tool/inkroot.dart release v1.1.8
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

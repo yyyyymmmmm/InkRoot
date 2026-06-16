@@ -445,7 +445,7 @@
     "description": "AI 智能标签功能"
   },
 
-  "aiSmartTagsDesc": "自动生成精准标签",
+  "aiSmartTagsDesc": "根据内容生成标签建议",
   "@aiSmartTagsDesc": {
     "description": "AI 智能标签功能描述"
   },
@@ -541,7 +541,7 @@
     "description": "AI 相关笔记功能"
   },
 
-  "aiRelatedNotesFeatureDesc": "智能推荐与当前笔记相关的其他笔记",
+  "aiRelatedNotesFeatureDesc": "查找与当前笔记可能相关的内容",
   "@aiRelatedNotesFeatureDesc": {
     "description": "AI 相关笔记功能描述"
   },
@@ -561,7 +561,7 @@
     "description": "AI 智能标签和摘要"
   },
 
-  "aiSmartTagsAndSummaryDesc": "自动生成精准标签和智能摘要",
+  "aiSmartTagsAndSummaryDesc": "根据内容生成标签建议和摘要",
   "@aiSmartTagsAndSummaryDesc": {
     "description": "AI 智能标签和摘要描述"
   },

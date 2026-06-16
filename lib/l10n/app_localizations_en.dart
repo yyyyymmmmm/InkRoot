@@ -272,7 +272,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiSmartTags => 'Smart Tags';
 
   @override
-  String get aiSmartTagsDesc => 'Automatically generate precise tags';
+  String get aiSmartTagsDesc => 'Suggest tags based on note content';
 
   @override
   String get aiRelatedNotes => 'Related Notes';
@@ -330,7 +330,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiRelatedNotesFeatureDesc =>
-      'Intelligently recommend notes related to the current note';
+      'Find notes that may be related to the current note';
 
   @override
   String get aiContinueWritingFeature => 'AI Continue Writing';
@@ -344,7 +344,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiSmartTagsAndSummaryDesc =>
-      'Automatically generate precise tags and smart summaries';
+      'Suggest tags and summaries based on note content';
 
   @override
   String get wechatAssistant => 'WeChat Assistant';

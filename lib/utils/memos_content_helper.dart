@@ -29,7 +29,9 @@ abstract final class MemosContentHelper {
       return '';
     }
 
-    final converted = MemosMarkdownConverter().convert(withoutImages);
+    final converted = MemosMarkdownConverter().convert(
+      _normalizeInlineHtmlForPreview(withoutImages),
+    );
     final document = md.Document(extensionSet: md.ExtensionSet.gitHubFlavored);
     final nodes = document.parse(converted);
 
@@ -88,6 +90,12 @@ abstract final class MemosContentHelper {
 
     return trimmed.startsWith('#');
   }
+
+  static String _normalizeInlineHtmlForPreview(String content) =>
+      content.replaceAllMapped(
+        RegExp(r'<[uU]\b[^>]*>([\s\S]*?)<\/[uU]>'),
+        (match) => match.group(1) ?? '',
+      );
 
   static List<String> extractResourceImagePaths(
     List<Map<String, dynamic>> resources,

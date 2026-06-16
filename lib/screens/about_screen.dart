@@ -34,7 +34,7 @@ class AboutScreen extends StatelessWidget {
                 onPressed: () => context.pop(),
               ),
         title: Text(
-          AppLocalizationsSimple.of(context)?.aboutUs ?? '关于我们',
+          AppLocalizationsSimple.of(context)?.aboutUs ?? '关于 InkRoot',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
         ),
         centerTitle: true,
@@ -98,11 +98,11 @@ class AboutScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.note_alt_outlined,
-                            size: 40,
-                            color: Color(0xFF2C9678),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),
@@ -127,7 +127,7 @@ class AboutScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       Text(
                         AppLocalizationsSimple.of(context)?.appTagline ??
-                            '静待沉淀，蓄势鸣响。\n你的每一次落笔，都是未来生长的根源。',
+                            '静待沉淀，蓄势而鸣。\n你的每一次落笔，都是未来生长的根源。',
                         style: const TextStyle(
                           fontSize: 15,
                           color: Colors.white,
@@ -181,7 +181,7 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     AppLocalizationsSimple.of(context)?.appIntroduction ??
-                        'InkRoot-墨鸣笔记是一款基于Memos系统打造的极简跨平台笔记应用，专为追求高效记录与深度积累的用户设计。应用完美对接Memos 0.21.0版本，提供纯净优雅的写作体验，帮助您默默书写、静待沉淀。',
+                        'InkRoot-墨鸣笔记是一款面向个人记录与知识沉淀的跨平台笔记应用。它保留轻量记录的速度，也提供标签、搜索、回顾、备份和同步能力，让零散内容逐步沉淀成可回看的资料库。',
                     style: const TextStyle(
                       fontSize: 15,
                       height: 1.6,
@@ -191,7 +191,7 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     AppLocalizationsSimple.of(context)?.technicalDetails ??
-                        '基于Flutter 3.32.5打造的跨平台架构，支持Android、iOS、Web三大平台。采用Material Design 3设计语言，提供丰富的Markdown支持、智能标签系统、全文搜索、数据统计热力图等功能，满足从个人记录到知识管理的多样化需求。',
+                        '当前支持 Android、iOS、macOS、Windows 和 Linux。应用提供富文本式编辑、Markdown 渲染、图片、标签、搜索、提醒、随机回顾、WebDAV 备份、导入导出和可选 AI 功能。',
                     style: const TextStyle(
                       fontSize: 15,
                       height: 1.6,
@@ -201,7 +201,7 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     AppLocalizationsSimple.of(context)?.securityCommitment ??
-                        '数据安全是我们的核心承诺。应用支持本地SQLite存储、敏感信息加密、HTTPS安全传输，以及完整的用户权限管理。支持私有化部署，数据完全由您掌控，无论是个人创作还是团队协作，都能获得企业级的安全保障。',
+                        '笔记优先保存在本机。登录、同步、WebDAV 和 AI 相关配置由你主动设置；自部署服务中的数据由对应服务器保存和管理。',
                     style: const TextStyle(
                       fontSize: 15,
                       height: 1.6,
@@ -252,7 +252,7 @@ class AboutScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     AppLocalizationsSimple.of(context)?.appTechDescription ??
-                        'InkRoot-墨鸣笔记基于Flutter 3.32.5和Dart 3.0+构建，采用现代化的架构设计，提供全平台一致的用户体验。集成丰富的功能特性，从基础的笔记记录到高级的知识管理，满足各种使用场景。',
+                        '这些是当前版本已经开放的主要能力。不同 Memos 服务器版本的接口能力不同，应用会按服务器版本自动适配并尽量降级处理。',
                     style: const TextStyle(
                       fontSize: 15,
                       height: 1.6,
@@ -268,18 +268,13 @@ class AboutScreen extends StatelessWidget {
                         context,
                         AppLocalizationsSimple.of(context)
                                 ?.memosExclusiveVersion ??
-                            'Memos 0.21.0专版',
+                            'Memos 多版本适配',
                         Icons.verified_outlined,
                       ),
                       _buildFeatureTag(
                         context,
-                        'Flutter 3.32.5',
-                        Icons.flutter_dash,
-                      ),
-                      _buildFeatureTag(
-                        context,
-                        'Material Design 3',
-                        Icons.design_services,
+                        '官方/自部署服务',
+                        Icons.cloud_queue_outlined,
                       ),
                       _buildFeatureTag(
                         context,
@@ -291,7 +286,7 @@ class AboutScreen extends StatelessWidget {
                         context,
                         AppLocalizationsSimple.of(context)
                                 ?.intelligentTagSystem ??
-                            '智能标签系统',
+                            '层级标签',
                         Icons.local_offer_outlined,
                       ),
                       _buildFeatureTag(
@@ -333,7 +328,7 @@ class AboutScreen extends StatelessWidget {
                       ),
                       _buildFeatureTag(
                         context,
-                        'Android/iOS/Web',
+                        '移动端和桌面端',
                         Icons.devices_outlined,
                       ),
                       _buildFeatureTag(
@@ -451,10 +446,44 @@ class AboutScreen extends StatelessWidget {
                   const Divider(height: 24),
                   _buildContactItem(
                     context,
+                    icon: Icons.privacy_tip_outlined,
+                    label: AppLocalizationsSimple.of(context)?.privacyPolicy ??
+                        '隐私政策',
+                    value: AppConfig.privacyPolicyUrl,
+                    onTap: () => _launchURL(AppConfig.privacyPolicyUrl),
+                  ),
+                  const Divider(height: 24),
+                  _buildContactItem(
+                    context,
+                    icon: Icons.description_outlined,
+                    label: AppLocalizationsSimple.of(context)?.userAgreement ??
+                        '用户协议',
+                    value: AppConfig.userAgreementUrl,
+                    onTap: () => _launchURL(AppConfig.userAgreementUrl),
+                  ),
+                  const Divider(height: 24),
+                  _buildContactItem(
+                    context,
+                    icon: Icons.delete_outline,
+                    label: '账号与数据删除',
+                    value: AppConfig.accountDeletionUrl,
+                    onTap: () => _launchURL(AppConfig.accountDeletionUrl),
+                  ),
+                  const Divider(height: 24),
+                  _buildContactItem(
+                    context,
+                    icon: Icons.code_outlined,
+                    label: '开源仓库',
+                    value: AppConfig.githubRepo,
+                    onTap: () => _launchURL(AppConfig.githubRepo),
+                  ),
+                  const Divider(height: 24),
+                  _buildContactItem(
+                    context,
                     icon: Icons.location_on_outlined,
                     label: AppLocalizationsSimple.of(context)
                             ?.communicationAddress ??
-                        '交流地址',
+                        '联系地址',
                     value: AppConfig.companyAddress,
                     onTap: () {},
                   ),

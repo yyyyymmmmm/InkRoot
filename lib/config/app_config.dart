@@ -30,6 +30,7 @@ class AppConfig {
   /// 应用密钥
   static const String appKey = String.fromEnvironment(
     'CLOUD_VERIFY_APP_KEY',
+    defaultValue: 'RLu4EGglybXSgRzK',
   );
 
   /// 应用包名

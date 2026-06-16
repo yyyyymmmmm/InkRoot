@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:inkroot/config/app_config.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/themes/app_theme.dart';
@@ -74,18 +73,6 @@ class LegalDocumentsHubScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            _buildEntry(
-              context,
-              icon: Icons.delete_forever_outlined,
-              title: isZh ? '账号与数据删除' : 'Account and Data Deletion',
-              subtitle: isZh
-                  ? '删除本机数据或发起官方服务器账号删除'
-                  : 'Delete local data or request official account deletion',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              onTap: () => context.push('/account-deletion'),
             ),
           ],
         ),

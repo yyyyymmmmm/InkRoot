@@ -6,19 +6,16 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 
 ## 当前版本
 
-`1.1.7`
+`1.1.8`
 
-本版本固定官方云验证 AppID，并收紧 Android Release 签名链路：正式包必须使用固定发布证书，APK/AAB 都会在发布流程中做证书校验。
+本版本集中修复笔记渲染、搜索、待办、相关笔记、标签返回路径、品牌文案和发布链路问题，并继续保持 Android Release 签名校验。
 
 主要变化：
 
-- Memos 登录成功后读取账号信息会自动兼容 v0.21、v0.22-v0.25 和 v0.26+ 接口。
-- 请求同时兼容 Bearer Token 与 Memos Cookie 鉴权，减少自部署服务器和反向代理差异导致的登录失败。
-- 登录失败提示会区分账号密码、Token、网络、TLS 和服务器返回异常。
-- 官方云验证 AppID 现在固定在源码默认值中，Release 包不再依赖外部 AppID 配置。
-- GitHub Actions 会在缺少必要发布密钥、Android 签名证书不匹配或正式包未带发布证书时直接失败。
-- Android 构建恢复 Flutter manifest 占位符与 BuildConfig 生成，避免云端 CLI 构建失败。
-- Release workflow 会生成 Android APK/AAB、iOS 测试包、macOS、Windows 和 Linux 产物。
+- 待办点击完成、主页下划线/加粗渲染、搜索结果空白和内容不一致问题已修复。
+- 相关笔记、AI 点评、摘要、续写、标签推荐和洞察体验继续优化。
+- 标签详情返回路径、侧边栏标签交互和关于/帮助/设置页文案继续整理。
+- 品牌文案恢复为“静待沉淀，蓄势而鸣”。
 - 首页笔记渲染保留用户输入的换行和排版。
 - 展开按钮按渲染后的可见内容判断，减少误显示。
 - 图片查看支持点击退出、原图查看和多图浏览。
@@ -81,13 +78,13 @@ dart tool/inkroot.dart build linux-debug
 版本号统一维护在 `pubspec.yaml`：
 
 ```yaml
-version: 1.1.7+10107
+version: 1.1.8+10108
 ```
 
 发布入口：
 
 ```bash
-dart tool/inkroot.dart release v1.1.7
+dart tool/inkroot.dart release v1.1.8
 ```
 
 这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android APK/AAB、iOS、macOS、Windows 和 Linux 产物。

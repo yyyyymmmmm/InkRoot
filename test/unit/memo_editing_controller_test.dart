@@ -33,6 +33,30 @@ void main() {
       expect(controller.toMarkdown(), '**hello** world');
     });
 
+    test('underline toggle stores style and renders as Memos compatible html',
+        () {
+      final controller = MemoEditingController(markdown: 'hello world');
+      controller.selection =
+          const TextSelection(baseOffset: 0, extentOffset: 5);
+
+      controller.toggleMark(MemoTextMark.underline);
+
+      expect(controller.text, 'hello world');
+      expect(controller.text, isNot(contains('<u>')));
+      expect(controller.toMarkdown(), '<u>hello</u> world');
+    });
+
+    test('active underline applies to subsequently typed text', () {
+      final controller = MemoEditingController();
+      controller.selection = const TextSelection.collapsed(offset: 0);
+
+      controller.toggleMark(MemoTextMark.underline);
+      controller.insertPlainText('下划线文字');
+
+      expect(controller.text, '下划线文字');
+      expect(controller.toMarkdown(), '<u>下划线文字</u>');
+    });
+
     test('keeps user authored leading, trailing, and blank lines', () {
       final controller = MemoEditingController(
         markdown: '\n  第一行\n\n第二行  \n',

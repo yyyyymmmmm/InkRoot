@@ -445,7 +445,7 @@
     "description": "AI smart tags feature"
   },
 
-  "aiSmartTagsDesc": "Automatically generate precise tags",
+  "aiSmartTagsDesc": "Suggest tags based on note content",
   "@aiSmartTagsDesc": {
     "description": "AI smart tags feature description"
   },
@@ -541,7 +541,7 @@
     "description": "AI related notes feature"
   },
 
-  "aiRelatedNotesFeatureDesc": "Intelligently recommend notes related to the current note",
+  "aiRelatedNotesFeatureDesc": "Find notes that may be related to the current note",
   "@aiRelatedNotesFeatureDesc": {
     "description": "AI related notes feature description"
   },
@@ -561,7 +561,7 @@
     "description": "AI smart tags and summary"
   },
 
-  "aiSmartTagsAndSummaryDesc": "Automatically generate precise tags and smart summaries",
+  "aiSmartTagsAndSummaryDesc": "Suggest tags and summaries based on note content",
   "@aiSmartTagsAndSummaryDesc": {
     "description": "AI smart tags and summary description"
   },

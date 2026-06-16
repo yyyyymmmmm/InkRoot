@@ -268,7 +268,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiSmartTags => '智能标签';
 
   @override
-  String get aiSmartTagsDesc => '自动生成精准标签';
+  String get aiSmartTagsDesc => '根据内容生成标签建议';
 
   @override
   String get aiRelatedNotes => '相关笔记';
@@ -324,7 +324,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiRelatedNotesFeature => 'AI 相关笔记';
 
   @override
-  String get aiRelatedNotesFeatureDesc => '智能推荐与当前笔记相关的其他笔记';
+  String get aiRelatedNotesFeatureDesc => '查找与当前笔记可能相关的内容';
 
   @override
   String get aiContinueWritingFeature => 'AI 续写';
@@ -336,7 +336,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiSmartTagsAndSummary => 'AI 智能标签 & 摘要';
 
   @override
-  String get aiSmartTagsAndSummaryDesc => '自动生成精准标签和智能摘要';
+  String get aiSmartTagsAndSummaryDesc => '根据内容生成标签建议和摘要';
 
   @override
   String get wechatAssistant => '微信小助手';

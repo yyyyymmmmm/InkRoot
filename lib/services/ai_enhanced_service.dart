@@ -41,17 +41,19 @@ class AIEnhancedService {
           ? ''
           : '\n【用户常用标签】\n${topUserTags.take(10).map((e) => '${e.key} (用过${e.value}次)').join('、')}\n';
 
-      final prompt = '''请为以下笔记内容生成 3-5 个精准的标签关键词。
+      final prompt = '''请为以下笔记内容生成 3-5 个精准标签。
 $userTagsHint
 笔记内容：
 $cleanContent
 
 要求：
 1. 标签要精准、简洁（2-6个字）
-2. 优先提取核心主题词、技术名词、领域关键词
+2. 优先提取核心主题词、项目名、领域关键词
 3. 如果笔记主题与用户常用标签相关，优先使用用户已有标签（保持标签体系一致性）
 4. 每行一个标签，不要编号，不要其他文字
 5. 标签不要带 # 符号
+6. 不要输出“笔记、记录、总结、想法、其他”这类泛标签
+7. 不要输出一句话标签
 
 示例输出：
 Flutter
@@ -71,7 +73,7 @@ Flutter
               'messages': [
                 {
                   'role': 'system',
-                  'content': '你是一个专业的知识管理助手，擅长为笔记生成精准标签并保持用户标签体系的一致性。',
+                  'content': '你是一个克制、准确的笔记标签顾问。优先复用用户已有标签，只输出可直接写入笔记的短标签。',
                 },
                 {'role': 'user', 'content': prompt},
               ],
@@ -92,7 +94,8 @@ Flutter
         final result = message?['content'] as String?;
 
         if (result != null) {
-          final tags = _parseTags(result);
+          final existingTags = _analyzeUserTags(allNotes ?? []).keys.toSet();
+          final tags = _parseTags(result, existingTags: existingTags);
           return (tags.isEmpty ? null : tags, null);
         }
       }
@@ -267,23 +270,64 @@ Flutter
   }
 
   /// 解析标签
-  List<String> _parseTags(String text) {
+  List<String> _parseTags(
+    String text, {
+    Set<String> existingTags = const {},
+  }) {
     final tags = <String>[];
-    final lines = text.split('\n');
+    final seen = <String>{};
+    final lines = text.split(RegExp(r'[\n,，、]'));
 
     for (final line in lines) {
       final trimmed = line
           .trim()
           .replaceAll(RegExp(r'^[0-9\.\-\*\+]+\s*'), '') // 移除编号
           .replaceAll(RegExp(r'^[#]+\s*'), '') // 移除 #
+          .replaceAll(RegExp(r'[：:]+$'), '')
           .trim();
 
-      if (trimmed.isNotEmpty && trimmed.length <= 20) {
-        tags.add(trimmed);
+      final tag = _normalizeTag(trimmed, existingTags);
+      final key = tag.toLowerCase();
+      if (tag.isNotEmpty && !seen.contains(key)) {
+        tags.add(tag);
+        seen.add(key);
       }
     }
 
     return tags.take(5).toList();
+  }
+
+  String _normalizeTag(String raw, Set<String> existingTags) {
+    final tag = raw
+        .replaceAll(RegExp(r'[`*_#\[\]（）(){}]'), '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .trim();
+    if (tag.isEmpty || tag.length > 12) {
+      return '';
+    }
+    const blocked = {
+      '笔记',
+      '记录',
+      '总结',
+      '想法',
+      '其他',
+      '未分类',
+      '内容',
+      '主题',
+      '标签',
+    };
+    if (blocked.contains(tag)) {
+      return '';
+    }
+    if (RegExp('[。！？!?，,；;]').hasMatch(tag)) {
+      return '';
+    }
+    for (final existing in existingTags) {
+      if (existing.toLowerCase() == tag.toLowerCase()) {
+        return existing;
+      }
+    }
+    return tag;
   }
 
   /// 截断文本

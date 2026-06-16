@@ -151,6 +151,30 @@ https://gpt-agent.cc/v1
         expect(renderedText, contains('同步到memos后'));
       },
     );
+
+    testWidgets('homepage preview keeps underline-only note visible',
+        (tester) async {
+      const content = '<u>主页应该显示这段下划线文字</u>';
+
+      await tester.pumpWidget(
+        _wrap(
+          const MemosMarkdownRenderer(
+            content: content,
+            selectable: false,
+            mode: MemosMarkdownMode.cardPreview,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderedText = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .map((widget) => widget.text.toPlainText())
+          .join('\n');
+
+      expect(renderedText, contains('主页应该显示这段下划线文字'));
+      expect(renderedText, isNot(contains('<u>')));
+    });
   });
 }
 

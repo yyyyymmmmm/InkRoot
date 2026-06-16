@@ -599,7 +599,7 @@ abstract class AppLocalizations {
   /// AI 智能标签功能描述
   ///
   /// In zh, this message translates to:
-  /// **'自动生成精准标签'**
+  /// **'根据内容生成标签建议'**
   String get aiSmartTagsDesc;
 
   /// AI 相关笔记功能
@@ -707,7 +707,7 @@ abstract class AppLocalizations {
   /// AI 相关笔记功能描述
   ///
   /// In zh, this message translates to:
-  /// **'智能推荐与当前笔记相关的其他笔记'**
+  /// **'查找与当前笔记可能相关的内容'**
   String get aiRelatedNotesFeatureDesc;
 
   /// AI 续写功能
@@ -731,7 +731,7 @@ abstract class AppLocalizations {
   /// AI 智能标签和摘要描述
   ///
   /// In zh, this message translates to:
-  /// **'自动生成精准标签和智能摘要'**
+  /// **'根据内容生成标签建议和摘要'**
   String get aiSmartTagsAndSummaryDesc;
 
   /// 微信小助手

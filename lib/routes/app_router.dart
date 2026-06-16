@@ -606,6 +606,15 @@ class AppRouter {
                   );
                 }
 
+                if (!kIsWeb && (Platform.isMacOS || Platform.isWindows)) {
+                  return NoTransitionPage<void>(
+                    key: state.pageKey,
+                    child: DesktopLayout(
+                      child: TagNotesScreen(tagName: tagName),
+                    ),
+                  );
+                }
+
                 // 🎯 Android使用自定义滑动动画
                 return CustomTransitionPage(
                   key: state.pageKey,

@@ -1382,38 +1382,6 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
-                          Icons.delete_forever_outlined,
-                          color: Color(0xFFFF6B6B),
-                        ),
-                      ),
-                      title: Text(
-                        Localizations.localeOf(context).languageCode == 'zh'
-                            ? '账号与数据删除'
-                            : 'Account and Data Deletion',
-                      ),
-                      subtitle: Text(
-                        Localizations.localeOf(context).languageCode == 'zh'
-                            ? '删除本机数据或发起官方账号删除'
-                            : 'Delete local data or request account deletion',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.textTheme.bodyMedium?.color
-                              ?.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/account-deletion'),
-                    ),
-                    const Divider(height: 1, indent: 56, endIndent: 16),
-                    ListTile(
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
                           Icons.logout,
                           color: Color(0xFFFF6B6B),
                         ),

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.8] - 2026-06-16
+
+### Fixed
+- Fixed todo completion not applying from note cards
+- Fixed underline and bold rendering issues on the home feed
+- Fixed search results showing mismatched notes or blank note cards
+- Fixed related notes sometimes reporting no results while preserving the existing related-notes experience
+- Fixed tag-detail back navigation after entering from the sidebar or home feed
+- Restored the brand copy "Settle patiently, then speak with force" and removed generic wording from Settings and About
+
+### Improved
+- Improved AI review, summary, continuation, tag recommendation, and insight output to reduce template-like responses
+- Updated About, Help, Settings, and legal copy to match the current product behavior and data flow
+- Improved image preview, note layout preservation, expand-state detection, WebDAV backup, and sync timestamp preservation
+- Hardened the CLI release flow around cloud verification, Android application ID, and release certificate checks
+
+### Verified
+- Verified Debug launch on the iOS simulator
+- `flutter analyze` passes
+- GitHub Actions Release continues to build Android APK/AAB, iOS unsigned, macOS, Windows, and Linux artifacts
+
+---
+
 ## [1.1.7] - 2026-06-15
 
 ### Fixed
@@ -29,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an Android release certificate fingerprint gate so mismatched signing certificates fail before packaging and do not break upgrade installs
 
 ### Maintenance
-- Release builds still require the cloud verification AppKey and Android signing credentials through GitHub Secrets; private keys and secrets stay out of source control
+- The cloud verification AppID and client AppKey now have source defaults so Release builds bind to the official cloud backend without a GitHub Secret; Android signing credentials still come from GitHub Secrets
 
 ---
 
@@ -39,8 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Release packages missing the cloud verification AppID / AppKey, which disabled official notices, cloud configuration, and update checks
 
 ### Maintenance
-- Added required-secret validation to the GitHub Actions Release workflow so missing cloud verification or Android signing secrets fail before packaging
-- Hardened the CLI so release builds stop when `CLOUD_VERIFY_APP_ID` or `CLOUD_VERIFY_APP_KEY` is missing
+- Kept required-secret validation for Android signing credentials in the GitHub Actions Release workflow
+- Hardened the CLI so cloud verification uses the official default configuration while Android release builds still verify the package certificate
 
 ---
 

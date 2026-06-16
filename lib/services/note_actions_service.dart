@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/annotation_model.dart';
-import 'package:inkroot/models/app_config_model.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/screens/note_detail_screen.dart';
-import 'package:inkroot/services/deepseek_api_service.dart';
+import 'package:inkroot/services/ai_review_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:inkroot/widgets/annotations_sidebar.dart';
@@ -34,6 +33,8 @@ import 'package:share_plus/share_plus.dart';
 ///
 /// 所有UI组件都通过这个服务执行笔记操作
 class NoteActionsService {
+  static const AiReviewService _aiReviewService = AiReviewService();
+
   /// 编辑笔记
   static Future<void> editNote({
     required BuildContext context,
@@ -688,33 +689,11 @@ class NoteActionsService {
   }) async {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final appConfig = appProvider.appConfig;
-
-    // 检查AI功能是否启用
-    if (!appConfig.aiEnabled) {
-      SnackBarUtils.showWarning(
-        context,
-        AppLocalizationsSimple.of(context)?.enableAIFirst ?? '请先在设置中启用AI功能',
-      );
-      return;
-    }
-
-    // 检查API配置
-    if (appConfig.aiApiUrl == null ||
-        appConfig.aiApiUrl!.isEmpty ||
-        appConfig.aiApiKey == null ||
-        appConfig.aiApiKey!.isEmpty) {
-      SnackBarUtils.showWarning(
-        context,
-        AppLocalizationsSimple.of(context)?.configureAIFirst ??
-            '请先在设置中配置AI API',
-      );
-      return;
-    }
-
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     String? aiReview;
     var isLoading = true;
     String? errorMessage;
+    var reviewSource = AiReviewSource.local;
 
     // 🔥 使用底部Sheet替代Dialog - 更现代的体验
     unawaited(
@@ -724,19 +703,23 @@ class NoteActionsService {
         backgroundColor: Colors.transparent,
         builder: (bottomSheetContext) => StatefulBuilder(
           builder: (context, setState) {
-            // 开始AI点评
+            // 开始点评。AI 未配置或失败时使用本地分析，不阻断用户。
             if (isLoading && aiReview == null && errorMessage == null) {
-              _getAiReview(appConfig, note.content).then((result) {
-                final (review, error) = result;
+              _aiReviewService
+                  .generateReview(
+                appConfig: appConfig,
+                note: note,
+                allNotes: appProvider.notes,
+              )
+                  .then((result) {
                 setState(() {
                   isLoading = false;
-                  aiReview = review != null
-                      ? _cleanMarkdownForReview(review)
-                      : null; // 🔥 清理Markdown符号
-                  errorMessage = error;
+                  aiReview = result.review;
+                  reviewSource = result.source;
+                  errorMessage = null;
                 });
                 // 🔥 完成后显示提示
-                if (review != null) {
+                if (result.usedRemote) {
                   if (!context.mounted) {
                     return;
                   }
@@ -744,6 +727,11 @@ class NoteActionsService {
                     context,
                     AppLocalizationsSimple.of(context)?.aiReviewCompleted ??
                         '✨ AI点评完成！',
+                  );
+                } else if (result.usedFallback && context.mounted) {
+                  SnackBarUtils.showInfo(
+                    context,
+                    'AI暂不可用，已使用本地点评',
                   );
                 }
               });
@@ -794,8 +782,11 @@ class NoteActionsService {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            AppLocalizationsSimple.of(context)?.aiReviewTitle ??
-                                '给你的点评',
+                            reviewSource == AiReviewSource.remote
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.aiReviewTitle ??
+                                    '给你的点评')
+                                : '本地点评',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -987,111 +978,6 @@ class NoteActionsService {
           ),
         ),
       );
-
-  // 🔥 清理Markdown符号，转换为纯文本
-  static String _cleanMarkdownForReview(String text) {
-    var cleaned = text;
-
-    // 移除Markdown标题符号 (# ## ###)
-    cleaned = cleaned.replaceAll(RegExp(r'^#+\s*', multiLine: true), '');
-
-    // 移除加粗符号 (** __ )
-    cleaned = cleaned.replaceAll(RegExp(r'\*\*(.*?)\*\*'), r'$1');
-    cleaned = cleaned.replaceAll(RegExp('__(.*?)__'), r'$1');
-
-    // 移除斜体符号 (* _)
-    cleaned = cleaned.replaceAll(
-      RegExp(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)'),
-      r'$1',
-    );
-    cleaned =
-        cleaned.replaceAll(RegExp('(?<!_)_(?!_)(.+?)(?<!_)_(?!_)'), r'$1');
-
-    // 移除删除线 (~~)
-    cleaned = cleaned.replaceAll(RegExp('~~(.*?)~~'), r'$1');
-
-    // 移除代码块符号 (```)
-    cleaned = cleaned.replaceAll(RegExp(r'```[\s\S]*?```'), '');
-    cleaned = cleaned.replaceAll(RegExp('`(.*?)`'), r'$1');
-
-    // 移除链接格式 [text](url)
-    cleaned = cleaned.replaceAll(RegExp(r'\[([^\]]+)\]\([^\)]+\)'), r'$1');
-
-    // 移除图片格式 ![alt](url)
-    cleaned = cleaned.replaceAll(RegExp(r'!\[([^\]]*)\]\([^\)]+\)'), r'$1');
-
-    // 移除引用符号 (>)
-    cleaned = cleaned.replaceAll(RegExp(r'^>\s*', multiLine: true), '');
-
-    // 移除水平线 (--- ***)
-    cleaned =
-        cleaned.replaceAll(RegExp(r'^[\-\*]{3,}\s*$', multiLine: true), '');
-
-    // 移除列表符号 (- * 1.)
-    cleaned = cleaned.replaceAll(RegExp(r'^[\-\*\+]\s+', multiLine: true), '');
-    cleaned = cleaned.replaceAll(RegExp(r'^\d+\.\s+', multiLine: true), '');
-
-    // 清理多余的空行（保留段落间的单个空行）
-    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-
-    return cleaned.trim();
-  }
-
-  /// 调用AI进行点评 - 优化Prompt为flomo风格
-  static Future<(String?, String?)> _getAiReview(
-    AppConfig appConfig,
-    String content,
-  ) async {
-    try {
-      final apiService = DeepSeekApiService(
-        apiUrl: appConfig.aiApiUrl!,
-        apiKey: appConfig.aiApiKey!,
-        model: appConfig.aiModel,
-      );
-
-      // 🔥 使用自定义Prompt或系统默认Prompt
-      final systemPrompt = appConfig.useCustomPrompt &&
-              appConfig.customReviewPrompt != null &&
-              appConfig.customReviewPrompt!.isNotEmpty
-          ? appConfig.customReviewPrompt!
-          : '''
-你是一位善于发现价值的笔记评论者，用自然对话方式提供完整的分析闭环。
-
-输出格式要求（重要！）：
-- 纯文本，不要用 # * ** 等Markdown符号
-- 不要用emoji
-- 用"你"称呼用户
-- 直接进入内容，不要固定开头
-- 3-4句话，根据笔记内容深度灵活调整长度
-- 语气自然、坦诚
-
-内容结构（微型闭环）：
-
-第1句 - 核心洞察：
-直接指出笔记中最值得关注的点，或提出一个有洞察力的观察。
-
-第2句 - 肯定/改进：
-快速指出闪光点或可优化之处（选一个重点说）。用"这里不错"、"或许可以"等自然表述。
-
-第3-4句 - 建议/启发：
-给出一个清晰、可操作的建议，或提出启发性思考。
-
-写作风格：
-- 像Notion AI那样：直接、专业、有温度
-- 坦诚但不批评，简洁但有深度
-- 保持对话感，不要说教
-''';
-
-      final messages = [
-        DeepSeekApiService.buildSystemMessage(systemPrompt),
-        DeepSeekApiService.buildUserMessage('请点评这篇笔记：\n\n$content'),
-      ];
-
-      return await apiService.chat(messages: messages);
-    } on Object catch (e) {
-      return (null, 'AI点评失败: $e');
-    }
-  }
 
   /// 显示引用详情（侧边栏版本 - 对标批注侧边栏）
   static Future<void> showReferences({

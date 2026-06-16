@@ -12,7 +12,6 @@ env:
   FLUTTER_CHANNEL: stable
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   ANDROID_RELEASE_CERT_SHA256: "7A:00:C9:A1:AC:E1:AC:15:0E:79:0C:9D:7A:5B:FC:37:A3:F1:A1:2F:0D:F5:9D:ED:86:27:17:93:C8:40:99:8D"
-  CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
   UMENG_ANDROID_APPKEY: ${{ secrets.UMENG_ANDROID_APPKEY }}
   UMENG_CHANNEL: ${{ secrets.UMENG_CHANNEL }}
   SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -75,7 +74,6 @@ jobs:
       - name: Verify required release secrets
         shell: bash
         env:
-          CLOUD_VERIFY_APP_KEY: ${{ secrets.CLOUD_VERIFY_APP_KEY }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -83,7 +81,6 @@ jobs:
         run: |
           set -euo pipefail
           required=(
-            CLOUD_VERIFY_APP_KEY
             ANDROID_KEYSTORE_BASE64
             ANDROID_STORE_PASSWORD
             ANDROID_KEY_ALIAS
@@ -106,7 +103,7 @@ jobs:
         run: |
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
             | sudo tar -xz -C /usr/local/bin gitleaks
-      - run: gitleaks detect --no-git --redact -v --exit-code=2
+      - run: gitleaks detect --no-git --redact -v --exit-code=2 --config=.gitleaks.toml
 
   android:
     name: Android

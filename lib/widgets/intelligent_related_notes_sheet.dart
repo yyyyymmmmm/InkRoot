@@ -99,7 +99,7 @@ class _IntelligentRelatedNotesSheetState
             // 标题栏
             Row(
               children: [
-                // 🧠 智能推荐图标
+                // 相关笔记图标
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -122,7 +122,7 @@ class _IntelligentRelatedNotesSheetState
                     ],
                   ),
                   child: const Icon(
-                    Icons.auto_awesome,
+                    Icons.link_rounded,
                     color: Colors.white,
                     size: 20,
                   ),
@@ -136,7 +136,7 @@ class _IntelligentRelatedNotesSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '🧠 智能推荐',
+                        '相关笔记',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

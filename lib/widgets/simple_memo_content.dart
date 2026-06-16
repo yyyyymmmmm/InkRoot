@@ -778,22 +778,31 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
 
 class UnderlineBuilder extends MarkdownElementBuilder {
   @override
-  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) =>
-      RichText(
-        text: TextSpan(
-          text: element.textContent,
-          style: (preferredStyle ?? const TextStyle()).copyWith(
-            decoration: TextDecoration.combine([
-              preferredStyle?.decoration ?? TextDecoration.none,
-              TextDecoration.underline,
-            ]),
-          ),
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final baseStyle =
+        preferredStyle ?? parentStyle ?? DefaultTextStyle.of(context).style;
+    return RichText(
+      text: TextSpan(
+        text: element.textContent,
+        style: baseStyle.copyWith(
+          decoration: TextDecoration.combine([
+            baseStyle.decoration ?? TextDecoration.none,
+            TextDecoration.underline,
+          ]),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class UnderlineSyntax extends md.InlineSyntax {
-  UnderlineSyntax() : super(r'<u>(.*?)<\/u>', startCharacter: 60);
+  UnderlineSyntax()
+      : super(r'<[uU]\b[^>]*>([\s\S]*?)<\/[uU]>', startCharacter: 60);
 
   @override
   bool onMatch(md.InlineParser parser, Match match) {

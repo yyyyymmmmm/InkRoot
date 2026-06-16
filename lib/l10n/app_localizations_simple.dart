@@ -458,15 +458,15 @@ class AppLocalizationsSimple {
   String get noRelationships => _t('noRelationships', fallback: '笔记之间还没有建立关联');
 
   // ===== 引导页 =====
-  String get onboardingTitle1 => _t('onboardingTitle1', fallback: '智能笔记管理');
+  String get onboardingTitle1 => _t('onboardingTitle1', fallback: '随手记录');
   String get onboardingDesc1 =>
-      _t('onboardingDesc1', fallback: '轻松记录生活中的每一个灵感时刻\n让思考更有条理，让创意永不丢失');
-  String get onboardingTitle2 => _t('onboardingTitle2', fallback: '标签分类系统');
+      _t('onboardingDesc1', fallback: '打开就写，文字、图片、待办和链接都能放在一条笔记里');
+  String get onboardingTitle2 => _t('onboardingTitle2', fallback: '用标签整理');
   String get onboardingDesc2 =>
-      _t('onboardingDesc2', fallback: '智能标签让你的笔记井然有序\n快速找到需要的内容，提升工作效率');
+      _t('onboardingDesc2', fallback: '支持层级标签、搜索和回顾，记录多了也能找回来');
   String get onboardingTitle3 => _t('onboardingTitle3', fallback: '随时随地同步');
   String get onboardingDesc3 =>
-      _t('onboardingDesc3', fallback: '云端同步确保数据安全\n无论在哪里都能访问你的重要笔记');
+      _t('onboardingDesc3', fallback: '可连接官方服务器或自部署 Memos，多端同步由你选择');
   String get onboardingTitle4 => _t('onboardingTitle4', fallback: '多平台支持');
   String get onboardingDesc4 =>
       _t('onboardingDesc4', fallback: '支持手机、平板、电脑多端协作\n让你的创作思路在任何设备上延续');
@@ -823,17 +823,27 @@ class AppLocalizationsSimple {
   // ===== 关于页面 =====
   String get aboutInkRoot => _t('aboutInkRoot', fallback: '关于InkRoot');
   String get appTagline =>
-      _t('appTagline', fallback: '静待沉淀，蓄势鸣响。\n你的每一次落笔，都是未来生长的根源。');
-  String get appIntroduction =>
-      _t('appIntroduction', fallback: 'InkRoot-墨鸣笔记是一款基于Memos系统打造的极简跨平台笔记应用。');
+      _t('appTagline', fallback: '静待沉淀，蓄势而鸣。\n你的每一次落笔，都是未来生长的根源。');
+  String get appIntroduction => _t(
+        'appIntroduction',
+        fallback:
+            'InkRoot 是一款面向个人记录和知识整理的笔记应用。你可以本地使用，也可以连接官方服务器或自部署 Memos 服务同步笔记。',
+      );
   String get appTechDescription => _t(
         'appTechDescription',
-        fallback: 'InkRoot-墨鸣笔记基于Flutter 3.32.5和Dart 3.0+构建，采用现代化的架构设计。',
+        fallback:
+            '这些是当前版本已经开放的主要能力。不同 Memos 服务器版本的接口能力不同，应用会按服务器版本自动适配并尽量降级处理。',
       );
-  String get technicalDetails =>
-      _t('technicalDetails', fallback: '基于Flutter 3.32.5打造的跨平台架构。');
-  String get securityCommitment =>
-      _t('securityCommitment', fallback: '数据安全是我们的核心承诺。');
+  String get technicalDetails => _t(
+        'technicalDetails',
+        fallback:
+            '当前支持 Android、iOS、macOS、Windows 和 Linux。应用提供富文本式编辑、Markdown 渲染、图片、标签、搜索、提醒、随机回顾、WebDAV 备份、导入导出和可选 AI 功能。',
+      );
+  String get securityCommitment => _t(
+        'securityCommitment',
+        fallback:
+            '笔记优先保存在本机。登录、同步、WebDAV 和 AI 相关配置由你主动设置；自部署服务中的数据由对应服务器保存和管理。',
+      );
   String get coreFeaturesTitle => _t('coreFeaturesTitle', fallback: '核心功能');
   String get contactMessage =>
       _t('contactMessage', fallback: '我们非常重视用户的反馈和建议。');
@@ -842,15 +852,15 @@ class AppLocalizationsSimple {
       _t('clickToSubmitFeedback', fallback: '点击提交反馈建议');
   String get officialWebsite => _t('officialWebsite', fallback: '官方网站');
   String get communicationAddress =>
-      _t('communicationAddress', fallback: '交流地址');
+      _t('communicationAddress', fallback: '联系地址');
   String get copyrightInfo => _t('copyrightInfo', fallback: '版权信息');
   String get opening => _t('opening', fallback: '正在打开');
 
   // ===== 功能标签 =====
   String get memosExclusiveVersion =>
-      _t('memosExclusiveVersion', fallback: 'Memos 0.21.0专版');
+      _t('memosExclusiveVersion', fallback: 'Memos 多版本适配');
   String get intelligentTagSystem =>
-      _t('intelligentTagSystem', fallback: '智能标签系统');
+      _t('intelligentTagSystem', fallback: '层级标签');
   String get randomReviewFeature => _t('randomReviewFeature', fallback: '随机回顾');
   String get realtimeSync => _t('realtimeSync', fallback: '实时同步');
   String get localEncryption => _t('localEncryption', fallback: '本地加密');
@@ -1017,7 +1027,7 @@ class AppLocalizationsSimple {
   String get welcomeBackPreparingSpace =>
       _t('welcomeBackPreparingSpace', fallback: '欢迎回来！正在为您准备个人笔记空间...');
   String get intelligentNoteManagement =>
-      _t('intelligentNoteManagement', fallback: '智能笔记管理，\n让思考更有条理');
+      _t('intelligentNoteManagement', fallback: '静待沉淀，\n蓄势而鸣');
   String get welcomeBack => _t('welcomeBack', fallback: '欢迎回来');
   String get continueCreativeJourney =>
       _t('continueCreativeJourney', fallback: '继续您的创作之旅');
@@ -1025,7 +1035,7 @@ class AppLocalizationsSimple {
   String get startYourCreativeJourney =>
       _t('startYourCreativeJourney', fallback: '开启您的创作之旅');
   String get onlySupportsMemosVersion =>
-      _t('onlySupportsMemosVersion', fallback: '仅支持 Memos 0.21.0');
+      _t('onlySupportsMemosVersion', fallback: '支持多个 Memos 版本');
   String get pleaseEnterUsername =>
       _t('pleaseEnterUsername', fallback: '请输入用户名');
   String get usernameMinLength =>
@@ -1082,7 +1092,7 @@ class AppLocalizationsSimple {
       _t('registrationFailed', fallback: '注册失败，请检查信息后重试');
   String get joinInkRoot => _t('joinInkRoot', fallback: '加入 InkRoot');
   String get startIntelligentNoteJourney =>
-      _t('startIntelligentNoteJourney', fallback: '开启您的智能笔记之旅');
+      _t('startIntelligentNoteJourney', fallback: '创建你的笔记空间');
   String get startCreativeJourney =>
       _t('startCreativeJourney', fallback: '开启您的\n创作之旅');
   String get recordEachMoment =>
@@ -1113,7 +1123,7 @@ class AppLocalizationsSimple {
       _t('whatFeaturesSupported', fallback: '笔记支持哪些功能？');
   String get whatFeaturesAnswer => _t(
         'whatFeaturesAnswer',
-        fallback: '支持 Markdown 格式、图片上传、标签分类、提醒功能、知识图谱等。还能使用 AI 助手帮助您创作和整理笔记。',
+        fallback: '支持富文本式编辑、Markdown 渲染、图片、标签、提醒、搜索、随机回顾、知识图谱和可选 AI 功能。',
       );
   String get isDataSafe => _t('isDataSafe', fallback: '数据安全吗？');
   String get isDataSafeAnswer => _t(
@@ -1246,7 +1256,7 @@ class AppLocalizationsSimple {
   String get relatedNotesRecommend =>
       _t('relatedNotesRecommend', fallback: '📌 相关笔记推荐');
   String get relatedNotesDesc =>
-      _t('relatedNotesDesc', fallback: '基于笔记内容智能推荐相关笔记');
+      _t('relatedNotesDesc', fallback: '根据内容查找可能相关的笔记');
   String get smartContinueWriting =>
       _t('smartContinueWriting', fallback: '✍️ 智能续写');
   String get smartContinueWritingDesc =>
@@ -1312,9 +1322,9 @@ class AppLocalizationsSimple {
 
   // ===== 设置页面 =====
   String get waitPatiently => _t('waitPatiently', fallback: '静待沉淀');
-  String get poiseToResound => _t('poiseToResound', fallback: '蓄势鸣响');
+  String get poiseToResound => _t('poiseToResound', fallback: '蓄势而鸣');
   String get focusAndAccumulate =>
-      _t('focusAndAccumulate', fallback: '你的每一次落笔，都是未来成长的根源！');
+      _t('focusAndAccumulate', fallback: '你的每一次落笔，都是未来生长的根源！');
 
   // ===== 隐私政策页面 =====
   String get privacyPolicyTitle => _t('privacyPolicyTitle', fallback: '隐私政策');
@@ -1600,7 +1610,7 @@ class AppLocalizationsSimple {
   String get selectExcludeTags => _t('selectExcludeTags', fallback: '选择要排除的标签');
   String get insightResults => _t('insightResults', fallback: '洞察结果');
   String get aiGeneratedAnalysis =>
-      _t('aiGeneratedAnalysis', fallback: 'AI为您生成的深度分析');
+      _t('aiGeneratedAnalysis', fallback: '根据当前筛选生成的整理结果');
   String get allTime => _t('allTime', fallback: '全部');
   String get openInNewWindow => _t('openInNewWindow', fallback: '在新窗口打开');
 
@@ -1938,8 +1948,8 @@ class AppLocalizationsSimple {
       : 'Intelligently continue based on existing content';
   String get aiSmartTags => locale.languageCode == 'zh' ? '智能标签' : 'Smart Tags';
   String get aiSmartTagsDesc => locale.languageCode == 'zh'
-      ? '自动生成精准标签'
-      : 'Automatically generate precise tags';
+      ? '根据内容生成标签建议'
+      : 'Suggest tags based on note content';
   String get aiRelatedNotes =>
       locale.languageCode == 'zh' ? '相关笔记' : 'Related Notes';
   String get aiSummary =>
@@ -1990,8 +2000,8 @@ class AppLocalizationsSimple {
   String get aiRelatedNotesFeature =>
       locale.languageCode == 'zh' ? 'AI 相关笔记' : 'AI Related Notes';
   String get aiRelatedNotesFeatureDesc => locale.languageCode == 'zh'
-      ? '智能推荐与当前笔记相关的其他笔记'
-      : 'Intelligently recommend notes related to the current note';
+      ? '查找与当前笔记可能相关的内容'
+      : 'Find notes that may be related to the current note';
   String get aiContinueWritingFeature =>
       locale.languageCode == 'zh' ? 'AI 续写' : 'AI Continue Writing';
   String get aiContinueWritingFeatureDesc => locale.languageCode == 'zh'
@@ -2000,8 +2010,8 @@ class AppLocalizationsSimple {
   String get aiSmartTagsAndSummary =>
       locale.languageCode == 'zh' ? 'AI 智能标签 & 摘要' : 'AI Smart Tags & Summary';
   String get aiSmartTagsAndSummaryDesc => locale.languageCode == 'zh'
-      ? '自动生成精准标签和智能摘要'
-      : 'Automatically generate precise tags and smart summaries';
+      ? '根据内容生成标签建议和摘要'
+      : 'Suggest tags and summaries based on note content';
   String get wechatAssistant =>
       locale.languageCode == 'zh' ? '微信小助手' : 'WeChat Assistant';
   String get wechatAssistantDesc => locale.languageCode == 'zh'
@@ -2814,7 +2824,7 @@ class AppLocalizationsSimple {
   String get noDataYet => _t('noDataYet', fallback: '暂无数据');
   String get personalizationEmptyHint => _t(
         'personalizationEmptyHint',
-        fallback: '开始使用 AI 相关笔记后，这里会生成你的个性化画像',
+        fallback: '开始使用相关笔记后，这里会显示你的使用统计',
       );
   String get usageStats => _t('usageStats', fallback: '使用统计');
   String get totalClicks => _t('totalClicks', fallback: '总点击');

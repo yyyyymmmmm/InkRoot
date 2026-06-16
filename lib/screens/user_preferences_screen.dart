@@ -139,7 +139,7 @@ class _UserPreferencesScreenState extends State<UserPreferencesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
                 AppLocalizationsSimple.of(context)?.personalizationEmptyHint ??
-                    '开始使用 AI 相关笔记后，这里会生成你的个性化画像',
+                    '开始使用相关笔记后，这里会显示你的使用统计',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: isDark ? Colors.grey[600] : Colors.grey[500],

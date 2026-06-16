@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:inkroot/themes/app_theme.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 
 /// 标签树节点
 class TagNode {
@@ -18,36 +19,43 @@ class TagNode {
 
   /// 从标签列表构建树结构
   static List<TagNode> buildTree(List<String> tags) {
-    if (tags.isEmpty) {
-      return [];
-    }
+    final noteTags = tags.map((tag) => [tag]).toList();
+    return buildTreeFromNoteTags(noteTags);
+  }
 
-    // 统计每个标签（及其父标签）的笔记数
-    final tagCounts = <String, int>{};
-    for (final tag in tags) {
-      final parts = tag.split('/');
-      for (var i = 0; i < parts.length; i++) {
-        final path = parts.sublist(0, i + 1).join('/');
-        tagCounts[path] = (tagCounts[path] ?? 0) + 1;
-      }
+  /// 从每条笔记的标签集合构建树结构，并按笔记数计数。
+  static List<TagNode> buildTreeFromNoteTags(Iterable<Iterable<String>> notes) {
+    final normalizedNotes = notes
+        .map(
+          (tags) => tags.map(normalizeTagPath).whereType<String>().toSet(),
+        )
+        .where((tags) => tags.isNotEmpty)
+        .toList();
+    if (normalizedNotes.isEmpty) {
+      return [];
     }
 
     // 构建树结构
     final childrenMap = <String, List<String>>{};
     final allPaths = <String>{};
+    final tagCounts = <String, int>{};
 
-    for (final tag in tags) {
-      final parts = tag.split('/');
-      for (var i = 0; i < parts.length; i++) {
-        final path = parts.sublist(0, i + 1).join('/');
-        allPaths.add(path);
+    for (final tags in normalizedNotes) {
+      final notePaths = <String>{};
+      for (final tag in tags) {
+        final parts = tag.split('/');
+        for (var i = 0; i < parts.length; i++) {
+          final path = parts.sublist(0, i + 1).join('/');
+          allPaths.add(path);
+          notePaths.add(path);
 
-        if (i < parts.length - 1) {
-          final parentPath = path;
-          if (!childrenMap.containsKey(parentPath)) {
-            childrenMap[parentPath] = [];
+          if (i < parts.length - 1) {
+            childrenMap.putIfAbsent(path, () => []);
           }
         }
+      }
+      for (final path in notePaths) {
+        tagCounts[path] = (tagCounts[path] ?? 0) + 1;
       }
     }
 
@@ -89,7 +97,21 @@ class TagNode {
       }
     }
 
+    sortNodes(rootNodes);
     return rootNodes;
+  }
+
+  static void sortNodes(List<TagNode> nodes) {
+    nodes.sort((a, b) {
+      final byCount = b.noteCount.compareTo(a.noteCount);
+      if (byCount != 0) {
+        return byCount;
+      }
+      return a.fullPath.compareTo(b.fullPath);
+    });
+    for (final node in nodes) {
+      sortNodes(node.children);
+    }
   }
 }
 
@@ -144,7 +166,7 @@ class _TagTreeItemState extends State<TagTreeItem> {
         Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => widget.onTagTap(widget.node.fullPath),
+            onTap: _openTag,
             borderRadius: BorderRadius.circular(12),
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 2),
@@ -165,11 +187,7 @@ class _TagTreeItemState extends State<TagTreeItem> {
                 children: [
                   if (hasChildren)
                     InkResponse(
-                      onTap: () {
-                        setState(() {
-                          _isExpanded = !_isExpanded;
-                        });
-                      },
+                      onTap: _toggleExpanded,
                       radius: 18,
                       child: SizedBox(
                         width: 28,
@@ -237,12 +255,25 @@ class _TagTreeItemState extends State<TagTreeItem> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: isSelected
-                        ? AppTheme.primaryColor
-                        : (isDarkMode ? Colors.grey[500] : Colors.grey[400]),
+                  Tooltip(
+                    message: '查看标签笔记',
+                    child: InkResponse(
+                      onTap: _openTag,
+                      radius: 18,
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : (isDarkMode
+                                  ? Colors.grey[500]
+                                  : Colors.grey[400]),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -270,5 +301,15 @@ class _TagTreeItemState extends State<TagTreeItem> {
           ),
       ],
     );
+  }
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
+  void _openTag() {
+    widget.onTagTap(widget.node.fullPath);
   }
 }

@@ -134,7 +134,7 @@ class NoteMoreOptionsMenu {
           value: 'ai',
           height: 44,
           child: _buildMenuItem(
-            icon: Icons.psychology_rounded,
+            icon: Icons.rate_review_rounded,
             label: localizations?.aiReview ?? 'AI点评',
             isDarkMode: isDarkMode,
           ),

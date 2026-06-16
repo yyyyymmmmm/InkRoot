@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.8] - 2026-06-16
+
+### 修复
+- 修复待办点击完成后状态不生效的问题
+- 修复下划线和加粗内容在主页渲染异常的问题
+- 修复搜索结果卡片与打开后的笔记内容不一致、空白卡片等问题
+- 修复相关笔记入口偶发显示无结果的问题，并保留原有相关笔记体验
+- 修复标签列表进入详情后返回路径不符合预期的问题
+- 恢复品牌文案“静待沉淀，蓄势而鸣”，避免设置页和关于页出现偏离品牌的通用描述
+
+### 优化
+- 优化 AI 点评、摘要、续写、标签推荐和洞察输出，减少模板化表达
+- 优化关于页、帮助页、设置页和法律文档内容，使其与当前功能和数据流一致
+- 优化图片预览、笔记排版、展开判断、WebDAV 备份和同步时间保留逻辑
+- 强化 CLI 发布流程，继续校验云验证配置、Android 应用 ID 和发布签名证书
+
+### 验证
+- iOS 模拟器完成 Debug 运行验证
+- `flutter analyze` 通过
+- GitHub Actions Release 继续负责 Android APK/AAB、iOS unsigned、macOS、Windows 和 Linux 产物构建
+
+---
+
 ## [1.1.7] - 2026-06-15
 
 ### 修复
@@ -29,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Android Release 新增签名证书指纹校验，签名证书不一致时直接失败，避免破坏覆盖安装链路
 
 ### 维护
-- Release 构建继续要求云验证 AppKey 和 Android 签名密钥通过 GitHub Secrets 注入，源码不保存私钥或密钥
+- 云验证 AppID 和客户端 AppKey 固定为源码默认值，Release 构建不再依赖 GitHub Secret 才能绑定官方云配置；Android 签名密钥仍通过 GitHub Secrets 注入
 
 ---
 
@@ -39,8 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 修复正式 Release 包未注入云验证 AppID / AppKey，导致官方公告、云配置和更新检查不可用的问题
 
 ### 维护
-- GitHub Actions Release 流程新增必要密钥校验，缺少云验证或 Android 签名密钥时直接失败
-- 统一 CLI 发布构建校验，release 构建缺少 `CLOUD_VERIFY_APP_ID` 或 `CLOUD_VERIFY_APP_KEY` 时不再继续打包
+- GitHub Actions Release 流程保留 Android 签名密钥校验，缺少签名密钥时直接失败
+- 统一 CLI 发布构建校验，云验证默认绑定官方配置，Android release 构建继续校验证书
 
 ---
 

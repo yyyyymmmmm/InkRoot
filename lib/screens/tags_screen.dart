@@ -10,6 +10,7 @@ import 'package:inkroot/themes/app_typography.dart';
 import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/widgets/sidebar.dart';
 import 'package:inkroot/widgets/tag_tree_item.dart';
 import 'package:provider/provider.dart';
@@ -122,7 +123,7 @@ class _TagsScreenState extends State<TagsScreen>
 
     return Consumer<AppProvider>(
       builder: (context, appProvider, _) {
-        final tags = appProvider.getAllTags().toList();
+        final tags = _visibleNormalizedTags(appProvider);
         // 🚀 标签统计（静默）
 
         return ResponsiveLayout(
@@ -297,16 +298,12 @@ class _TagsScreenState extends State<TagsScreen>
             ),
           ],
 
-          // 标签内容（点击空白处关闭搜索）
+          // 标签内容（点击空白处仅收起键盘，不清空搜索）
           Expanded(
             child: GestureDetector(
               onTap: () {
                 if (_isSearching) {
-                  setState(() {
-                    _isSearching = false;
-                    _searchQuery = '';
-                    _searchController.clear();
-                  });
+                  FocusScope.of(context).unfocus();
                 }
               },
               behavior: HitTestBehavior.translucent,
@@ -461,16 +458,12 @@ class _TagsScreenState extends State<TagsScreen>
             ),
           ],
 
-          // 标签内容（点击空白处关闭搜索）
+          // 标签内容（点击空白处仅收起键盘，不清空搜索）
           Expanded(
             child: GestureDetector(
               onTap: () {
                 if (_isSearching) {
-                  setState(() {
-                    _isSearching = false;
-                    _searchQuery = '';
-                    _searchController.clear();
-                  });
+                  FocusScope.of(context).unfocus();
                 }
               },
               behavior: HitTestBehavior.translucent,
@@ -858,12 +851,12 @@ class _TagsScreenState extends State<TagsScreen>
     Color iconColor,
     List<String> tags,
   ) {
-    // 根据搜索关键词过滤标签
-    final filteredTags = _searchQuery.isEmpty
+    final query = _searchQuery.trim().toLowerCase();
+    final filteredTags = query.isEmpty
         ? tags
         : tags
             .where(
-              (tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()),
+              (tag) => tag.toLowerCase().contains(query),
             )
             .toList();
 
@@ -887,6 +880,20 @@ class _TagsScreenState extends State<TagsScreen>
         ),
       ],
     );
+  }
+
+  List<String> _visibleNormalizedTags(AppProvider appProvider) {
+    final tags = <String>{};
+    for (final note in appProvider.notes) {
+      for (final tag in note.tags) {
+        final normalized = normalizeTagPath(tag);
+        if (normalized != null) {
+          tags.add(normalized);
+        }
+      }
+    }
+    return tags.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   }
 
   Widget _buildEmptyState(
@@ -1155,7 +1162,20 @@ class _TagsScreenState extends State<TagsScreen>
       );
     }
 
-    final tagNodes = TagNode.buildTree(validTags);
+    final appProvider = Provider.of<AppProvider>(context, listen: false);
+    final validTagSet = validTags.toSet();
+    final tagNodes = _searchQuery.trim().isEmpty
+        ? TagNode.buildTreeFromNoteTags(
+            appProvider.notes.map((note) => note.tags),
+          )
+        : TagNode.buildTreeFromNoteTags(
+            appProvider.notes.map(
+              (note) => note.tags.where((tag) {
+                final normalized = normalizeTagPath(tag);
+                return normalized != null && validTagSet.contains(normalized);
+              }),
+            ),
+          );
 
     if (tagNodes.isEmpty) {
       return Center(

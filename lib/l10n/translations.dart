@@ -203,7 +203,7 @@ class Translations {
     'saveConfiguration': {'zh': 'AI配置已保存', 'en': 'AI Config Saved'},
 
     // ===== 关于和帮助 =====
-    'aboutUs': {'zh': '关于我们', 'en': 'About Us'},
+    'aboutUs': {'zh': '关于 InkRoot', 'en': 'About InkRoot'},
     'version': {'zh': '版本', 'en': 'Version'},
     'team': {'zh': '团队', 'en': 'Team'},
     'helpCenter': {'zh': '帮助中心', 'en': 'Help Center'},
@@ -264,23 +264,21 @@ class Translations {
     },
 
     // ===== 引导页 =====
-    'onboardingTitle1': {'zh': '智能笔记管理', 'en': 'Smart Note Management'},
+    'onboardingTitle1': {'zh': '随手记录', 'en': 'Capture Notes'},
     'onboardingDesc1': {
-      'zh': '轻松记录生活中的每一个灵感时刻\n让思考更有条理，让创意永不丢失',
-      'en':
-          'Easily capture every moment of inspiration\nOrganize your thoughts and never lose creativity',
+      'zh': '打开就写，文字、图片、待办和链接都能放在一条笔记里',
+      'en': 'Open and write. Keep text, images, todos, and links in one note.',
     },
-    'onboardingTitle2': {'zh': '标签分类系统', 'en': 'Tag Classification System'},
+    'onboardingTitle2': {'zh': '用标签整理', 'en': 'Organize with Tags'},
     'onboardingDesc2': {
-      'zh': '智能标签让你的笔记井然有序\n快速找到需要的内容，提升工作效率',
-      'en':
-          'Smart tags keep your notes organized\nQuickly find what you need and boost productivity',
+      'zh': '支持层级标签、搜索和回顾，记录多了也能找回来',
+      'en': 'Use nested tags, search, and review to find notes later.',
     },
     'onboardingTitle3': {'zh': '随时随地同步', 'en': 'Sync Anytime, Anywhere'},
     'onboardingDesc3': {
-      'zh': '云端同步确保数据安全\n无论在哪里都能访问你的重要笔记',
+      'zh': '可连接官方服务器或自部署 Memos，多端同步由你选择',
       'en':
-          'Cloud sync ensures data security\nAccess your important notes anywhere',
+          'Connect to the official server or a self-hosted Memos service. Sync is your choice.',
     },
     'onboardingTitle4': {'zh': '多平台支持', 'en': 'Multi-Platform Support'},
     'onboardingDesc4': {
@@ -776,30 +774,30 @@ class Translations {
     // ===== 关于页面 =====
     'aboutInkRoot': {'zh': '关于InkRoot', 'en': 'About InkRoot'},
     'appTagline': {
-      'zh': '静待沉淀，蓄势鸣响。\n你的每一次落笔，都是未来生长的根源。',
+      'zh': '静待沉淀，蓄势而鸣。\n你的每一次落笔，都是未来生长的根源。',
       'en':
-          'Patient accumulation, poised to resound.\nEvery note you take is the root of future growth.',
+          'Settle patiently, then speak with force.\nEvery note you take becomes a root for what comes next.',
     },
     'appIntroduction': {
-      'zh': 'InkRoot-墨鸣笔记是一款基于Memos系统打造的极简跨平台笔记应用，专为追求高效记录与深度积累的用户设计。',
+      'zh': 'InkRoot 是一款面向个人记录和知识整理的笔记应用。你可以本地使用，也可以连接官方服务器或自部署 Memos 服务同步笔记。',
       'en':
-          'InkRoot Notes is a minimalist cross-platform note-taking app built on the Memos system, designed for users who pursue efficient recording and deep accumulation.',
+          'InkRoot is a note app for personal capture and knowledge organization. You can use it locally, connect to the official server, or sync with a self-hosted Memos service.',
     },
     'appTechDescription': {
-      'zh':
-          'InkRoot-墨鸣笔记基于Flutter 3.32.5和Dart 3.0+构建，采用现代化的架构设计，提供全平台一致的用户体验。集成丰富的功能特性，从基础的笔记记录到高级的知识管理，满足各种使用场景。',
+      'zh': '这些是当前版本已经开放的主要能力。不同 Memos 服务器版本的接口能力不同，应用会按服务器版本自动适配并尽量降级处理。',
       'en':
-          'InkRoot Notes is built with Flutter 3.32.5 and Dart 3.0+, featuring modern architecture design and providing a consistent user experience across all platforms. With rich features from basic note-taking to advanced knowledge management, it meets various use cases.',
+          'These are the main capabilities available in this version. Memos server APIs vary by version, so the app adapts to the detected server version and falls back where needed.',
     },
     'technicalDetails': {
-      'zh': '基于Flutter 3.32.5打造的跨平台架构，支持Android、iOS、Web三大平台。',
+      'zh':
+          '当前支持 Android、iOS、macOS、Windows 和 Linux。应用提供富文本式编辑、Markdown 渲染、图片、标签、搜索、提醒、随机回顾、WebDAV 备份、导入导出和可选 AI 功能。',
       'en':
-          'Built with Flutter 3.32.5 cross-platform architecture, supporting Android, iOS, and Web platforms.',
+          'InkRoot currently supports Android, iOS, macOS, Windows, and Linux. It includes rich-text-style editing, Markdown rendering, images, tags, search, reminders, random review, WebDAV backup, import/export, and optional AI features.',
     },
     'securityCommitment': {
-      'zh': '数据安全是我们的核心承诺。应用支持本地SQLite存储、敏感信息加密、HTTPS安全传输。',
+      'zh': '笔记优先保存在本机。登录、同步、WebDAV 和 AI 相关配置由你主动设置；自部署服务中的数据由对应服务器保存和管理。',
       'en':
-          'Data security is our core commitment. The app supports local SQLite storage, sensitive data encryption, and HTTPS secure transmission.',
+          'Notes are stored locally first. Login, sync, WebDAV, and AI settings are configured by you; data on self-hosted services is stored and managed by those servers.',
     },
     'coreFeaturesTitle': {'zh': '核心功能', 'en': 'Core Features'},
     'contactUs': {'zh': '联系我们', 'en': 'Contact Us'},
@@ -820,11 +818,11 @@ class Translations {
 
     // ===== 功能标签 =====
     'memosExclusiveVersion': {
-      'zh': 'Memos 0.21.0专版',
-      'en': 'Memos 0.21.0 Exclusive',
+      'zh': 'Memos 多版本适配',
+      'en': 'Memos Version Compatibility',
     },
     'markdownSupport': {'zh': 'Markdown支持', 'en': 'Markdown Support'},
-    'intelligentTagSystem': {'zh': '智能标签系统', 'en': 'Intelligent Tag System'},
+    'intelligentTagSystem': {'zh': '层级标签', 'en': 'Nested Tags'},
     'fullTextSearch': {'zh': '全文搜索', 'en': 'Full-Text Search'},
     'randomReviewFeature': {'zh': '随机回顾', 'en': 'Random Review'},
     'dataStatistics': {'zh': '数据统计', 'en': 'Data Statistics'},
@@ -1111,8 +1109,8 @@ class Translations {
       'en': 'Welcome back! Preparing your personal note space...',
     },
     'intelligentNoteManagement': {
-      'zh': '智能笔记管理，\n让思考更有条理',
-      'en': 'Intelligent note management,\nmake thinking more organized',
+      'zh': '静待沉淀，\n蓄势而鸣',
+      'en': 'Settle patiently,\nthen speak with force',
     },
     'welcomeBack': {'zh': '欢迎回来', 'en': 'Welcome Back'},
     'continueCreativeJourney': {
@@ -1125,8 +1123,8 @@ class Translations {
       'en': 'Start your creative journey',
     },
     'onlySupportsMemosVersion': {
-      'zh': '仅支持 Memos 0.21.0',
-      'en': 'Only supports Memos 0.21.0',
+      'zh': '支持多个 Memos 版本',
+      'en': 'Supports multiple Memos versions',
     },
     'pleaseEnterUsername': {'zh': '请输入用户名', 'en': 'Please enter username'},
     'usernameMinLength': {
@@ -1209,8 +1207,8 @@ class Translations {
     },
     'joinInkRoot': {'zh': '加入 InkRoot', 'en': 'Join InkRoot'},
     'startIntelligentNoteJourney': {
-      'zh': '开启您的智能笔记之旅',
-      'en': 'Start your intelligent note journey',
+      'zh': '创建你的笔记空间',
+      'en': 'Create your note space',
     },
     'startCreativeJourney': {
       'zh': '开启您的\n创作之旅',
@@ -1263,9 +1261,9 @@ class Translations {
       'en': 'What features are supported?',
     },
     'whatFeaturesAnswer': {
-      'zh': '支持 Markdown 格式、图片上传、标签分类、提醒功能、知识图谱等。还能使用 AI 助手帮助您创作和整理笔记。',
+      'zh': '支持富文本式编辑、Markdown 渲染、图片、标签、提醒、搜索、随机回顾、知识图谱和可选 AI 功能。',
       'en':
-          'Supports Markdown format, image upload, tag classification, reminders, knowledge graph, etc. You can also use AI assistant to help you create and organize notes.',
+          'Supports rich-text-style editing, Markdown rendering, images, tags, reminders, search, random review, knowledge graph, and optional AI features.',
     },
     'isDataSafe': {'zh': '数据安全吗？', 'en': 'Is data safe?'},
     'isDataSafeAnswer': {
@@ -1414,8 +1412,8 @@ class Translations {
     },
     'relatedNotesRecommend': {'zh': '📌 相关笔记推荐', 'en': '📌 Related Notes'},
     'relatedNotesDesc': {
-      'zh': '基于笔记内容智能推荐相关笔记',
-      'en': 'Intelligently recommend related notes',
+      'zh': '根据内容查找可能相关的笔记',
+      'en': 'Find notes that may be related by content',
     },
     'smartContinueWriting': {'zh': '✍️ 智能续写', 'en': '✍️ Smart Writing'},
     'smartContinueWritingDesc': {
@@ -1509,11 +1507,11 @@ class Translations {
     'gpt35Turbo': {'zh': 'GPT-3.5 Turbo', 'en': 'GPT-3.5 Turbo'},
 
     // ===== 设置页面 =====
-    'waitPatiently': {'zh': '静待沉淀', 'en': 'Patient Accumulation'},
-    'poiseToResound': {'zh': '蓄势鸣响', 'en': 'Poised to Resound'},
+    'waitPatiently': {'zh': '静待沉淀', 'en': 'Settle Patiently'},
+    'poiseToResound': {'zh': '蓄势而鸣', 'en': 'Speak With Force'},
     'focusAndAccumulate': {
-      'zh': '你的每一次落笔，都是未来成长的根源！',
-      'en': 'Focus on thinking, accumulate wisdom',
+      'zh': '你的每一次落笔，都是未来生长的根源！',
+      'en': 'Every note you take becomes a root for what comes next.',
     },
 
     // ===== 隐私政策页面 =====
@@ -1774,8 +1772,8 @@ class Translations {
     'selectExcludeTags': {'zh': '选择要排除的标签', 'en': 'Select tags to exclude'},
     'insightResults': {'zh': '洞察结果', 'en': 'Insight Results'},
     'aiGeneratedAnalysis': {
-      'zh': 'AI为您生成的深度分析',
-      'en': 'AI-generated deep analysis for you',
+      'zh': '根据当前筛选生成的整理结果',
+      'en': 'Organized result generated from the current filter',
     },
     'allTime': {'zh': '全部', 'en': 'All Time'},
     'openInNewWindow': {'zh': '在新窗口打开', 'en': 'Open in New Window'},
@@ -2651,9 +2649,8 @@ class Translations {
     'allDataCleared': {'zh': '已清除所有数据', 'en': 'All data cleared'},
     'noDataYet': {'zh': '暂无数据', 'en': 'No Data Yet'},
     'personalizationEmptyHint': {
-      'zh': '开始使用 AI 相关笔记后，这里会生成你的个性化画像',
-      'en':
-          'Start using AI-powered related notes to build your personalization profile',
+      'zh': '开始使用相关笔记后，这里会显示你的使用统计',
+      'en': 'After using related notes, your usage statistics will appear here',
     },
     'usageStats': {'zh': '使用统计', 'en': 'Usage Stats'},
     'totalClicks': {'zh': '总点击', 'en': 'Clicks'},

@@ -32,21 +32,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final l10n = AppLocalizationsSimple.of(context);
     return [
       OnboardingPage(
-        title: l10n?.onboardingTitle1 ?? '智能笔记管理',
-        description:
-            l10n?.onboardingDesc1 ?? '轻松记录生活中的每一个灵感时刻\n让思考更有条理，让创意永不丢失',
+        title: l10n?.onboardingTitle1 ?? '随手记录',
+        description: l10n?.onboardingDesc1 ?? '打开就写，文字、图片、待办和链接都能放在一条笔记里',
         iconData: Icons.edit_note_rounded,
         gradient: [AppTheme.primaryColor, AppTheme.primaryLightColor],
       ),
       OnboardingPage(
-        title: l10n?.onboardingTitle2 ?? '标签分类系统',
-        description: l10n?.onboardingDesc2 ?? '智能标签让你的笔记井然有序\n快速找到需要的内容，提升工作效率',
+        title: l10n?.onboardingTitle2 ?? '用标签整理',
+        description: l10n?.onboardingDesc2 ?? '支持层级标签、搜索和回顾，记录多了也能找回来',
         iconData: Icons.tag_rounded,
         gradient: [AppTheme.accentColor, AppTheme.primaryColor],
       ),
       OnboardingPage(
         title: l10n?.onboardingTitle3 ?? '随时随地同步',
-        description: l10n?.onboardingDesc3 ?? '云端同步确保数据安全\n无论在哪里都能访问你的重要笔记',
+        description: l10n?.onboardingDesc3 ?? '可连接官方服务器或自部署 Memos，多端同步由你选择',
         iconData: Icons.sync_rounded,
         gradient: [AppTheme.primaryLightColor, AppTheme.accentColor],
       ),
@@ -308,20 +307,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   width: ResponsiveUtils.responsiveIconSize(context, 32),
                   height: ResponsiveUtils.responsiveIconSize(context, 32),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        AppTheme.primaryColor,
-                        AppTheme.primaryLightColor,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
-                    size: ResponsiveUtils.responsiveIconSize(context, 18),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
                 SizedBox(width: ResponsiveUtils.responsiveSpacing(context, 8)),
@@ -678,21 +670,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           height:
                               ResponsiveUtils.responsiveIconSize(context, 48),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                AppTheme.primaryColor,
-                                AppTheme.primaryLightColor,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
-                            Icons.auto_awesome_rounded,
-                            color: Colors.white,
-                            size:
-                                ResponsiveUtils.responsiveIconSize(context, 24),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
                         SizedBox(
@@ -716,7 +700,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       height: ResponsiveUtils.responsiveSpacing(context, 40),
                     ),
 
-                    // 大标题
                     Text(
                       '静待沉淀',
                       style: TextStyle(
@@ -731,7 +714,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
 
                     Text(
-                      '蓄势鸣响',
+                      '蓄势而鸣',
                       style: TextStyle(
                         fontSize:
                             ResponsiveUtils.responsiveFontSize(context, 48),
@@ -746,7 +729,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
 
                     Text(
-                      '专为思考者打造的智能笔记应用\n让每一个灵感都得到妥善保管，让每一次思考都产生价值',
+                      '你的每一次落笔，都是未来生长的根源。',
                       style: TextStyle(
                         fontSize:
                             ResponsiveUtils.responsiveFontSize(context, 18),

@@ -21,6 +21,7 @@ import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/image_cache_manager.dart'; // 🔥 添加长期缓存管理器
 import 'package:inkroot/utils/memos_content_helper.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
 import 'package:inkroot/utils/text_style_helper.dart';
 import 'package:inkroot/utils/todo_parser.dart';
 import 'package:inkroot/widgets/annotations_sidebar.dart';
@@ -40,6 +41,7 @@ class NoteCard extends StatefulWidget {
     required this.onPin,
     this.onNoteUpdated, // 新增：笔记更新回调（用于统一组件）
     this.disableTagNavigation = false, // 🎯 是否禁用标签点击跳转（避免无限嵌套）
+    this.onTagTap,
     this.highlightQuery,
     super.key,
   });
@@ -49,6 +51,7 @@ class NoteCard extends StatefulWidget {
   final VoidCallback onPin;
   final VoidCallback? onNoteUpdated; // 可选的笔记更新回调
   final bool disableTagNavigation; // 是否禁用标签跳转
+  final ValueChanged<String>? onTagTap;
   final String? highlightQuery;
 
   // 🚀 便捷访问属性
@@ -69,10 +72,13 @@ class _NoteCardState extends State<NoteCard>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   final ValueNotifier<bool> _expandedNotifier = ValueNotifier<bool>(false);
+  Note? _optimisticNote;
 
   // 🚀 精确测量文本行数的缓存
   bool? _needsExpansionCache;
   String? _lastMeasuredContent;
+
+  Note get _effectiveNote => _optimisticNote ?? widget.note;
 
   @override
   void initState() {
@@ -111,10 +117,11 @@ class _NoteCardState extends State<NoteCard>
   // 处理标签和Markdown内容
   Widget _buildContent() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final note = _effectiveNote;
 
-    final imagePaths = MemosContentHelper.extractNoteImagePaths(widget.note);
+    final imagePaths = MemosContentHelper.extractNoteImagePaths(note);
     final contentWithoutImages =
-        MemosContentHelper.removeMarkdownImages(widget.content);
+        MemosContentHelper.removeMarkdownImages(note.content);
     final previewVisibleText =
         MemosContentHelper.previewVisibleText(contentWithoutImages);
     final expansionText =
@@ -156,19 +163,20 @@ class _NoteCardState extends State<NoteCard>
                               .appConfig
                               .memosApiUrl,
                       selectable: false,
-                      note: widget.note, // 🎯 传入note对象
+                      note: note, // 🎯 传入note对象
                       onCheckboxTap: _toggleTodoItem, // 🎯 复选框点击回调（传递索引）
                       mode: MemosMarkdownMode.cardPreview,
                       highlightQuery: widget.highlightQuery,
                       // 🎯 标签点击 - 根据配置决定是否跳转
                       onTagTap: widget.disableTagNavigation
-                          ? null // 禁用标签跳转（避免在标签详情页中无限嵌套）
-                          : (tagName) {
-                              context.pushNamed(
-                                'tag-notes',
-                                queryParameters: {'tag': tagName},
-                              );
-                            },
+                          ? null
+                          : widget.onTagTap ??
+                              (tagName) {
+                                context.pushNamed(
+                                  'tag-notes',
+                                  queryParameters: {'tag': tagName},
+                                );
+                              },
                       // 🎯 链接点击 - 打开浏览器
                       onLinkTap: (url) async {
                         final uri = Uri.tryParse(url);
@@ -425,7 +433,8 @@ class _NoteCardState extends State<NoteCard>
 
   // 🎯 切换指定索引的待办事项
   void _toggleTodoItem(int todoIndex) {
-    final todos = TodoParser.parseTodos(widget.note.content);
+    final currentNote = _effectiveNote;
+    final todos = TodoParser.parseTodos(currentNote.content);
     if (todoIndex < 0 || todoIndex >= todos.length) {
       if (kDebugMode) {
         debugPrint('NoteCard: 待办事项索引越界 $todoIndex/${todos.length}');
@@ -436,7 +445,7 @@ class _NoteCardState extends State<NoteCard>
     // 切换待办事项的状态
     final todo = todos[todoIndex];
     final newContent =
-        TodoParser.toggleTodoAtLine(widget.note.content, todo.lineNumber);
+        TodoParser.toggleTodoAtLine(currentNote.content, todo.lineNumber);
 
     if (kDebugMode) {
       debugPrint(
@@ -444,11 +453,32 @@ class _NoteCardState extends State<NoteCard>
       );
     }
 
+    setState(() {
+      _optimisticNote = currentNote.copyWith(
+        content: newContent,
+        updatedAt: DateTime.now(),
+        tags: tag_utils.extractTagsFromContent(newContent),
+        isSynced: false,
+      );
+    });
+
     // 更新笔记
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    appProvider.updateNote(widget.note, newContent).then((_) {
+    appProvider.updateNote(currentNote, newContent).then((success) {
       if (kDebugMode) {
-        debugPrint('NoteCard: 待办事项状态已更新');
+        debugPrint('NoteCard: 待办事项状态已更新 success=$success');
+      }
+      if (!mounted) {
+        return;
+      }
+      if (!success) {
+        setState(() {
+          _optimisticNote = null;
+        });
+        SnackBarUtils.showError(
+          context,
+          AppLocalizationsSimple.of(context)?.updateFailed ?? '更新失败',
+        );
       }
     }).catchError((error) {
       if (kDebugMode) {
@@ -457,6 +487,9 @@ class _NoteCardState extends State<NoteCard>
       if (!mounted) {
         return;
       }
+      setState(() {
+        _optimisticNote = null;
+      });
       SnackBarUtils.showError(
         context,
         AppLocalizationsSimple.of(context)?.updateFailed ?? '更新失败',

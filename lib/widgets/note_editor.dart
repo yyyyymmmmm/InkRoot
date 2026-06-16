@@ -45,6 +45,7 @@ class _NoteEditorState extends State<NoteEditor>
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   final FocusNode _textFocusNode = FocusNode();
+  TextSelection? _lastUsableSelection;
 
   // 语音识别动画控制器
   late AnimationController _speechAnimationController;
@@ -489,6 +490,7 @@ class _NoteEditorState extends State<NoteEditor>
 
     // 监听输入变化，更新保存按钮状态和行数
     _textController.addListener(() {
+      _preserveCurrentSelection();
       _syncImageAnchorsForTextChange();
       _updateLineCount();
 
@@ -1011,7 +1013,7 @@ class _NoteEditorState extends State<NoteEditor>
     required List<_AnchoredImage> images,
   }) =>
       range.copyWith(
-        start: start + _insertedLengthBefore(start, images),
+        start: start + _insertedLengthBeforeOrAt(start, images),
         end: end + _insertedLengthBefore(end, images),
       );
 
@@ -1019,6 +1021,16 @@ class _NoteEditorState extends State<NoteEditor>
     var inserted = 0;
     for (final image in images) {
       if (image.offset < offset) {
+        inserted += image.markdown.length;
+      }
+    }
+    return inserted;
+  }
+
+  int _insertedLengthBeforeOrAt(int offset, List<_AnchoredImage> images) {
+    var inserted = 0;
+    for (final image in images) {
+      if (image.offset <= offset) {
         inserted += image.markdown.length;
       }
     }
@@ -1870,16 +1882,19 @@ class _NoteEditorState extends State<NoteEditor>
   }
 
   void _toggleBold() {
+    _restoreSelectionForFormatting();
     _textController.toggleMark(MemoTextMark.bold);
     setState(() {});
   }
 
   void _toggleInlineCode() {
+    _restoreSelectionForFormatting();
     _textController.toggleMark(MemoTextMark.code);
     setState(() {});
   }
 
   void _toggleUnderline() {
+    _restoreSelectionForFormatting();
     _textController.toggleMark(MemoTextMark.underline);
     setState(() {});
   }
@@ -2229,10 +2244,37 @@ class _NoteEditorState extends State<NoteEditor>
   }
 
   void _showMoreOptions() {
+    _preserveCurrentSelection();
     setState(() {
       _showingMoreOptions = !_showingMoreOptions;
     });
     _keepEditorFocused();
+  }
+
+  void _preserveCurrentSelection() {
+    final selection = _textController.selection;
+    if (selection.isValid && !selection.isCollapsed) {
+      _lastUsableSelection = selection;
+    }
+  }
+
+  void _restoreSelectionForFormatting() {
+    final selection = _textController.selection;
+    if (selection.isValid && !selection.isCollapsed) {
+      _lastUsableSelection = selection;
+      return;
+    }
+
+    final lastSelection = _lastUsableSelection;
+    if (lastSelection == null || !lastSelection.isValid) {
+      return;
+    }
+    if (lastSelection.start < 0 ||
+        lastSelection.end > _textController.text.length ||
+        lastSelection.isCollapsed) {
+      return;
+    }
+    _textController.selection = lastSelection;
   }
 
   void _keepEditorFocused() {
@@ -2385,16 +2427,22 @@ class _NoteEditorState extends State<NoteEditor>
     required VoidCallback onPressed,
     required Color secondaryTextColor,
   }) =>
-      IconButton(
-        icon: Icon(
-          icon,
-          size: 20,
-          color: secondaryTextColor,
+      Listener(
+        onPointerDown: (_) => _preserveCurrentSelection(),
+        child: IconButton(
+          icon: Icon(
+            icon,
+            size: 20,
+            color: secondaryTextColor,
+          ),
+          onPressed: () {
+            onPressed();
+            _keepEditorFocused();
+          },
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(),
+          visualDensity: VisualDensity.compact,
         ),
-        onPressed: onPressed,
-        padding: const EdgeInsets.all(8),
-        constraints: const BoxConstraints(),
-        visualDensity: VisualDensity.compact,
       );
 
   Widget _buildToolbarIconButton({
@@ -2413,28 +2461,31 @@ class _NoteEditorState extends State<NoteEditor>
         color: isActive ? effectiveActiveColor.withValues(alpha: 0.12) : null,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: IconButton(
-        icon: IconTheme(
-          data: IconThemeData(
-            color: isActive ? effectiveActiveColor : iconColor,
-            size: 20,
-          ),
-          child: DefaultTextStyle.merge(
-            style: TextStyle(
+      child: Listener(
+        onPointerDown: (_) => _preserveCurrentSelection(),
+        child: IconButton(
+          icon: IconTheme(
+            data: IconThemeData(
               color: isActive ? effectiveActiveColor : iconColor,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
+              size: 20,
             ),
-            child: icon,
+            child: DefaultTextStyle.merge(
+              style: TextStyle(
+                color: isActive ? effectiveActiveColor : iconColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+              child: icon,
+            ),
           ),
+          onPressed: () {
+            onPressed();
+            _keepEditorFocused();
+          },
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(),
+          visualDensity: VisualDensity.compact,
         ),
-        onPressed: () {
-          onPressed();
-          _keepEditorFocused();
-        },
-        padding: const EdgeInsets.all(8),
-        constraints: const BoxConstraints(),
-        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -2716,6 +2767,7 @@ class _NoteEditorState extends State<NoteEditor>
         apiKey: apiKey,
         apiUrl: apiUrl,
         model: model,
+        allNotes: appProvider.notes,
       );
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();

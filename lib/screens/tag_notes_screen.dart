@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
+import 'package:inkroot/services/note_sorting_helper.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/themes/app_typography.dart';
-import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/widgets/note_card.dart';
 import 'package:inkroot/widgets/note_editor.dart';
 import 'package:provider/provider.dart';
@@ -31,21 +32,31 @@ class TagNotesScreen extends StatefulWidget {
 class _TagNotesScreenState extends State<TagNotesScreen> {
   // 不再需要本地状态，直接使用 Consumer 监听 Provider
 
+  void _switchTag(String tagName) {
+    final nextTag = normalizeTagPath(tagName);
+    final currentTag = _normalizedTagName;
+    if (nextTag == null || nextTag == currentTag) {
+      return;
+    }
+    context.pushNamed(
+      'tag-notes',
+      queryParameters: {'tag': nextTag},
+    );
+  }
+
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/tags');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 🐛 调试日志：打印接收到的标签名
-    Log.ui.debug(
-      'Build tag notes screen',
-      data: {
-        'tagName': widget.tagName,
-        'tagNameLength': widget.tagName.length,
-        'isEmpty': widget.tagName.isEmpty,
-      },
-    );
-
     // 🛡️ 防御性检查：标签名不能为空
-    if (widget.tagName.isEmpty || widget.tagName.trim().isEmpty) {
-      Log.ui.warning('Invalid empty tag name for tag notes screen');
+    final tagName = _normalizedTagName;
+    if (tagName.isEmpty) {
       final l10n = AppLocalizationsSimple.of(context);
       return Scaffold(
         appBar: AppBar(
@@ -63,16 +74,19 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
 
     return Consumer<AppProvider>(
       builder: (context, appProvider, _) {
-        // 🎯 计算当前标签的笔记数量（支持层级筛选）
-        final notesCount = appProvider.notes
+        final currentNotes = _notesForCurrentTag(appProvider);
+        final childCount = currentNotes
             .where(
               (note) => note.tags.any(
-                (tag) =>
-                    tag == widget.tagName ||
-                    tag.startsWith('${widget.tagName}/'),
+                (tag) {
+                  final normalizedTag = normalizeTagPath(tag);
+                  return normalizedTag != null &&
+                      normalizedTag.startsWith('$tagName/');
+                },
               ),
             )
             .length;
+        final notesCount = currentNotes.length;
 
         return Scaffold(
           backgroundColor: backgroundColor,
@@ -89,14 +103,14 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
                     ? AppTheme.primaryLightColor
                     : AppTheme.primaryColor,
               ),
-              onPressed: () => context.pop(),
+              onPressed: _handleBack,
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '#${widget.tagName}',
+                  '#$tagName',
                   style: AppTypography.getTitleStyle(
                     context,
                     fontSize: 18,
@@ -108,7 +122,9 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '$notesCount ${AppLocalizationsSimple.of(context)?.notes ?? "条笔记"}',
+                  childCount > 0
+                      ? '$notesCount ${AppLocalizationsSimple.of(context)?.notes ?? "条笔记"} · 含子标签'
+                      : '$notesCount ${AppLocalizationsSimple.of(context)?.notes ?? "条笔记"}',
                   style: AppTypography.getCaptionStyle(
                     context,
                     color: isDarkMode
@@ -119,61 +135,21 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
               ],
             ),
           ),
-          body: Consumer<AppProvider>(
-            builder: (context, appProvider, _) {
-              // 🐛 调试日志
-              Log.ui.debug(
-                'Filter notes by tag',
-                data: {
-                  'tagName': widget.tagName,
-                  'notesCount': appProvider.notes.length,
-                },
-              );
-
-              // 打印前5个笔记的标签
-              for (var i = 0; i < appProvider.notes.length && i < 5; i++) {
-                Log.ui.debug(
-                  'Tag notes sample',
-                  data: {'index': i + 1, 'tags': appProvider.notes[i].tags},
-                );
-              }
-
-              // 🎯 实时监听笔记变化，支持层级标签筛选
-              final currentNotes = appProvider.notes.where((note) {
-                final hasTag = note.tags.any(
-                  (tag) =>
-                      tag == widget.tagName ||
-                      tag.startsWith('${widget.tagName}/'),
-                );
-                if (hasTag) {
-                  Log.ui.debug(
-                    'Matched note for tag filter',
-                    data: {'tags': note.tags},
-                  );
-                }
-                return hasTag;
-              }).toList()
-                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-              Log.ui.debug(
-                'Tag notes filter completed',
-                data: {'filteredCount': currentNotes.length},
-              );
-
-              if (currentNotes.isEmpty) {
-                Log.ui.debug('No notes matched tag filter');
-                return _buildEmptyState(context);
-              }
-
-              return ResponsiveLayout(
-                mobile: _buildNotesList(context, currentNotes),
-                tablet:
-                    _buildNotesGrid(context, currentNotes, crossAxisCount: 2),
-                desktop:
-                    _buildNotesGrid(context, currentNotes, crossAxisCount: 3),
-              );
-            },
-          ),
+          body: currentNotes.isEmpty
+              ? _buildEmptyState(context)
+              : ResponsiveLayout(
+                  mobile: _buildNotesList(context, currentNotes),
+                  tablet: _buildNotesGrid(
+                    context,
+                    currentNotes,
+                    crossAxisCount: 2,
+                  ),
+                  desktop: _buildNotesGrid(
+                    context,
+                    currentNotes,
+                    crossAxisCount: 3,
+                  ),
+                ),
           // 🎯 右下角添加按钮，默认带当前标签
           floatingActionButton: FloatingActionButton(
             onPressed: () {
@@ -191,6 +167,16 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
     );
   }
 
+  String get _normalizedTagName => normalizeTagPath(widget.tagName) ?? '';
+
+  List<Note> _notesForCurrentTag(AppProvider appProvider) =>
+      appProvider.notes.where((note) {
+        return note.tags.any(
+          (tag) => tagPathMatches(tag, _normalizedTagName),
+        );
+      }).toList()
+        ..sort(noteComparator(appProvider.sortOrder));
+
   // 🎯 显示添加笔记对话框，默认带当前标签
   void _showAddNoteDialog(BuildContext context) {
     showModalBottomSheet(
@@ -198,7 +184,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => NoteEditor(
-        initialContent: '#${widget.tagName} ', // 🎯 预填充当前标签
+        initialContent: '#$_normalizedTagName ', // 🎯 预填充当前标签
         onSave: (content) async {
           if (content.trim().isNotEmpty) {
             try {
@@ -281,7 +267,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
           ),
           SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 32)),
           Text(
-            '还没有带 #${widget.tagName} 的笔记',
+            '还没有带 #$_normalizedTagName 的笔记',
             style: AppTypography.getBodyStyle(
               context,
               fontSize: 18,
@@ -293,7 +279,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              '创建新笔记时，在内容中输入 #${widget.tagName} 即可',
+              '创建一条笔记会自动带上 #$_normalizedTagName',
               textAlign: TextAlign.center,
               style: AppTypography.getCaptionStyle(
                 context,
@@ -304,10 +290,10 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
           SizedBox(height: ResponsiveUtils.responsiveSpacing(context, 32)),
           // CTA按钮
           ElevatedButton.icon(
-            onPressed: () => context.go('/'),
+            onPressed: () => _showAddNoteDialog(context),
             icon: const Icon(Icons.add, size: 20),
             label: Text(
-              AppLocalizationsSimple.of(context)?.createNote ?? '创建笔记',
+              '创建带 #$_normalizedTagName 的笔记',
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
@@ -338,7 +324,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
               child: NoteCard(
                 key: ValueKey('card_${note.id}'), // 🚀 与主页一致
                 note: note,
-                disableTagNavigation: true, // 🎯 在标签详情页中禁用标签点击跳转，避免无限嵌套
+                onTagTap: _switchTag,
                 onEdit: () {
                   // 🎯 与主页完全一致：弹出底部编辑器
                   _showEditNoteForm(note);
@@ -387,7 +373,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
                 child: NoteCard(
                   key: ValueKey('card_${note.id}'), // 🚀 与主页一致
                   note: note,
-                  disableTagNavigation: true, // 🎯 在标签详情页中禁用标签点击跳转，避免无限嵌套
+                  onTagTap: _switchTag,
                   onEdit: () {
                     // 🎯 与主页完全一致：弹出底部编辑器
                     _showEditNoteForm(note);

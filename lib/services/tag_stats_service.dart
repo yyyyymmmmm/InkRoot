@@ -1,3 +1,5 @@
+import 'package:inkroot/utils/tag_path_utils.dart';
+
 /// Lightweight tag statistics for sidebar/tags page.
 ///
 /// NOTE: when used with `compute()`, input/output MUST be JSON-like objects.
@@ -36,7 +38,7 @@ Map<String, dynamic> buildTagStatsPayloadFromNoteJson(
       if (t is! String) {
         continue;
       }
-      final tag = _normalizeTagPath(t);
+      final tag = normalizeTagPath(t);
       if (tag == null) {
         continue;
       }
@@ -115,7 +117,7 @@ Map<String, dynamic> buildTagTreePayloadFromNoteJson(
       if (t is! String) {
         continue;
       }
-      final tag = _normalizeTagPath(t);
+      final tag = normalizeTagPath(t);
       if (tag == null) {
         continue;
       }
@@ -166,18 +168,6 @@ Map<String, dynamic> buildTagTreePayloadFromNoteJson(
     'totalUniqueTags': nodeMap.length,
     'roots': roots.map(buildNode).toList(growable: false),
   };
-}
-
-String? _normalizeTagPath(String tag) {
-  final parts = tag
-      .split('/')
-      .map((part) => part.trim())
-      .where((part) => part.isNotEmpty)
-      .toList(growable: false);
-  if (parts.isEmpty) {
-    return null;
-  }
-  return parts.join('/');
 }
 
 TagStatsSnapshot tagStatsSnapshotFromPayload(Map<String, dynamic> payload) {

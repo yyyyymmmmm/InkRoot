@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/services/user_behavior_service.dart';
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
+import 'package:inkroot/utils/text_analysis_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 🚀 AI洞察引擎 - 革命性实现
@@ -399,35 +400,39 @@ class AIInsightEngine {
   }
 
   String _buildSummaryTask(AnalysisStrategy strategy) => '''
-用2-3句话（60-80字）总结笔记核心内容。像口头转述给朋友。
+生成一段适合回看卡片使用的摘要。不是压缩原文，而是提炼这条笔记以后为什么值得看。
 
-【3条铁律】
-1. 从用户角度说（用户关心什么，不是技术细节）
-2. 客观陈述（不要"你/我"，不要评价）
-3. 流畅成段（不分点、不用符号）
+【输出要求】
+1. 2-3句话，60-100字。
+2. 纯文本，不要标题、编号、emoji、Markdown。
+3. 客观陈述，不要使用"你/我"。
+4. 优先保留结论、问题、行动、限制条件；删除寒暄、重复和无关细节。
+5. 如果原文是待办，摘要要说明任务目标；如果原文是资料，摘要要说明资料价值；如果原文是想法，摘要要说明核心判断。
 
 【示例】
 原文："这个网站可以根据你喜欢的电影推荐类似的，用了协同过滤算法，准确率挺高的，只支持电影不支持电视剧"
-✅ 好："介绍了一个电影推荐网站，根据输入的电影推荐相似作品，准确率较高但仅支持电影。"
+好："介绍了一个电影推荐网站，根据输入作品推荐相似电影，准确率较高，但目前只支持电影，不支持电视剧。"
 ❌ 差："介绍了基于协同过滤算法的推荐服务。"（太技术化，丢失用户关心的信息）
 ''';
 
   String _buildContinuationTask(AnalysisStrategy strategy) => '''
-续写笔记内容（100-150字）。像原作者继续写，保持风格。
+在原文后面续写 80-160 字，像原作者自己继续写，不要像 AI 在帮忙总结。
 
-【3个步骤】
-1. 判断原文风格：口语化还是专业？轻松还是严肃？
-2. 完全模仿这种风格
-3. 顺着思路延伸（不突变、不评价、不总结）
+【硬性要求】
+1. 保持原文口吻、句长、标点和排版习惯。
+2. 只延续当前思路，不跳到新主题，不替用户下最终结论。
+3. 不要输出"续写如下"、"可以这样写"、标题、编号、emoji、Markdown。
+4. 原文是列表就继续列表；原文是短句就继续短句；原文是日记就继续日记。
+5. 只输出要插入正文的内容。
 
 【示例1】口语化→继续口语化
 原文："这个电影网站挺好用的，准确率还不错"
-✅ 好："我试了几次，输入《盗梦空间》会推荐《记忆碎片》这些烧脑片，确实挺准。搜索速度也快，基本秒出结果。"
+好："我试了几次，输入《盗梦空间》会推荐《记忆碎片》这些烧脑片，确实挺准。搜索速度也快，基本秒出结果。"
 ❌ 差："该网站基于协同过滤算法..."（突然变学术）
 
 【示例2】技术风格→继续技术
 原文："Provider是Flutter最常用的状态管理方案"
-✅ 好："Provider通过InheritedWidget实现状态共享，当状态改变时自动通知依赖的Widget重建。使用时在Widget树上层包裹ChangeNotifierProvider。"
+好："Provider通过 InheritedWidget 实现状态共享，状态改变时会通知依赖的 Widget 重建。实际使用时，通常在 Widget 树上层包一层 ChangeNotifierProvider。"
 ''';
 
   /// 🤖 调用AI
@@ -935,13 +940,10 @@ class AIInsightEngine {
   }
 
   /// 🛠️ 辅助方法
-  Set<String> _extractKeywords(String text) => text
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^\w\s\u4e00-\u9fa5]'), ' ')
-      .split(RegExp(r'\s+'))
-      .where((w) => w.length > 2)
-      .where((w) => !_isStopWord(w))
-      .toSet();
+  Set<String> _extractKeywords(String text) =>
+      TextAnalysisUtils.extractKeywords(
+        text,
+      ).where((word) => !_isStopWord(word)).toSet();
 
   bool _isStopWord(String word) {
     const stopWords = {

@@ -6,7 +6,7 @@ import 'package:inkroot/themes/app_theme.dart';
 
 /// 相关笔记底部抽屉
 ///
-/// 展示 AI 智能推荐的相关笔记列表
+/// 展示相关笔记列表
 class RelatedNotesBottomSheet extends StatelessWidget {
   const RelatedNotesBottomSheet({
     required this.relatedNotes,
@@ -185,7 +185,7 @@ class RelatedNotesBottomSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                '尝试创建更多笔记，AI 会为你发现知识之间的关联',
+                '多写一些笔记后，这里会显示可能相关的内容',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: isDark

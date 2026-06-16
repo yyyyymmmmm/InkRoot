@@ -7,7 +7,7 @@ This document describes the project workflow for versioning, checks, builds, and
 `pubspec.yaml` is the source of truth for the application version.
 
 ```yaml
-version: 1.1.7+10107
+version: 1.1.8+10108
 ```
 
 Do not duplicate the app version in platform files or Dart code. Flutter passes the version into Android, iOS, macOS, Windows, and Linux build metadata.
@@ -26,7 +26,7 @@ dart tool/inkroot.dart build ios-sim
 dart tool/inkroot.dart build macos-debug
 dart tool/inkroot.dart build windows-debug
 dart tool/inkroot.dart build linux-debug
-dart tool/inkroot.dart release v1.1.7
+dart tool/inkroot.dart release v1.1.8
 ```
 
 Host-specific builds require matching local tools:
@@ -84,21 +84,21 @@ Release flow:
 5. Run `dart tool/inkroot.dart release vX.Y.Z`.
 6. Wait for the GitHub Actions Release workflow to finish.
 
-The tag must match the version in `pubspec.yaml`. For `version: 1.1.7+10107`, the release tag is `v1.1.7`.
+The tag must match the version in `pubspec.yaml`. For `version: 1.1.8+10108`, the release tag is `v1.1.8`.
 
 GitHub Actions publishes the release assets after all release jobs pass.
 
 Release builds require these GitHub Actions secrets:
 
-- `CLOUD_VERIFY_APP_KEY`
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_STORE_PASSWORD`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-The official cloud verification AppID is fixed in source. Android release builds
-must have signing credentials and also verify the signing certificate fingerprint
-and APK/AAB package certificates before publishing.
+The official cloud verification AppID and client AppKey are fixed in source so
+local, CI, and cloud CLI builds all use the production backend by default.
+Android release builds must have signing credentials and also verify the signing
+certificate fingerprint and APK/AAB package certificates before publishing.
 
 GitHub Releases are for test and desktop distribution assets. Store submission
 packages are prepared separately: iOS through Xcode archive/App Store Connect,

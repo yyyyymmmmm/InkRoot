@@ -322,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         Flexible(
                           child: Text(
-                            l10n?.poiseToResound ?? '蓄势鸣响',
+                            l10n?.poiseToResound ?? '蓄势而鸣',
                             style: TextStyle(
                               fontSize: ResponsiveUtils.responsiveFontSize(
                                 context,
@@ -342,7 +342,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       height: ResponsiveUtils.responsiveSpacing(context, 8),
                     ),
                     Text(
-                      l10n?.focusAndAccumulate ?? '你的每一次落笔，都是未来成长的根源！',
+                      l10n?.focusAndAccumulate ?? '你的每一次落笔，都是未来生长的根源！',
                       style: TextStyle(
                         fontSize:
                             ResponsiveUtils.responsiveFontSize(context, 16),

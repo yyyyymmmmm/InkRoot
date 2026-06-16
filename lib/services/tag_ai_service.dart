@@ -141,13 +141,13 @@ class TagAIService {
   }) {
     final insights = <String>[];
 
-    // 洞察1: 标签使用频率
+    // 洞察1: 标签使用规模
     if (tagNotes.length >= 10) {
-      insights.add('🔥 这是一个高频标签，已有 ${tagNotes.length} 条相关笔记');
+      insights.add('「$tagName」已经沉淀 ${tagNotes.length} 条笔记，适合做一次主题复盘。');
     } else if (tagNotes.length >= 5) {
-      insights.add('📝 标签使用适中，继续保持记录习惯');
+      insights.add('「$tagName」已有 ${tagNotes.length} 条笔记，主题开始成形，适合做一次小复盘。');
     } else {
-      insights.add('🌱 新标签刚起步，多记录相关内容可获得更多洞察');
+      insights.add('「$tagName」还在起步阶段，建议先补足背景、案例和下一步动作。');
     }
 
     // 洞察2: 趋势分析
@@ -156,11 +156,11 @@ class TagAIService {
 
     if (confidence > 70) {
       if (trend == 'increasing') {
-        insights.add('📈 该标签热度持续上升，建议继续深入探索');
+        insights.add('这个标签近期明显升温，说明它正在变成当前关注重点。');
       } else if (trend == 'decreasing') {
-        insights.add('📉 该标签关注度下降，可能需要重新审视相关主题');
+        insights.add('这个标签近期降温，适合判断是已经完成、暂停，还是需要重新激活。');
       } else {
-        insights.add('📊 该标签使用稳定，保持了良好的记录习惯');
+        insights.add('这个标签记录节奏稳定，适合按周或按月整理成连续脉络。');
       }
     }
 
@@ -171,31 +171,25 @@ class TagAIService {
       final maxCount = maxMonth.value;
 
       if (maxCount >= 5) {
-        insights.add('⏰ ${maxMonth.key} 是最活跃的月份，创建了 $maxCount 条笔记');
+        insights.add('${maxMonth.key} 是最活跃阶段，共记录 $maxCount 条，建议回看当时触发了什么问题。');
       }
     }
 
-    // 洞察4: 预测建议
-    final prediction = trendData['prediction'] as int? ?? 0;
-    if (prediction > 0 && confidence > 60) {
-      insights.add('🔮 AI预测：下月可能创建约 $prediction 条相关笔记');
-    }
-
-    // 洞察5: 内容质量（基于笔记长度）
+    // 洞察4: 内容密度
     final avgLength = tagNotes.isEmpty
         ? 0
         : tagNotes.map((n) => n.content.length).reduce((a, b) => a + b) /
             tagNotes.length;
 
     if (avgLength > 500) {
-      insights.add('✍️ 相关笔记内容详实，平均长度较高');
+      insights.add('这个标签下长笔记较多，建议提炼 3 条可复用观点，避免资料沉底。');
     } else if (avgLength > 200) {
-      insights.add('📄 笔记内容适中，记录较为完整');
+      insights.add('这个标签内容密度适中，适合整理成问题、证据、结论三类卡片。');
     } else if (avgLength > 0) {
-      insights.add('💬 笔记以简短记录为主，可考虑增加细节');
+      insights.add('这个标签多为短记录，建议给关键笔记补一句“为什么重要”。');
     }
 
-    return insights;
+    return insights.take(5).toList();
   }
 
   /// 🎯 计算标签相似度矩阵（用于聚类分析）
@@ -329,11 +323,14 @@ class TagAIService {
         );
 
         // 🎯 大厂标准：支持用户自定义提示词
-        final systemPrompt = appConfig.useCustomPrompt &&
+        final customPrompt = appConfig.useCustomPrompt &&
                 appConfig.customTagRecommendationPrompt != null &&
                 appConfig.customTagRecommendationPrompt!.isNotEmpty
-            ? appConfig.customTagRecommendationPrompt! // 使用用户自定义标签推荐提示词
-            : '你是一个智能笔记管理助手，擅长分析标签关系和提供个性化建议。'; // 默认提示词
+            ? appConfig.customTagRecommendationPrompt!.trim()
+            : null;
+        final systemPrompt = customPrompt == null
+            ? '你是一个克制、准确的笔记标签顾问。只推荐用户已有标签，不创造新标签，不输出解释性废话。'
+            : '$customPrompt\n\n额外硬性要求：只推荐可用标签列表中的标签；不要推荐当前标签；不要编造新标签。';
 
         // 调用LLM
         final (response, error) = await aiService.chat(
@@ -353,7 +350,11 @@ class TagAIService {
         } else if (response != null) {
           Log.service.debug('LLM tag recommendation succeeded');
           final parsed = _parseAIRecommendationResponse(response);
-          aiRecommendations = parsed['recommendations'];
+          aiRecommendations = _sanitizeRecommendedTags(
+            parsed['recommendations'] as List<String>? ?? const [],
+            availableTags: allTags,
+            currentTag: currentTag,
+          );
           aiInsight = parsed['insight'];
         }
       } on Object catch (e, stackTrace) {
@@ -430,11 +431,14 @@ class TagAIService {
         );
 
         // 🎯 大厂标准：支持用户自定义提示词
-        final systemPrompt = appConfig.useCustomPrompt &&
-                appConfig.customInsightPrompt != null &&
-                appConfig.customInsightPrompt!.isNotEmpty
-            ? appConfig.customInsightPrompt! // 使用用户自定义提示词
-            : '你是一个专业的数据分析师和个人知识管理顾问，擅长从笔记数据中发现有价值的洞察和趋势。'; // 默认提示词
+        final customPrompt = appConfig.useCustomPrompt &&
+                appConfig.customTagInsightPrompt != null &&
+                appConfig.customTagInsightPrompt!.isNotEmpty
+            ? appConfig.customTagInsightPrompt!.trim()
+            : null;
+        final systemPrompt = customPrompt == null
+            ? '你是一个克制、专业的笔记主题分析顾问。必须输出具体、有证据感、可行动的短洞察，禁止泛泛鼓励。'
+            : '$customPrompt\n\n额外硬性要求：输出短句洞察，不要 Markdown 标题，不要 emoji，不要泛泛鼓励。';
 
         // 调用LLM
         final (response, error) = await aiService.chat(
@@ -465,7 +469,7 @@ class TagAIService {
     }
 
     // 3️⃣ 合并本地和AI洞察（AI洞察在前，更重要）
-    return [...aiInsights, ...localInsights];
+    return _dedupeInsights([...aiInsights, ...localInsights]).take(6).toList();
   }
 
   // ========================================
@@ -510,6 +514,7 @@ ${availableTags.take(20).join(', ')}
 1. 推荐的标签必须在「可用的所有标签」列表中
 2. 不要推荐「$currentTag」本身
 3. 优先推荐语义相关的标签，而不仅仅是共现频率高的
+4. 不要输出解释过程，不要使用 Markdown，不要新增不存在的标签
 ''';
   }
 
@@ -558,15 +563,16 @@ $notesPreview
 2. **内容主题发现**：笔记内容反映的核心主题或关注点
 3. **行动建议**：基于趋势和内容的个性化建议
 
-**输出格式**（每条洞察独立一行，以emoji开头）：
-🔍 [使用习惯分析]
-💡 [内容主题发现]
-🎯 [行动建议]
+**输出格式**（每条洞察独立一行）：
+使用习惯：[一句具体洞察]
+内容主题：[一句具体洞察]
+行动建议：[一句具体建议]
 
 要求：
-- 每条洞察控制在30字以内
+- 每条洞察控制在40字以内
 - 语言简洁、具体、可操作
 - 不要重复基础数据，要提供新的视角
+- 不要使用 emoji、Markdown 标题或编号
 ''';
   }
 
@@ -582,7 +588,7 @@ $notesPreview
           final tags = line
               .replaceAll(RegExp('推荐标签[：:]*'), '')
               .replaceAll(RegExp('Recommended tags[：:]*'), '')
-              .split(',')
+              .split(RegExp('[,，、]'))
               .map((t) => t.trim())
               .where((t) => t.isNotEmpty)
               .toList();
@@ -619,14 +625,13 @@ $notesPreview
 
       final insights = <String>[];
       for (final line in lines) {
-        final trimmed = line.trim();
-        // 提取以emoji或符号开头的洞察
-        if (RegExp(r'^[🔍💡🎯📊🚀✨⚡️🌟•\-\*]').hasMatch(trimmed)) {
+        final trimmed = _cleanInsightLine(line);
+        if (trimmed.length >= 8) {
           insights.add(trimmed);
         }
       }
 
-      return insights.take(5).toList(); // 最多5条
+      return _dedupeInsights(insights).take(5).toList(); // 最多5条
     } on Object catch (e, stackTrace) {
       Log.service.warning(
         'Failed to parse AI tag insights response',
@@ -635,4 +640,67 @@ $notesPreview
       return [];
     }
   }
+
+  static List<String> _sanitizeRecommendedTags(
+    List<String> rawTags, {
+    required Set<String> availableTags,
+    required String currentTag,
+  }) {
+    final normalizedAvailable = {
+      for (final tag in availableTags) _normalizeTag(tag): tag,
+    };
+    final result = <String>[];
+    final seen = <String>{};
+
+    for (final raw in rawTags) {
+      final normalized = _normalizeTag(raw);
+      if (normalized.isEmpty ||
+          normalized == _normalizeTag(currentTag) ||
+          seen.contains(normalized)) {
+        continue;
+      }
+      final existing = normalizedAvailable[normalized];
+      if (existing == null) {
+        continue;
+      }
+      result.add(existing);
+      seen.add(normalized);
+      if (result.length >= 5) {
+        break;
+      }
+    }
+    return result;
+  }
+
+  static List<String> _dedupeInsights(List<String> insights) {
+    final result = <String>[];
+    final seen = <String>{};
+    for (final insight in insights) {
+      final cleaned = _cleanInsightLine(insight);
+      final key = cleaned.replaceAll(RegExp(r'\s+'), '');
+      if (cleaned.isEmpty || seen.contains(key)) {
+        continue;
+      }
+      result.add(cleaned);
+      seen.add(key);
+    }
+    return result;
+  }
+
+  static String _cleanInsightLine(String line) {
+    var cleaned = line.trim();
+    cleaned = cleaned
+        .replaceAll(RegExp(r'^[\-\*\d\.\s]+'), '')
+        .replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}]', unicode: true), '')
+        .replaceAll('**', '')
+        .replaceAll('#', '')
+        .trim();
+    return cleaned;
+  }
+
+  static String _normalizeTag(String tag) => tag
+      .replaceAll('#', '')
+      .replaceAll(RegExp(r'^[\-\*\d\.\s]+'), '')
+      .trim()
+      .toLowerCase();
 }

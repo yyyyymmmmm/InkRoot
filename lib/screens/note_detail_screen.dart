@@ -7,15 +7,15 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/annotation_model.dart';
-import 'package:inkroot/models/app_config_model.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/services/ai_enhanced_service.dart';
-import 'package:inkroot/services/deepseek_api_service.dart';
+import 'package:inkroot/services/ai_review_service.dart';
 import 'package:inkroot/services/intelligent_related_notes_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
 import 'package:inkroot/utils/todo_parser.dart';
 import 'package:inkroot/widgets/annotations_sidebar.dart';
 import 'package:inkroot/widgets/intelligent_related_notes_sheet.dart';
@@ -44,6 +44,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   // AI 摘要
   final AIEnhancedService _aiEnhancedService = AIEnhancedService();
+  final AiReviewService _aiReviewService = const AiReviewService();
   String? _aiSummary;
   bool _isGeneratingSummary = false;
   bool _showSummary = false;
@@ -153,36 +154,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
     final appConfig = appProvider.appConfig;
 
-    // 检查AI功能是否启用
-    if (!appConfig.aiEnabled) {
-      if (mounted) {
-        SnackBarUtils.showWarning(
-          context,
-          AppLocalizationsSimple.of(context)?.enableAIFirst ?? '请先在设置中启用AI功能',
-        );
-      }
-      return;
-    }
-
-    // 检查API配置
-    if (appConfig.aiApiUrl == null ||
-        appConfig.aiApiUrl!.isEmpty ||
-        appConfig.aiApiKey == null ||
-        appConfig.aiApiKey!.isEmpty) {
-      if (mounted) {
-        SnackBarUtils.showWarning(
-          context,
-          AppLocalizationsSimple.of(context)?.configureAIFirst ??
-              '请先在设置中配置AI API',
-        );
-      }
-      return;
-    }
-
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     String? aiReview;
     var isLoading = true;
     String? errorMessage;
+    var reviewSource = AiReviewSource.local;
 
     // 🔥 使用底部Sheet替代Dialog - 更现代的体验
     unawaited(
@@ -192,24 +168,33 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         backgroundColor: Colors.transparent,
         builder: (bottomSheetContext) => StatefulBuilder(
           builder: (context, setState) {
-            // 开始AI点评
+            // 开始点评。AI 未配置或失败时使用本地分析，不阻断用户。
             if (isLoading && aiReview == null && errorMessage == null) {
-              _getAiReview(appConfig, _note!.content).then((result) {
-                final (review, error) = result;
+              _aiReviewService
+                  .generateReview(
+                appConfig: appConfig,
+                note: _note!,
+                allNotes: appProvider.notes,
+              )
+                  .then((result) {
                 if (mounted && context.mounted) {
                   setState(() {
                     isLoading = false;
-                    aiReview = review != null
-                        ? _cleanMarkdownForReview(review)
-                        : null; // 🔥 清理Markdown符号
-                    errorMessage = error;
+                    aiReview = result.review;
+                    reviewSource = result.source;
+                    errorMessage = null;
                   });
                   // 🔥 完成后显示提示
-                  if (review != null) {
+                  if (result.usedRemote) {
                     SnackBarUtils.showSuccess(
                       context,
                       AppLocalizationsSimple.of(context)?.aiReviewCompleted ??
                           '✨ AI点评完成！',
+                    );
+                  } else if (result.usedFallback) {
+                    SnackBarUtils.showInfo(
+                      context,
+                      'AI暂不可用，已使用本地点评',
                     );
                   }
                 }
@@ -261,8 +246,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            AppLocalizationsSimple.of(context)?.aiReviewTitle ??
-                                '给你的点评',
+                            reviewSource == AiReviewSource.remote
+                                ? (AppLocalizationsSimple.of(context)
+                                        ?.aiReviewTitle ??
+                                    '给你的点评')
+                                : '本地点评',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -454,111 +442,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         ),
       );
 
-  // 🔥 清理Markdown符号，转换为纯文本
-  String _cleanMarkdownForReview(String text) {
-    var cleaned = text;
-
-    // 移除Markdown标题符号 (# ## ###)
-    cleaned = cleaned.replaceAll(RegExp(r'^#+\s*', multiLine: true), '');
-
-    // 移除加粗符号 (** __ )
-    cleaned = cleaned.replaceAll(RegExp(r'\*\*(.*?)\*\*'), r'$1');
-    cleaned = cleaned.replaceAll(RegExp('__(.*?)__'), r'$1');
-
-    // 移除斜体符号 (* _)
-    cleaned = cleaned.replaceAll(
-      RegExp(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)'),
-      r'$1',
-    );
-    cleaned =
-        cleaned.replaceAll(RegExp('(?<!_)_(?!_)(.+?)(?<!_)_(?!_)'), r'$1');
-
-    // 移除删除线 (~~)
-    cleaned = cleaned.replaceAll(RegExp('~~(.*?)~~'), r'$1');
-
-    // 移除代码块符号 (```)
-    cleaned = cleaned.replaceAll(RegExp(r'```[\s\S]*?```'), '');
-    cleaned = cleaned.replaceAll(RegExp('`(.*?)`'), r'$1');
-
-    // 移除链接格式 [text](url)
-    cleaned = cleaned.replaceAll(RegExp(r'\[([^\]]+)\]\([^\)]+\)'), r'$1');
-
-    // 移除图片格式 ![alt](url)
-    cleaned = cleaned.replaceAll(RegExp(r'!\[([^\]]*)\]\([^\)]+\)'), r'$1');
-
-    // 移除引用符号 (>)
-    cleaned = cleaned.replaceAll(RegExp(r'^>\s*', multiLine: true), '');
-
-    // 移除水平线 (--- ***)
-    cleaned =
-        cleaned.replaceAll(RegExp(r'^[\-\*]{3,}\s*$', multiLine: true), '');
-
-    // 移除列表符号 (- * 1.)
-    cleaned = cleaned.replaceAll(RegExp(r'^[\-\*\+]\s+', multiLine: true), '');
-    cleaned = cleaned.replaceAll(RegExp(r'^\d+\.\s+', multiLine: true), '');
-
-    // 清理多余的空行（保留段落间的单个空行）
-    cleaned = cleaned.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-
-    return cleaned.trim();
-  }
-
-  // 调用AI进行点评 - 优化Prompt为flomo风格
-  Future<(String?, String?)> _getAiReview(
-    AppConfig appConfig,
-    String content,
-  ) async {
-    try {
-      final apiService = DeepSeekApiService(
-        apiUrl: appConfig.aiApiUrl!,
-        apiKey: appConfig.aiApiKey!,
-        model: appConfig.aiModel,
-      );
-
-      // 🔥 使用自定义Prompt或系统默认Prompt
-      final systemPrompt = appConfig.useCustomPrompt &&
-              appConfig.customReviewPrompt != null &&
-              appConfig.customReviewPrompt!.isNotEmpty
-          ? appConfig.customReviewPrompt!
-          : '''
-你是一位善于发现价值的笔记评论者，用自然对话方式提供完整的分析闭环。
-
-输出格式要求（重要！）：
-- 纯文本，不要用 # * ** 等Markdown符号
-- 不要用emoji
-- 用"你"称呼用户
-- 直接进入内容，不要固定开头
-- 3-4句话，控制在80字左右
-- 语气自然、坦诚
-
-内容结构（微型闭环）：
-
-第1句 - 核心洞察：
-直接指出笔记中最值得关注的点，或提出一个有洞察力的观察。
-
-第2句 - 肯定/改进：
-快速指出闪光点或可优化之处（选一个重点说）。用"这里不错"、"或许可以"等自然表述。
-
-第3-4句 - 建议/启发：
-给出一个清晰、可操作的建议，或提出启发性思考。
-
-写作风格：
-- 像Notion AI那样：直接、专业、有温度
-- 坦诚但不批评，简洁但有深度
-- 保持对话感，不要说教
-''';
-
-      final messages = [
-        DeepSeekApiService.buildSystemMessage(systemPrompt),
-        DeepSeekApiService.buildUserMessage('请点评这篇笔记（80字左右）：\n\n$content'),
-      ];
-
-      return await apiService.chat(messages: messages);
-    } on Object catch (e) {
-      return (null, 'AI点评失败: $e');
-    }
-  }
-
   void _showEditNoteForm(Note note) {
     showModalBottomSheet(
       context: context,
@@ -643,7 +526,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       return;
     }
 
-    final todos = TodoParser.parseTodos(_note!.content);
+    final previousNote = _note!;
+    final todos = TodoParser.parseTodos(previousNote.content);
     if (todoIndex < 0 || todoIndex >= todos.length) {
       if (kDebugMode) {
         debugPrint('NoteDetailScreen: 待办事项索引越界 $todoIndex/${todos.length}');
@@ -653,19 +537,39 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
     final todo = todos[todoIndex];
     final newContent =
-        TodoParser.toggleTodoAtLine(_note!.content, todo.lineNumber);
+        TodoParser.toggleTodoAtLine(previousNote.content, todo.lineNumber);
     if (kDebugMode) {
       debugPrint(
         'NoteDetailScreen: 切换待办事项 #$todoIndex 行${todo.lineNumber}: "${todo.text}"',
       );
     }
 
+    setState(() {
+      _note = previousNote.copyWith(
+        content: newContent,
+        updatedAt: DateTime.now(),
+        tags: tag_utils.extractTagsFromContent(newContent),
+        isSynced: false,
+      );
+    });
+
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    appProvider.updateNote(_note!, newContent).then((_) {
+    appProvider.updateNote(previousNote, newContent).then((success) {
       if (kDebugMode) {
-        debugPrint('NoteDetailScreen: 待办事项状态已更新');
+        debugPrint('NoteDetailScreen: 待办事项状态已更新 success=$success');
       }
-      _loadNote(); // 刷新笔记数据
+      if (!mounted) {
+        return;
+      }
+      if (success) {
+        _loadNote(); // 刷新笔记数据
+      } else {
+        setState(() => _note = previousNote);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizationsSimple.of(context)?.updateFailed ?? '更新失败',
+        );
+      }
     }).catchError((error) {
       if (kDebugMode) {
         debugPrint('NoteDetailScreen: 更新待办事项失败: $error');
@@ -673,7 +577,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (!mounted) {
         return;
       }
-      SnackBarUtils.showError(context, '更新失败');
+      setState(() => _note = previousNote);
+      SnackBarUtils.showError(
+        context,
+        AppLocalizationsSimple.of(context)?.updateFailed ?? '更新失败',
+      );
     });
   }
 
@@ -750,7 +658,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 color: bgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.psychology_rounded, size: 20, color: iconColor),
+              child:
+                  Icon(Icons.rate_review_rounded, size: 20, color: iconColor),
             ),
             tooltip: AppLocalizationsSimple.of(context)?.aiReview ?? 'AI点评',
             onPressed: _showAiReviewDialog,
@@ -986,31 +895,11 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                   onCheckboxTap:
                                       _toggleTodoInNote, // 🎯 复选框点击回调（传递索引）
                                   onTagTap: (tagName) {
-                                    // 🎯 大厂导航模式：详情页点击标签 → 返回到标签列表页
-                                    // 而不是推入新页面（避免：标签A详情 → 标签B列表 → 标签B详情 → ...）
-
                                     try {
-                                      final currentRoute =
-                                          GoRouterState.of(context)
-                                              .uri
-                                              .toString();
-
-                                      // 如果当前在标签筛选页进入的详情页
-                                      if (currentRoute
-                                          .contains('/tags/detail')) {
-                                        // 策略1：直接返回到标签页（用户可以重新选择标签）
-                                        if (mounted) {
-                                          context.pop(); // 返回到上一页（标签列表）
-                                        }
-                                      } else {
-                                        // 策略2：从其他入口（如主页）进入，可以跳转到标签页
-                                        if (mounted) {
-                                          // 使用 go 而不是 push，替换当前页面栈
-                                          context.go(
-                                            '/tags/detail?tag=${Uri.encodeComponent(tagName)}',
-                                          );
-                                        }
-                                      }
+                                      context.pushNamed(
+                                        'tag-notes',
+                                        queryParameters: {'tag': tagName},
+                                      );
                                     } on Object catch (e, stackTrace) {
                                       Log.ui.error(
                                         'Failed to navigate from note detail tag',

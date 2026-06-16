@@ -897,7 +897,19 @@ class _SidebarState extends State<Sidebar> {
     final delay = widget.isDrawer ? 120 : 50;
     Future.delayed(Duration(milliseconds: delay), () {
       try {
-        router.goNamed('tag-notes', queryParameters: {'tag': tagPath});
+        final currentPath = router.routerDelegate.currentConfiguration.uri.path;
+        final isSwitchingTag = currentPath == '/tags/detail';
+        if (isSwitchingTag) {
+          router.replaceNamed(
+            'tag-notes',
+            queryParameters: {'tag': tagPath},
+          );
+        } else {
+          router.pushNamed(
+            'tag-notes',
+            queryParameters: {'tag': tagPath},
+          );
+        }
       } finally {
         _navigationPending = false;
       }
