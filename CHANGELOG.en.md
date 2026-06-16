@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.9] - 2026-06-16
+
+### Fixed
+- Fixed GitHub Actions iOS unsigned packaging failing when the `SDWebImage` Gitee mirror timed out
+
+### Maintenance
+- Moved the iOS Pod dependency back to the CocoaPods spec source and added `pod install` retries for unsigned IPA packaging
+
+---
+
 ## [1.1.8] - 2026-06-16
 
 ### Fixed

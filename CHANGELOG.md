@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.9] - 2026-06-16
+
+### 修复
+- 修复 GitHub Actions iOS unsigned 包构建时依赖 Gitee 镜像下载 `SDWebImage` 偶发超时导致发布中断的问题
+
+### 维护
+- iOS Pod 依赖改回 CocoaPods 官方源，并为 unsigned IPA 打包流程增加 `pod install` 重试
+
+---
+
 ## [1.1.8] - 2026-06-16
 
 ### 修复

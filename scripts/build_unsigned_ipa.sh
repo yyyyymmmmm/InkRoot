@@ -43,7 +43,17 @@ flutter pub get
 # 步骤3: 安装 CocoaPods 依赖
 echo -e "${YELLOW}[3/6] Installing CocoaPods dependencies...${NC}"
 cd "$PROJECT_DIR/ios"
-pod install
+for attempt in 1 2 3; do
+    if pod install; then
+        break
+    fi
+    if [ "$attempt" -eq 3 ]; then
+        echo -e "${RED}Error: pod install failed after 3 attempts${NC}"
+        exit 1
+    fi
+    echo -e "${YELLOW}pod install failed, retrying ($attempt/3)...${NC}"
+    sleep 10
+done
 
 # 步骤4: 构建 iOS Release 版本（不签名）
 echo -e "${YELLOW}[4/6] Building iOS release without codesigning...${NC}"

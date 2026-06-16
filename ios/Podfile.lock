@@ -119,7 +119,7 @@ DEPENDENCIES:
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
-  - SDWebImage (from `https://gitee.com/mirrors/SDWebImage.git`, tag `5.21.7`)
+  - SDWebImage (= 5.21.7)
   - SDWebImageWebPCoder (from `local_pods/SDWebImageWebPCoder-0.15.0`)
   - sentry_flutter (from `.symlinks/plugins/sentry_flutter/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
@@ -135,6 +135,7 @@ SPEC REPOS:
     - DKPhotoGallery
     - libwebp
     - Mantle
+    - SDWebImage
     - Sentry
     - SwiftyGif
 
@@ -168,9 +169,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   record_ios:
     :path: ".symlinks/plugins/record_ios/ios"
-  SDWebImage:
-    :git: https://gitee.com/mirrors/SDWebImage.git
-    :tag: 5.21.7
   SDWebImageWebPCoder:
     :path: local_pods/SDWebImageWebPCoder-0.15.0
   sentry_flutter:
@@ -190,9 +188,6 @@ CHECKOUT OPTIONS:
   CwlCatchException:
     :git: https://github.com/mattgallagher/CwlCatchException.git
     :tag: 2.2.1
-  SDWebImage:
-    :git: https://gitee.com/mirrors/SDWebImage.git
-    :tag: 5.21.7
 
 SPEC CHECKSUMS:
   CwlCatchException: 7acc161b299a6de7f0a46a6ed741eae2c8b4d75a
@@ -214,7 +209,7 @@ SPEC CHECKSUMS:
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   record_ios: 980fd386a97a35987d0fce3dfda4b26a38c90f4c
-  SDWebImage: 597cbc2be2c2a62aaf662533e34b6d0464d7066f
+  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   Sentry: da60d980b197a46db0b35ea12cb8f39af48d8854
   sentry_flutter: 27892878729f42701297c628eb90e7c6529f3684
@@ -225,6 +220,6 @@ SPEC CHECKSUMS:
   SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: 7553dd165a3641168148eb3bd6f73a7cecd0854e
+PODFILE CHECKSUM: 0ac546e03267868133062d7dc3e0d45b24c93345
 
 COCOAPODS: 1.16.2

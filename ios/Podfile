@@ -47,8 +47,10 @@ end
 target 'Runner' do
   use_frameworks! :linkage => :static
 
-  # 避免 pod install 时 git clone GitHub：走 Gitee 镜像
-  pod 'SDWebImage', :git => 'https://gitee.com/mirrors/SDWebImage.git', :tag => '5.21.7'
+  # Keep this on the CocoaPods spec source. GitHub-hosted macOS runners have
+  # unstable access to third-party mirrors, and release packaging must be
+  # reproducible without relying on a regional Git mirror.
+  pod 'SDWebImage', '5.21.7'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 

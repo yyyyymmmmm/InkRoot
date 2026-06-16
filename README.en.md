@@ -6,9 +6,9 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.8`
+`1.1.9`
 
-This release focuses on note rendering, search, todos, related notes, tag navigation, brand copy, and release-flow hardening while keeping Android Release certificate checks in place.
+This release focuses on note rendering, search, todos, related notes, tag navigation, brand copy, and release-flow hardening, and fixes cloud iOS unsigned packaging stability.
 
 Highlights:
 
@@ -16,6 +16,7 @@ Highlights:
 - Related notes, AI review, summary, continuation, tag recommendation, and insights are improved.
 - Tag-detail back navigation, sidebar tag behavior, and About/Help/Settings copy are tightened.
 - Brand copy is restored to "Settle patiently, then speak with force."
+- iOS unsigned packaging no longer depends on an unstable third-party mirror.
 - Home feed rendering keeps user line breaks and spacing.
 - Expand controls are based on rendered visible content.
 - Image preview supports tap-to-dismiss, original image viewing, and multi-image browsing.
@@ -78,13 +79,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.8+10108
+version: 1.1.9+10109
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.8
+dart tool/inkroot.dart release v1.1.9
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

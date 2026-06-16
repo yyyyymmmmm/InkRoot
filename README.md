@@ -6,9 +6,9 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 
 ## 当前版本
 
-`1.1.8`
+`1.1.9`
 
-本版本集中修复笔记渲染、搜索、待办、相关笔记、标签返回路径、品牌文案和发布链路问题，并继续保持 Android Release 签名校验。
+本版本集中修复笔记渲染、搜索、待办、相关笔记、标签返回路径、品牌文案和发布链路问题，并修复云端 iOS unsigned 包构建的依赖下载稳定性。
 
 主要变化：
 
@@ -16,6 +16,7 @@ InkRoot 是一款面向个人知识记录的跨平台笔记应用，支持本地
 - 相关笔记、AI 点评、摘要、续写、标签推荐和洞察体验继续优化。
 - 标签详情返回路径、侧边栏标签交互和关于/帮助/设置页文案继续整理。
 - 品牌文案恢复为“静待沉淀，蓄势而鸣”。
+- iOS unsigned 打包不再依赖不稳定的第三方镜像源。
 - 首页笔记渲染保留用户输入的换行和排版。
 - 展开按钮按渲染后的可见内容判断，减少误显示。
 - 图片查看支持点击退出、原图查看和多图浏览。
@@ -78,13 +79,13 @@ dart tool/inkroot.dart build linux-debug
 版本号统一维护在 `pubspec.yaml`：
 
 ```yaml
-version: 1.1.8+10108
+version: 1.1.9+10109
 ```
 
 发布入口：
 
 ```bash
-dart tool/inkroot.dart release v1.1.8
+dart tool/inkroot.dart release v1.1.9
 ```
 
 这个命令会创建并推送版本 tag。GitHub Actions 收到 tag 后自动执行检查、构建并发布 Android APK/AAB、iOS、macOS、Windows 和 Linux 产物。
