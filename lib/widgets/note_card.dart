@@ -6,7 +6,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +20,7 @@ import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/image_cache_manager.dart'; // 🔥 添加长期缓存管理器
 import 'package:inkroot/utils/memos_content_helper.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
 import 'package:inkroot/utils/text_style_helper.dart';
 import 'package:inkroot/utils/todo_parser.dart';
@@ -43,6 +43,7 @@ class NoteCard extends StatefulWidget {
     this.disableTagNavigation = false, // 🎯 是否禁用标签点击跳转（避免无限嵌套）
     this.onTagTap,
     this.highlightQuery,
+    this.referenceNotes,
     super.key,
   });
   final Note note; // 🚀 直接传递完整Note对象，避免查找
@@ -53,6 +54,7 @@ class NoteCard extends StatefulWidget {
   final bool disableTagNavigation; // 是否禁用标签跳转
   final ValueChanged<String>? onTagTap;
   final String? highlightQuery;
+  final List<Note>? referenceNotes;
 
   // 🚀 便捷访问属性
   String get content => note.content;
@@ -167,14 +169,20 @@ class _NoteCardState extends State<NoteCard>
                       onCheckboxTap: _toggleTodoItem, // 🎯 复选框点击回调（传递索引）
                       mode: MemosMarkdownMode.cardPreview,
                       highlightQuery: widget.highlightQuery,
+                      referenceNotes: widget.referenceNotes,
                       // 🎯 标签点击 - 根据配置决定是否跳转
                       onTagTap: widget.disableTagNavigation
                           ? null
                           : widget.onTagTap ??
                               (tagName) {
+                                final tagPath =
+                                    normalizeIncomingTagPath(tagName);
+                                if (tagPath == null) {
+                                  return;
+                                }
                                 context.pushNamed(
                                   'tag-notes',
-                                  queryParameters: {'tag': tagName},
+                                  queryParameters: {'tag': tagPath},
                                 );
                               },
                       // 🎯 链接点击 - 打开浏览器
@@ -244,29 +252,31 @@ class _NoteCardState extends State<NoteCard>
                 child: SizedBox(
                   width: availableWidth,
                   height: gridHeight,
-                  child: GridView.builder(
-                    scrollCacheExtent: const ScrollCacheExtent.pixels(500),
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics:
-                        const NeverScrollableScrollPhysics(), // 🚀 预加载缓存（抖音方案）
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: spacing,
-                      mainAxisSpacing: spacing,
-                    ),
-                    itemCount: imageCount,
-                    itemBuilder: (context, index) {
-                      if (index == 8 && imagePaths.length > 9) {
-                        return Stack(
+                  child: Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    children: List.generate(imageCount, (index) {
+                      final imageItem = SizedBox(
+                        width: imageWidth,
+                        height: imageWidth,
+                        child: _buildUniformImageItem(
+                          imagePaths[index],
+                          imagePaths: imagePaths,
+                          index: index,
+                        ),
+                      );
+
+                      if (index != 8 || imagePaths.length <= 9) {
+                        return imageItem;
+                      }
+
+                      return SizedBox(
+                        width: imageWidth,
+                        height: imageWidth,
+                        child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            _buildUniformImageItem(
-                              imagePaths[index],
-                              imagePaths: imagePaths,
-                              index: index,
-                            ),
+                            imageItem,
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
@@ -289,14 +299,9 @@ class _NoteCardState extends State<NoteCard>
                               ),
                             ),
                           ],
-                        );
-                      }
-                      return _buildUniformImageItem(
-                        imagePaths[index],
-                        imagePaths: imagePaths,
-                        index: index,
+                        ),
                       );
-                    },
+                    }),
                   ),
                 ),
               ),

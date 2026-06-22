@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/widgets/memos_markdown_renderer.dart';
 import 'package:provider/provider.dart';
@@ -49,7 +50,8 @@ void main() {
       expect(renderedText, isNot(contains('[[missing-note]]')));
       expect(renderedText, contains('#游戏'));
       expect(renderedText, contains('#GTA'));
-      expect(renderedText, contains('(已删除的笔记)'));
+      expect(renderedText, contains('已删除的笔记'));
+      expect(renderedText, isNot(contains('(已删除的笔记)')));
 
       final underlineSpan = tester
           .widgetList<RichText>(find.byType(RichText))
@@ -175,8 +177,130 @@ https://gpt-agent.cc/v1
       expect(renderedText, contains('主页应该显示这段下划线文字'));
       expect(renderedText, isNot(contains('<u>')));
     });
+
+    testWidgets('renders note references with first meaningful line',
+        (tester) async {
+      final referenceNotes = [
+        _note(
+          id: 'target-1',
+          content: '# 产品观察\n\n第二行内容',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _wrap(
+          MemosMarkdownRenderer(
+            content: '关联 [[target-1]]',
+            selectable: false,
+            referenceNotes: referenceNotes,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderedText = _renderedText(tester);
+
+      expect(renderedText, contains('产品观察'));
+      expect(renderedText, isNot(contains('target-1')));
+      expect(renderedText, isNot(contains('[[target-1]]')));
+      expect(renderedText, isNot(contains('# 产品观察')));
+    });
+
+    testWidgets('reference display skips images and pure tag lines',
+        (tester) async {
+      final referenceNotes = [
+        _note(
+          id: 'review-1',
+          content: '''
+![封面](file://cover.png)
+#产品 #复盘
+- [x] 完成用户访谈复盘
+''',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _wrap(
+          MemosMarkdownRenderer(
+            content: '参考 [[review-1]]',
+            selectable: false,
+            referenceNotes: referenceNotes,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderedText = _renderedText(tester);
+
+      expect(renderedText, contains('完成用户访谈复盘'));
+      expect(renderedText, isNot(contains('封面')));
+      expect(renderedText, isNot(contains('#产品 #复盘')));
+    });
+
+    testWidgets('supports memos prefix and custom reference aliases',
+        (tester) async {
+      final referenceNotes = [
+        _note(
+          id: '101',
+          content: '# 原始标题',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _wrap(
+          MemosMarkdownRenderer(
+            content: '[[memos/101]] [[101?text=%E5%88%AB%E5%90%8D]]',
+            selectable: false,
+            referenceNotes: referenceNotes,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderedText = _renderedText(tester);
+
+      expect(renderedText, contains('原始标题'));
+      expect(renderedText, contains('别名'));
+      expect(renderedText, isNot(contains('memos/101')));
+      expect(renderedText, isNot(contains('?text=')));
+    });
+
+    testWidgets('missing references use a weak readable state', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const MemosMarkdownRenderer(
+            content: '关联 [[missing-note]]',
+            selectable: false,
+            referenceNotes: [],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderedText = _renderedText(tester);
+
+      expect(renderedText, contains('已删除的笔记'));
+      expect(renderedText, isNot(contains('missing-note')));
+      expect(renderedText, isNot(contains('[[missing-note]]')));
+    });
   });
 }
+
+Note _note({
+  required String id,
+  required String content,
+}) =>
+    Note(
+      id: id,
+      content: content,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+String _renderedText(WidgetTester tester) => tester
+    .widgetList<RichText>(find.byType(RichText))
+    .map((widget) => widget.text.toPlainText())
+    .join('\n');
 
 Iterable<TextSpan> _flattenSpans(InlineSpan span) sync* {
   if (span is TextSpan) {

@@ -190,6 +190,14 @@ class Translations {
     'noteRestored': {'zh': '笔记已恢复', 'en': 'Note Restored'},
     'undo': {'zh': '撤销', 'en': 'Undo'},
     'showAll': {'zh': '显示全部', 'en': 'Show All'},
+    'graphShowIsolated': {'zh': '显示孤立点', 'en': 'Show isolated'},
+    'graphHideIsolated': {'zh': '隐藏孤立点', 'en': 'Hide isolated'},
+    'graphBuilding': {'zh': '正在整理图谱', 'en': 'Building graph'},
+    'graphOpenNote': {'zh': '打开笔记', 'en': 'Open note'},
+    'graphFocusNode': {'zh': '聚焦关联', 'en': 'Focus links'},
+    'graphClearSelection': {'zh': '清除选择', 'en': 'Clear selection'},
+    'graphNoConnections': {'zh': '还没有引用关系', 'en': 'No linked notes yet'},
+    'graphResetView': {'zh': '适配视图', 'en': 'Fit view'},
 
     // ===== AI设置 =====
     'aiFeatures': {'zh': 'AI功能', 'en': 'AI Features'},
@@ -2515,12 +2523,12 @@ class Translations {
       'en': 'Password (App-Specific)',
     },
     'notLoginPassword': {
-      'zh': '⚠️ 不是登录密码！需在服务商处生成',
-      'en': '⚠️ Not login password! Generate at service provider',
+      'zh': '不是登录密码，需在服务商处生成',
+      'en': 'Not the login password. Generate it from your service provider.',
     },
     'clickHelpIcon': {
-      'zh': '💡 点击右上角 ? 查看如何获取',
-      'en': '💡 Tap ? for instructions',
+      'zh': '点击右上角 ? 查看如何获取',
+      'en': 'Tap ? for instructions',
     },
 
     // ===== 偏好设置页面 =====

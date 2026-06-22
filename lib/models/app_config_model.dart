@@ -24,6 +24,13 @@ class AppConfig {
     this.aiModel = AI_MODEL_DEEPSEEK, // 默认使用DeepSeek
     this.aiEnabled = false, // 默认不启用AI
     this.autoShowEditorOnLaunch = false, // 默认不自动弹出编辑框
+    this.widgetReviewRefreshIntervalMinutes = 60,
+    this.widgetReviewRangeDays = 0,
+    this.speechRecognitionMode = SPEECH_MODE_SYSTEM,
+    this.iflytekSpeechEnabled = false,
+    this.iflytekAppId,
+    this.iflytekApiKey,
+    this.iflytekApiSecret,
     this.useCustomPrompt = false, // 默认不使用自定义Prompt
     this.customInsightPrompt, // 自定义笔记洞察Prompt（首页AI洞察）
     this.customReviewPrompt, // 自定义点评Prompt
@@ -56,6 +63,15 @@ class AppConfig {
         aiModel: json['aiModel'] ?? AI_MODEL_DEEPSEEK,
         aiEnabled: json['aiEnabled'] ?? false,
         autoShowEditorOnLaunch: json['autoShowEditorOnLaunch'] ?? false,
+        widgetReviewRefreshIntervalMinutes:
+            json['widgetReviewRefreshIntervalMinutes'] ?? 60,
+        widgetReviewRangeDays: json['widgetReviewRangeDays'] ?? 0,
+        speechRecognitionMode:
+            json['speechRecognitionMode'] ?? SPEECH_MODE_SYSTEM,
+        iflytekSpeechEnabled: json['iflytekSpeechEnabled'] ?? false,
+        iflytekAppId: json['iflytekAppId'],
+        iflytekApiKey: json['iflytekApiKey'],
+        iflytekApiSecret: json['iflytekApiSecret'],
         useCustomPrompt: json['useCustomPrompt'] ?? false,
         customInsightPrompt: json['customInsightPrompt'],
         customReviewPrompt: json['customReviewPrompt'],
@@ -126,6 +142,13 @@ class AppConfig {
       fontFamily; // 字体家族：default(默认), noto-sans(思源黑体), noto-serif(思源宋体), ma-shan-zheng(楷体风格), zcool-xiaowei(站酷小薇)
   final String? locale; // 语言选择：null(跟随系统), zh_CN(简体中文), en_US(English)
   final bool autoShowEditorOnLaunch; // 启动时自动弹出编辑框
+  final int widgetReviewRefreshIntervalMinutes; // 随机回顾小组件刷新间隔（分钟）
+  final int widgetReviewRangeDays; // 随机回顾小组件回顾范围（天，0表示全部）
+  final String speechRecognitionMode; // 语音识别模式：system 或 iflytek
+  final bool iflytekSpeechEnabled; // 是否启用讯飞云语音识别
+  final String? iflytekAppId; // 讯飞 APPID
+  final String? iflytekApiKey; // 讯飞 APIKey
+  final String? iflytekApiSecret; // 讯飞 APISecret
 
   // AI配置
   final String? aiApiUrl; // AI API地址
@@ -193,6 +216,9 @@ class AppConfig {
   static const String LOCALE_NL_NL = 'nl_NL'; // Nederlands
   static const String LOCALE_HI_IN = 'hi_IN'; // हिन्दी
 
+  static const String SPEECH_MODE_SYSTEM = 'system';
+  static const String SPEECH_MODE_IFLYTEK = 'iflytek';
+
   // AI模型选项（2025年最新版本，仅保留兼容OpenAI格式的模型）
   // DeepSeek 系列（2025）
   static const String AI_MODEL_DEEPSEEK = 'deepseek-chat'; // V3版本
@@ -251,6 +277,16 @@ class AppConfig {
     bool updateAiApiUrl = false,
     bool updateAiApiKey = false,
     bool? autoShowEditorOnLaunch,
+    int? widgetReviewRefreshIntervalMinutes,
+    int? widgetReviewRangeDays,
+    String? speechRecognitionMode,
+    bool? iflytekSpeechEnabled,
+    String? iflytekAppId,
+    String? iflytekApiKey,
+    String? iflytekApiSecret,
+    bool updateIflytekAppId = false,
+    bool updateIflytekApiKey = false,
+    bool updateIflytekApiSecret = false,
     bool? useCustomPrompt,
     String? customInsightPrompt,
     String? customReviewPrompt,
@@ -291,6 +327,23 @@ class AppConfig {
         aiEnabled: aiEnabled ?? this.aiEnabled,
         autoShowEditorOnLaunch:
             autoShowEditorOnLaunch ?? this.autoShowEditorOnLaunch,
+        widgetReviewRefreshIntervalMinutes:
+            widgetReviewRefreshIntervalMinutes ??
+                this.widgetReviewRefreshIntervalMinutes,
+        widgetReviewRangeDays:
+            widgetReviewRangeDays ?? this.widgetReviewRangeDays,
+        speechRecognitionMode:
+            speechRecognitionMode ?? this.speechRecognitionMode,
+        iflytekSpeechEnabled: iflytekSpeechEnabled ?? this.iflytekSpeechEnabled,
+        iflytekAppId: updateIflytekAppId
+            ? iflytekAppId
+            : (iflytekAppId ?? this.iflytekAppId),
+        iflytekApiKey: updateIflytekApiKey
+            ? iflytekApiKey
+            : (iflytekApiKey ?? this.iflytekApiKey),
+        iflytekApiSecret: updateIflytekApiSecret
+            ? iflytekApiSecret
+            : (iflytekApiSecret ?? this.iflytekApiSecret),
         useCustomPrompt: useCustomPrompt ?? this.useCustomPrompt,
         customInsightPrompt: updateCustomInsightPrompt
             ? customInsightPrompt
@@ -333,6 +386,14 @@ class AppConfig {
         'aiModel': aiModel,
         'aiEnabled': aiEnabled,
         'autoShowEditorOnLaunch': autoShowEditorOnLaunch,
+        'widgetReviewRefreshIntervalMinutes':
+            widgetReviewRefreshIntervalMinutes,
+        'widgetReviewRangeDays': widgetReviewRangeDays,
+        'speechRecognitionMode': speechRecognitionMode,
+        'iflytekSpeechEnabled': iflytekSpeechEnabled,
+        'iflytekAppId': iflytekAppId,
+        'iflytekApiKey': iflytekApiKey,
+        'iflytekApiSecret': iflytekApiSecret,
         'useCustomPrompt': useCustomPrompt,
         'customInsightPrompt': customInsightPrompt,
         'customReviewPrompt': customReviewPrompt,

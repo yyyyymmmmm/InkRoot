@@ -27,7 +27,8 @@ class TagNode {
   static List<TagNode> buildTreeFromNoteTags(Iterable<Iterable<String>> notes) {
     final normalizedNotes = notes
         .map(
-          (tags) => tags.map(normalizeTagPath).whereType<String>().toSet(),
+          (tags) =>
+              tags.map(normalizeIncomingTagPath).whereType<String>().toSet(),
         )
         .where((tags) => tags.isNotEmpty)
         .toList();

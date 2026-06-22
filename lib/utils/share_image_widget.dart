@@ -398,18 +398,21 @@ class CustomizableMemoContent extends StatelessWidget {
         ),
         h1: TextStyle(
           color: isDarkMode ? Colors.white : Colors.black,
-          fontSize: fontSize + 8, // 标题相对基础字体大小
+          fontSize: fontSize + 3,
           fontWeight: FontWeight.bold,
+          height: 1.34,
         ),
         h2: TextStyle(
           color: isDarkMode ? Colors.white : Colors.black,
-          fontSize: fontSize + 6,
+          fontSize: fontSize + 2,
           fontWeight: FontWeight.bold,
+          height: 1.36,
         ),
         h3: TextStyle(
           color: isDarkMode ? Colors.white : Colors.black,
-          fontSize: fontSize + 4,
+          fontSize: fontSize + 1,
           fontWeight: FontWeight.w600,
+          height: 1.4,
         ),
         a: TextStyle(
           color: isDarkMode ? Colors.blue[300] : Colors.blue[700],

@@ -3,4 +3,10 @@
     <color name="ic_launcher_background">#FFFFFF</color>
     <color name="splash_color">#F5F4F7</color>
     <color name="splash_color_dark">#000000</color>
+    <color name="inkroot_primary">#2C9678</color>
+    <color name="inkroot_widget_background">#FFFFFF</color>
+    <color name="inkroot_widget_surface">#F5F7F6</color>
+    <color name="inkroot_widget_text">#1F2A27</color>
+    <color name="inkroot_widget_muted">#6C7874</color>
+    <color name="inkroot_widget_border">#E3E9E6</color>
 </resources>

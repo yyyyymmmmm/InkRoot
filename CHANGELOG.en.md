@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.10] - 2026-06-22
+
+### Added
+- Added base Android and iOS home-widget support with separate quick-note and random-review widgets
+- Added random-review widget selection and refresh settings so widgets prefer real note content
+- Added configurable iFlytek speech recognition settings so users can enable their own speech service
+
+### Improved
+- Improved the knowledge graph visuals, zoom controls, node selection, and large-note rendering performance
+- Improved Windows, macOS, and Linux desktop scaling so the font-size preference scales the whole interface
+- Improved home and detail rendering for Markdown headings, blockquotes, links, underline, and related note references
+- Improved tag path parsing, sidebar tag navigation, and Chinese tag opening behavior
+- Improved AI settings, model input, custom prompts, and quick-start copy
+- Updated project structure, build documentation, and marketing asset folders to match the current project state
+
+### Fixed
+- Fixed single-note pull-to-refresh getting stuck in a loading state
+- Fixed random-review widgets not switching randomly and showing inaccurate empty states
+- Fixed desktop shrinking only affecting text while surrounding UI stayed unchanged
+
 ## [1.1.9] - 2026-06-16
 
 ### Fixed

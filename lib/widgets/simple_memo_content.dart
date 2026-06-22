@@ -15,6 +15,7 @@ import 'package:inkroot/utils/image_utils.dart';
 import 'package:inkroot/utils/memos_content_helper.dart';
 import 'package:inkroot/utils/memos_markdown_converter.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/utils/text_style_helper.dart';
 import 'package:inkroot/widgets/animated_checkbox.dart';
 import 'package:inkroot/widgets/image_viewer_screen.dart';
@@ -36,6 +37,8 @@ class SimpleMemoContent extends StatefulWidget {
     this.note, // 🎯 可选的note对象（用于交互）
     this.onCheckboxTap, // 🎯 复选框点击回调
     this.highlightQuery,
+    this.referenceNotes,
+    this.compactHeadings = false,
   });
   final String content;
   final String? serverUrl;
@@ -46,6 +49,8 @@ class SimpleMemoContent extends StatefulWidget {
   final Note? note; // 🎯 可选的note对象
   final Function(int todoIndex)? onCheckboxTap; // 🎯 复选框点击回调，传递待办事项索引
   final String? highlightQuery;
+  final List<Note>? referenceNotes;
+  final bool compactHeadings;
 
   @override
   State<SimpleMemoContent> createState() => _SimpleMemoContentState();
@@ -81,7 +86,7 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
     return content.substring(0, maxChars);
   }
 
-  // 🎯 预处理引用：将 [[referenceStr]] 转换为可读的链接格式（Memos 标准）
+  // 🎯 预处理引用：将 [[referenceStr]] 转换为可读的站内笔记链接
   String _preprocessReferencesWithContext(String content, List<Note> notes) {
     final referenceRegex = RegExp(r'\[\[([^\]]+)\]\]');
     return content.replaceAllMapped(referenceRegex, (match) {
@@ -92,12 +97,17 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
       final noteId = parsed['id']!;
       final customText = parsed['text'];
 
-      // 根据ID提取显示文本
-      final displayText =
-          customText ?? _extractDisplayTextFromId(noteId, notes);
+      final display = _resolveReferenceDisplay(
+        noteId,
+        notes,
+        customText: customText,
+      );
 
       // 转换为特殊的Markdown链接格式，用 ref: 前缀标识
-      return '[$displayText](ref:$noteId)';
+      final encodedId = Uri.encodeComponent(noteId);
+      final escapedText = _escapeMarkdownLinkText(display.text);
+      final title = display.isMissing ? 'missing' : 'note';
+      return '[$escapedText](ref:$encodedId "$title")';
     });
   }
 
@@ -110,7 +120,13 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
     if (cleanRef.contains('?text=')) {
       final parts = cleanRef.split('?text=');
       cleanRef = parts[0];
-      customText = parts.length > 1 ? Uri.decodeComponent(parts[1]) : null;
+      if (parts.length > 1 && parts[1].isNotEmpty) {
+        try {
+          customText = Uri.decodeComponent(parts[1]);
+        } on FormatException {
+          customText = parts[1];
+        }
+      }
     }
 
     // 移除 memos/ 前缀（如果有）
@@ -121,52 +137,122 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
     return {'id': cleanRef, 'text': customText};
   }
 
-  // 🎯 根据笔记ID提取显示文本（标题或第一行）
-  String _extractDisplayTextFromId(String noteId, List<Note> notes) {
-    // 查找笔记
-    final note = notes.firstWhere(
-      (n) => n.id == noteId,
-      orElse: () => Note(
-        id: '',
-        content: '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    );
+  _ReferenceDisplay _resolveReferenceDisplay(
+    String noteId,
+    List<Note> notes, {
+    String? customText,
+  }) {
+    final maxChars =
+        (widget.compactHeadings || widget.maxLines != null) ? 18 : 30;
+    final noteIndex = notes.indexWhere((note) => note.id == noteId);
+    final isMissing = noteIndex < 0;
 
-    if (note.id.isEmpty) {
-      // 未找到笔记，显示友好提示
-      return '(已删除的笔记)';
+    final alias = customText?.trim();
+    if (alias != null && alias.isNotEmpty) {
+      return _ReferenceDisplay(
+        _sanitizeReferenceDisplayText(alias, maxChars: maxChars),
+        isMissing: isMissing,
+      );
     }
 
-    // 提取显示文本
-    return _extractDisplayText(note.content);
+    if (isMissing) {
+      return const _ReferenceDisplay('已删除的笔记', isMissing: true);
+    }
+
+    return _ReferenceDisplay(
+      _extractDisplayText(notes[noteIndex].content, maxChars: maxChars),
+      isMissing: false,
+    );
   }
 
-  // 提取显示文本（Memos 标准：前12字符，清理 Markdown 格式）
-  String _extractDisplayText(String content) {
+  String _extractDisplayText(String content, {required int maxChars}) {
     if (content.isEmpty) {
-      return '(空笔记)';
+      return '空笔记';
     }
 
-    // 🎯 清理 Markdown 格式标记
-    var cleaned = content.trim();
-    // 移除 Markdown 标记：** _ ` # [ ] ( ) ~
-    cleaned = cleaned.replaceAll(RegExp(r'[*_`#\[\]\(\)~]'), '');
-    // 移除多余的空格
+    final lines = content.split('\n');
+    for (final line in lines) {
+      final cleaned = _cleanReferenceLine(line);
+      if (cleaned.isEmpty || _isPureTagLine(cleaned)) {
+        continue;
+      }
+      return _truncateReferenceText(cleaned, maxChars: maxChars);
+    }
+
+    final hasImage = RegExp(r'!\[[^\]]*\]\([^)]+\)').hasMatch(content);
+    return hasImage ? '图片笔记' : '空笔记';
+  }
+
+  String _sanitizeReferenceDisplayText(
+    String text, {
+    required int maxChars,
+  }) {
+    final cleaned = _cleanReferenceLine(text);
+    if (cleaned.isEmpty) {
+      return '空笔记';
+    }
+    return _truncateReferenceText(cleaned, maxChars: maxChars);
+  }
+
+  String _cleanReferenceLine(String line) {
+    var cleaned = line.trim();
+    if (cleaned.isEmpty) {
+      return '';
+    }
+
+    cleaned = cleaned.replaceAll(RegExp(r'!\[[^\]]*\]\([^)]+\)'), '');
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'\[([^\]]+)\]\([^)]+\)'),
+      (match) => match.group(1) ?? '',
+    );
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'<[uU]\b[^>]*>([\s\S]*?)<\/[uU]>'),
+      (match) => match.group(1) ?? '',
+    );
+    cleaned = cleaned.replaceAll(RegExp('<[^>]+>'), '');
+    cleaned = cleaned.replaceFirst(RegExp(r'^#{1,6}\s+'), '');
+    cleaned = cleaned.replaceFirst(RegExp(r'^>\s*'), '');
+    cleaned = cleaned.replaceFirst(RegExp(r'^[-*+]\s+\[[ xX]\]\s+'), '');
+    cleaned = cleaned.replaceFirst(RegExp(r'^[-*+]\s+'), '');
+    cleaned = cleaned.replaceFirst(RegExp(r'^\d+\.\s+'), '');
+    cleaned = cleaned.replaceAll(RegExp('[*_`~]'), '');
     cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
 
-    // Memos 标准：显示前12个字符
-    if (cleaned.length > 12) {
-      return '${cleaned.substring(0, 12)}...';
+    return cleaned;
+  }
+
+  bool _isPureTagLine(String text) {
+    final words = text.split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+    if (words.isEmpty) {
+      return false;
     }
-    return cleaned.isNotEmpty ? cleaned : '(空笔记)';
+    return words.every((word) => word.startsWith('#') && word.length > 1);
+  }
+
+  String _truncateReferenceText(String text, {required int maxChars}) {
+    final characters = text.runes.toList();
+    if (characters.length <= maxChars) {
+      return text;
+    }
+    return '${String.fromCharCodes(characters.take(maxChars))}...';
+  }
+
+  String _escapeMarkdownLinkText(String text) => text
+      .replaceAll(r'\', r'\\')
+      .replaceAll('[', r'\[')
+      .replaceAll(']', r'\]');
+
+  String _decodeReferenceId(String encodedId) {
+    try {
+      return Uri.decodeComponent(encodedId);
+    } on FormatException {
+      return encodedId;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final appProvider = Provider.of<AppProvider>(context, listen: false);
 
     // 🎯 每次构建时重置复选框计数器
     _checkboxCounter = 0;
@@ -177,8 +263,12 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
         : widget.content;
 
     // 🎯 预处理：将 [[noteId]] 转换为可读的链接格式
-    final processedContent =
-        _preprocessReferencesWithContext(rawContent, appProvider.notes);
+    final referenceNotes = widget.referenceNotes ??
+        Provider.of<AppProvider>(context, listen: false).rawNotes;
+    final processedContent = _preprocessReferencesWithContext(
+      rawContent,
+      referenceNotes,
+    );
 
     final converter = MemosMarkdownConverter(serverUrl: widget.serverUrl);
     final convertedContent = converter.convert(processedContent);
@@ -220,6 +310,10 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
             );
           },
           builders: {
+            'a': ReferenceLinkBuilder(
+              onReferenceTap: (noteId) =>
+                  _handleReferenceNavigation(context, noteId),
+            ),
             'u': UnderlineBuilder(),
           },
           onTapText: () {
@@ -234,11 +328,17 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
                   text.startsWith('#') &&
                   href.length > 1) {
                 // 这是标签，不是普通链接
-                widget.onTagTap?.call(href.substring(1));
+                final tagPath = normalizeIncomingTagPath(href.substring(1));
+                if (tagPath != null) {
+                  widget.onTagTap?.call(tagPath);
+                }
                 return;
               }
               if (href.startsWith('ref:') && href.length > 4) {
-                _handleReferenceNavigation(context, href.substring(4));
+                _handleReferenceNavigation(
+                  context,
+                  _decodeReferenceId(href.substring(4)),
+                );
                 return;
               }
               widget.onLinkTap?.call(href);
@@ -268,38 +368,74 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
             ),
             codeblockPadding: const EdgeInsets.all(12),
             blockquote: TextStyle(
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-              fontStyle: FontStyle.italic,
+              color: isDarkMode
+                  ? const Color(0xFFE4E1DA)
+                  : const Color(0xFF343A32),
+              height: 1.58,
             ),
             blockquoteDecoration: BoxDecoration(
+              color: (isDarkMode
+                      ? AppTheme.primaryLightColor
+                      : AppTheme.primaryColor)
+                  .withValues(alpha: isDarkMode ? 0.10 : 0.06),
               border: Border(
                 left: BorderSide(
-                  color: isDarkMode ? Colors.grey[600]! : Colors.grey[400]!,
+                  color: (isDarkMode
+                          ? AppTheme.primaryLightColor
+                          : AppTheme.primaryColor)
+                      .withValues(alpha: isDarkMode ? 0.70 : 0.45),
                   width: 3,
                 ),
               ),
             ),
-            // 🎯 大厂标准标题字体大小（参考 Notion/Apple Notes）
-            h1: AppTextStyles.headlineMedium(
+            blockquotePadding: EdgeInsets.fromLTRB(
+              widget.compactHeadings ? 10 : 12,
+              widget.compactHeadings ? 6 : 8,
+              widget.compactHeadings ? 10 : 12,
+              widget.compactHeadings ? 6 : 8,
+            ),
+            // 笔记流标题不做文档级放大，靠字重和行距表达层级。
+            h1: AppTextStyles.custom(
               context,
+              widget.compactHeadings ? 17 : 19,
               fontWeight: FontWeight.bold,
               color: isDarkMode ? Colors.white : Colors.black,
-            ).copyWith(
-              fontSize: ResponsiveUtils.responsiveFontSize(context, 26),
+              height: widget.compactHeadings ? 1.36 : 1.34,
             ),
-            h2: AppTextStyles.headlineSmall(
+            h2: AppTextStyles.custom(
               context,
+              widget.compactHeadings ? 16 : 18,
               fontWeight: FontWeight.bold,
               color: isDarkMode ? Colors.white : Colors.black,
-            ).copyWith(
-              fontSize: ResponsiveUtils.responsiveFontSize(context, 22),
+              height: widget.compactHeadings ? 1.38 : 1.36,
             ),
-            h3: AppTextStyles.titleLarge(
+            h3: AppTextStyles.custom(
               context,
+              widget.compactHeadings ? 15.5 : 17,
               fontWeight: FontWeight.w600,
               color: isDarkMode ? Colors.white : Colors.black,
-            ).copyWith(
-              fontSize: ResponsiveUtils.responsiveFontSize(context, 19),
+              height: 1.4,
+            ),
+            h4: AppTextStyles.custom(
+              context,
+              widget.compactHeadings ? 15 : 16,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode ? Colors.white : Colors.black,
+              height: 1.42,
+            ),
+            h5: AppTextStyles.custom(
+              context,
+              widget.compactHeadings ? 15 : 15.5,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode ? Colors.white : Colors.black,
+              height: 1.44,
+            ),
+            h6: AppTextStyles.custom(
+              context,
+              15,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode ? Colors.white70 : Colors.black87,
+              height: 1.45,
             ),
             a: TextStyle(
               color: isDarkMode
@@ -752,7 +888,9 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
   // 处理引用导航（直接使用ID跳转）
   void _handleReferenceNavigation(BuildContext context, String noteId) {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
-    final noteExists = appProvider.notes.any((note) => note.id == noteId);
+    final noteExists =
+        widget.referenceNotes?.any((note) => note.id == noteId) ??
+            (appProvider.getNoteById(noteId) != null);
 
     if (!noteExists) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -773,6 +911,89 @@ class _SimpleMemoContentState extends State<SimpleMemoContent> {
         builder: (ctx) => NoteDetailScreen(noteId: noteId),
       ),
     );
+  }
+}
+
+class _ReferenceDisplay {
+  const _ReferenceDisplay(this.text, {required this.isMissing});
+
+  final String text;
+  final bool isMissing;
+}
+
+class ReferenceLinkBuilder extends MarkdownElementBuilder {
+  ReferenceLinkBuilder({
+    required this.onReferenceTap,
+  });
+
+  final ValueChanged<String> onReferenceTap;
+
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final href = element.attributes['href'];
+    if (href == null || !href.startsWith('ref:') || href.length <= 4) {
+      return null;
+    }
+
+    final noteId = _decodeId(href.substring(4));
+    final isMissing = element.attributes['title'] == 'missing';
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final primary =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
+    final baseStyle =
+        preferredStyle ?? parentStyle ?? DefaultTextStyle.of(context).style;
+    final textColor = isMissing
+        ? (isDarkMode ? const Color(0xFF969696) : const Color(0xFF80857C))
+        : primary;
+    final borderColor = isMissing
+        ? (isDarkMode ? Colors.white24 : Colors.black12)
+        : primary.withValues(alpha: isDarkMode ? 0.34 : 0.22);
+    final backgroundColor = isMissing
+        ? (isDarkMode ? Colors.white10 : const Color(0xFFF3F4F1))
+        : primary.withValues(alpha: isDarkMode ? 0.14 : 0.08);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onReferenceTap(noteId),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            child: Text(
+              element.textContent,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: baseStyle.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w500,
+                height: 1.26,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _decodeId(String encodedId) {
+    try {
+      return Uri.decodeComponent(encodedId);
+    } on FormatException {
+      return encodedId;
+    }
   }
 }
 

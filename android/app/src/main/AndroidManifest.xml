@@ -60,6 +60,14 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- 桌面小组件、通知和系统快捷方式统一深链入口 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="inkroot" />
+            </intent-filter>
             
             <!-- 🔥 接收分享的文本内容 -->
             <intent-filter>
@@ -100,6 +108,30 @@
             android:name=".AlarmReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- 🧩 桌面小组件：快速记录 -->
+        <receiver
+            android:name=".InkRootQuickNoteWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/inkroot_quick_note_widget_info" />
+        </receiver>
+
+        <!-- 🧩 桌面小组件：随机回顾 -->
+        <receiver
+            android:name=".InkRootRandomReviewWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/inkroot_random_review_widget_info" />
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

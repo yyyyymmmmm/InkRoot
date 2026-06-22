@@ -4,6 +4,7 @@ import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/app_config_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/services/deepseek_api_service.dart';
+import 'package:inkroot/services/iflytek_speech_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
@@ -25,7 +26,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   final _customContinuationPromptController = TextEditingController();
   final _customTagInsightPromptController = TextEditingController();
   final _customTagRecommendationPromptController = TextEditingController();
+  final _iflytekAppIdController = TextEditingController();
+  final _iflytekApiKeyController = TextEditingController();
+  final _iflytekApiSecretController = TextEditingController();
   bool _obscureApiKey = true;
+  bool _obscureIflytekApiKey = true;
+  bool _obscureIflytekApiSecret = true;
+  bool _useIflytekSpeech = false;
 
   String _text(String zh, String en) =>
       Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
@@ -48,6 +55,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         appConfig.customTagInsightPrompt ?? '';
     _customTagRecommendationPromptController.text =
         appConfig.customTagRecommendationPrompt ?? '';
+    _iflytekAppIdController.text = appConfig.iflytekAppId ?? '';
+    _iflytekApiKeyController.text = appConfig.iflytekApiKey ?? '';
+    _iflytekApiSecretController.text = appConfig.iflytekApiSecret ?? '';
+    _useIflytekSpeech =
+        appConfig.speechRecognitionMode == AppConfig.SPEECH_MODE_IFLYTEK &&
+            appConfig.iflytekSpeechEnabled;
   }
 
   @override
@@ -60,6 +73,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     _customContinuationPromptController.dispose();
     _customTagInsightPromptController.dispose();
     _customTagRecommendationPromptController.dispose();
+    _iflytekAppIdController.dispose();
+    _iflytekApiKeyController.dispose();
+    _iflytekApiSecretController.dispose();
     super.dispose();
   }
 
@@ -212,6 +228,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               appProvider.updateConfig(updatedConfig);
             },
           ),
+
+          const SizedBox(height: 24),
+          _buildSectionHeader(context, _text('语音输入', 'Voice Input')),
+          _buildSpeechSettingsCard(context, appProvider, appConfig),
 
           // 只有启用AI后才显示配置项
           if (appConfig.aiEnabled) ...[
@@ -394,6 +414,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
     bool obscureText = false,
     bool enabled = true,
     Widget? suffixIcon,
+    TextInputType? keyboardType,
+    int maxLines = 1,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
@@ -444,6 +466,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             controller: controller,
             obscureText: obscureText,
             enabled: enabled,
+            keyboardType: keyboardType,
+            maxLines: obscureText ? 1 : maxLines,
             style: TextStyle(
               fontSize: 14,
               color: textColor,
@@ -491,6 +515,191 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               suffixIcon: suffixIcon,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpeechSettingsCard(
+    BuildContext context,
+    AppProvider appProvider,
+    AppConfig appConfig,
+  ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
+    final textColor =
+        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
+    final subTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final iconColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
+    final useIflytek = _useIflytekSpeech;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.mic_none_rounded, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _text('语音转文字', 'Speech to Text'),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _text(
+                        '点击编辑器麦克风，或长按首页 + 号直接语音新建。',
+                        'Use the editor mic button, or long-press + on Home to start a voice note.',
+                      ),
+                      style: TextStyle(fontSize: 13, color: subTextColor),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment<String>(
+                value: AppConfig.SPEECH_MODE_SYSTEM,
+                icon: const Icon(Icons.phone_iphone_rounded),
+                label: Text(_text('系统识别', 'System')),
+              ),
+              const ButtonSegment<String>(
+                value: AppConfig.SPEECH_MODE_IFLYTEK,
+                icon: Icon(Icons.cloud_outlined),
+                label: Text('讯飞'),
+              ),
+            ],
+            selected: {
+              if (useIflytek)
+                AppConfig.SPEECH_MODE_IFLYTEK
+              else
+                AppConfig.SPEECH_MODE_SYSTEM,
+            },
+            onSelectionChanged: (selection) {
+              final mode = selection.first;
+              setState(() {
+                _useIflytekSpeech = mode == AppConfig.SPEECH_MODE_IFLYTEK;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          Text(
+            useIflytek
+                ? _text(
+                    '开启后语音会发送到讯飞接口转写，调用费用由你的讯飞账号承担。',
+                    'When enabled, audio is sent to iFlytek for transcription. Usage costs belong to your iFlytek account.',
+                  )
+                : _text(
+                    '默认使用系统语音识别，免费、低门槛，能力受系统和设备环境影响。',
+                    'System recognition is free and simple, but quality depends on the OS and device environment.',
+                  ),
+            style: TextStyle(fontSize: 12, height: 1.5, color: subTextColor),
+          ),
+          if (useIflytek) ...[
+            const SizedBox(height: 16),
+            _buildInputCard(
+              context,
+              icon: Icons.badge_outlined,
+              title: 'APPID',
+              controller: _iflytekAppIdController,
+              hintText: _text('讯飞控制台的 APPID', 'APPID from iFlytek console'),
+            ),
+            const SizedBox(height: 12),
+            _buildInputCard(
+              context,
+              icon: Icons.key_outlined,
+              title: 'APIKey',
+              controller: _iflytekApiKeyController,
+              hintText: 'APIKey',
+              obscureText: _obscureIflytekApiKey,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureIflytekApiKey
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: subTextColor,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureIflytekApiKey = !_obscureIflytekApiKey;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildInputCard(
+              context,
+              icon: Icons.lock_outline,
+              title: 'APISecret',
+              controller: _iflytekApiSecretController,
+              hintText: 'APISecret',
+              obscureText: _obscureIflytekApiSecret,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureIflytekApiSecret
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: subTextColor,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureIflytekApiSecret = !_obscureIflytekApiSecret;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _testIflytekConnection,
+                    icon: const Icon(Icons.wifi_tethering_rounded, size: 18),
+                    label: Text(_text('测试讯飞连接', 'Test iFlytek')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showIflytekSetupGuide,
+                    icon: const Icon(Icons.help_outline_rounded, size: 18),
+                    label: Text(_text('对接教程', 'Setup Guide')),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1121,6 +1330,100 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         );
       }
     }
+  }
+
+  Future<void> _testIflytekConnection() async {
+    final config = _speechConfigFromInputs(
+      Provider.of<AppProvider>(
+        context,
+        listen: false,
+      ).appConfig,
+    );
+
+    if (!IflytekSpeechService(config).isConfigured) {
+      SnackBarUtils.showWarning(
+        context,
+        _text(
+          '请先填写完整的 APPID、APIKey 和 APISecret',
+          'Enter APPID, APIKey, and APISecret first',
+        ),
+      );
+      return;
+    }
+
+    SnackBarUtils.showInfo(
+      context,
+      _text('正在测试讯飞连接...', 'Testing iFlytek connection...'),
+    );
+    final ok = await IflytekSpeechService(config).testConnection();
+    if (!mounted) {
+      return;
+    }
+    if (ok) {
+      SnackBarUtils.showSuccess(
+        context,
+        _text('讯飞连接成功，请点击右上角保存', 'iFlytek connected. Save to apply.'),
+      );
+    } else {
+      SnackBarUtils.showError(
+        context,
+        _text(
+          '讯飞连接失败，请检查密钥、额度和网络',
+          'iFlytek connection failed. Check keys, quota, and network.',
+        ),
+      );
+    }
+  }
+
+  AppConfig _speechConfigFromInputs(AppConfig base) {
+    final appId = _iflytekAppIdController.text.trim();
+    final apiKey = _iflytekApiKeyController.text.trim();
+    final apiSecret = _iflytekApiSecretController.text.trim();
+    return base.copyWith(
+      speechRecognitionMode: _useIflytekSpeech
+          ? AppConfig.SPEECH_MODE_IFLYTEK
+          : AppConfig.SPEECH_MODE_SYSTEM,
+      iflytekSpeechEnabled: _useIflytekSpeech,
+      iflytekAppId: appId.isEmpty ? null : appId,
+      iflytekApiKey: apiKey.isEmpty ? null : apiKey,
+      iflytekApiSecret: apiSecret.isEmpty ? null : apiSecret,
+      updateIflytekAppId: true,
+      updateIflytekApiKey: true,
+      updateIflytekApiSecret: true,
+    );
+  }
+
+  void _showIflytekSetupGuide() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_text('讯飞语音识别对接教程', 'iFlytek Setup Guide')),
+        content: SingleChildScrollView(
+          child: Text(
+            _text(
+              '1. 打开讯飞开放平台，进入控制台\n'
+                  '2. 创建应用，开通“语音听写/实时语音转写”能力\n'
+                  '3. 在应用详情复制 APPID、APIKey、APISecret\n'
+                  '4. 回到 InkRoot 填入上方三个字段并测试连接\n'
+                  '5. 首页长按 + 号即可语音新建，编辑器里也可点麦克风补充\n\n'
+                  '注意：开启后语音会发送到讯飞接口识别，调用额度和费用由你的讯飞账号承担。',
+              '1. Open iFlytek Open Platform and enter the console\n'
+                  '2. Create an app and enable speech dictation / real-time ASR\n'
+                  '3. Copy APPID, APIKey, and APISecret from the app detail page\n'
+                  '4. Enter them in InkRoot and test the connection\n'
+                  '5. Long-press + on Home to create a voice note; use the editor mic to add more\n\n'
+                  'Note: when enabled, audio is sent to iFlytek for recognition. Quota and costs belong to your iFlytek account.',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(AppLocalizationsSimple.of(context)?.confirm ?? '确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   // 显示常见问题对话框
@@ -1903,6 +2206,23 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             customContinuationPrompt.isNotEmpty ||
             customTagInsightPrompt.isNotEmpty ||
             customTagRecommendationPrompt.isNotEmpty);
+    final iflytekAppId = _iflytekAppIdController.text.trim();
+    final iflytekApiKey = _iflytekApiKeyController.text.trim();
+    final iflytekApiSecret = _iflytekApiSecretController.text.trim();
+
+    if (_useIflytekSpeech &&
+        (iflytekAppId.isEmpty ||
+            iflytekApiKey.isEmpty ||
+            iflytekApiSecret.isEmpty)) {
+      SnackBarUtils.showWarning(
+        context,
+        _text(
+          '开启讯飞语音识别需要填写 APPID、APIKey 和 APISecret',
+          'APPID, APIKey, and APISecret are required for iFlytek speech.',
+        ),
+      );
+      return;
+    }
 
     final updatedConfig = appProvider.appConfig.copyWith(
       aiApiUrl: apiUrl.isEmpty ? null : apiUrl,
@@ -1910,6 +2230,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       aiModel: model.isEmpty ? appProvider.appConfig.aiModel : model,
       updateAiApiUrl: true,
       updateAiApiKey: true,
+      speechRecognitionMode: _useIflytekSpeech
+          ? AppConfig.SPEECH_MODE_IFLYTEK
+          : AppConfig.SPEECH_MODE_SYSTEM,
+      iflytekSpeechEnabled: _useIflytekSpeech,
+      iflytekAppId: iflytekAppId.isEmpty ? null : iflytekAppId,
+      iflytekApiKey: iflytekApiKey.isEmpty ? null : iflytekApiKey,
+      iflytekApiSecret: iflytekApiSecret.isEmpty ? null : iflytekApiSecret,
+      updateIflytekAppId: true,
+      updateIflytekApiKey: true,
+      updateIflytekApiSecret: true,
       useCustomPrompt: hasCustomPrompt,
       customInsightPrompt:
           customInsightPrompt.isEmpty ? null : customInsightPrompt,

@@ -108,6 +108,16 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
 
           const Divider(),
 
+          _buildSectionHeader(context, '桌面小组件'),
+
+          _buildWidgetReviewRefreshSetting(context, appProvider, appConfig),
+
+          SizedBox(height: ResponsiveUtils.fontScaledSpacing(context, 4)),
+
+          _buildWidgetReviewRangeSetting(context, appProvider, appConfig),
+
+          const Divider(),
+
           // 其他设置
           _buildSectionHeader(context, l10n?.other ?? '其他'),
 
@@ -141,6 +151,159 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             onChanged: (value) => _updateAutoShowEditor(appProvider, value),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWidgetReviewRefreshSetting(
+    BuildContext context,
+    AppProvider appProvider,
+    AppConfig appConfig,
+  ) {
+    final options = <int>[15, 30, 60, 180, 360, 720];
+    return _buildChoiceSetting(
+      context,
+      icon: Icons.schedule_rounded,
+      title: '随机回顾刷新',
+      subtitle: '控制随机回顾小组件多久换一条内容',
+      options: options,
+      selectedValue: appConfig.widgetReviewRefreshIntervalMinutes,
+      labelBuilder: (value) => value < 60 ? '$value分钟' : '${value ~/ 60}小时',
+      onSelected: (value) => _updateWidgetReviewSettings(
+        appProvider,
+        refreshIntervalMinutes: value,
+      ),
+    );
+  }
+
+  Widget _buildWidgetReviewRangeSetting(
+    BuildContext context,
+    AppProvider appProvider,
+    AppConfig appConfig,
+  ) {
+    final options = <int>[30, 90, 180, 365, 0];
+    return _buildChoiceSetting(
+      context,
+      icon: Icons.history_rounded,
+      title: '随机回顾范围',
+      subtitle: '控制小组件优先从多久以前的笔记里抽取',
+      options: options,
+      selectedValue: appConfig.widgetReviewRangeDays,
+      labelBuilder: (value) => switch (value) {
+        0 => '全部',
+        30 => '近30天',
+        90 => '近90天',
+        180 => '近半年',
+        365 => '近一年',
+        _ => '$value天',
+      },
+      onSelected: (value) => _updateWidgetReviewSettings(
+        appProvider,
+        rangeDays: value,
+      ),
+    );
+  }
+
+  Widget _buildChoiceSetting(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<int> options,
+    required int selectedValue,
+    required String Function(int value) labelBuilder,
+    required ValueChanged<int> onSelected,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor =
+        isDarkMode ? AppTheme.primaryLightColor : AppTheme.primaryColor;
+    final textColor =
+        isDarkMode ? AppTheme.darkTextPrimaryColor : AppTheme.textPrimaryColor;
+    final subTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final backgroundColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        vertical: ResponsiveUtils.fontScaledSpacing(context, 8),
+        horizontal: ResponsiveUtils.fontScaledSpacing(context, 16),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(ResponsiveUtils.fontScaledSpacing(context, 16)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(
+            ResponsiveUtils.fontScaledBorderRadius(context, 12),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: isDarkMode ? 0.2 : 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: primaryColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 14, color: subTextColor),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: options.map((value) {
+                      final selected = value == selectedValue;
+                      return ChoiceChip(
+                        label: Text(labelBuilder(value)),
+                        selected: selected,
+                        selectedColor: primaryColor.withValues(alpha: 0.18),
+                        labelStyle: TextStyle(
+                          color: selected
+                              ? primaryColor
+                              : (isDarkMode
+                                  ? Colors.grey[300]
+                                  : Colors.black87),
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                        onSelected: (isSelected) {
+                          if (isSelected) {
+                            onSelected(value);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -676,6 +839,18 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 '已关闭启动自动弹出编辑框'),
       );
     }
+  }
+
+  Future<void> _updateWidgetReviewSettings(
+    AppProvider appProvider, {
+    int? refreshIntervalMinutes,
+    int? rangeDays,
+  }) async {
+    final newConfig = appProvider.appConfig.copyWith(
+      widgetReviewRefreshIntervalMinutes: refreshIntervalMinutes,
+      widgetReviewRangeDays: rangeDays,
+    );
+    await appProvider.updateConfig(newConfig);
   }
 
   // 构建默认笔记可见性选择器

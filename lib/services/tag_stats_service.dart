@@ -38,7 +38,7 @@ Map<String, dynamic> buildTagStatsPayloadFromNoteJson(
       if (t is! String) {
         continue;
       }
-      final tag = normalizeTagPath(t);
+      final tag = normalizeIncomingTagPath(t);
       if (tag == null) {
         continue;
       }
@@ -117,7 +117,7 @@ Map<String, dynamic> buildTagTreePayloadFromNoteJson(
       if (t is! String) {
         continue;
       }
-      final tag = normalizeTagPath(t);
+      final tag = normalizeIncomingTagPath(t);
       if (tag == null) {
         continue;
       }

@@ -25,6 +25,8 @@ class PreferencesService {
   static const String _usernameKey = Config.AppConfig.prefKeyUsername;
   static const String _passwordKey = Config.AppConfig.prefKeyPassword;
   static const String _aiApiKeySecureKey = 'ai_api_key';
+  static const String _iflytekApiKeySecureKey = 'iflytek_api_key';
+  static const String _iflytekApiSecretSecureKey = 'iflytek_api_secret';
   static const String _webDavPasswordSecureKey = 'webdav_password';
 
   // 🎯 大厂标准：服务器选择偏好（登录/注册页共享）
@@ -92,6 +94,8 @@ class PreferencesService {
     final json = config.toJson();
     json['lastToken'] = null;
     json['aiApiKey'] = null;
+    json['iflytekApiKey'] = null;
+    json['iflytekApiSecret'] = null;
     return json;
   }
 
@@ -107,22 +111,53 @@ class PreferencesService {
     } else {
       await _storage.delete(key: _aiApiKeySecureKey);
     }
+
+    final iflytekApiKey = config.iflytekApiKey?.trim();
+    if (iflytekApiKey != null && iflytekApiKey.isNotEmpty) {
+      await _storage.write(
+        key: _iflytekApiKeySecureKey,
+        value: iflytekApiKey,
+      );
+    } else {
+      await _storage.delete(key: _iflytekApiKeySecureKey);
+    }
+
+    final iflytekApiSecret = config.iflytekApiSecret?.trim();
+    if (iflytekApiSecret != null && iflytekApiSecret.isNotEmpty) {
+      await _storage.write(
+        key: _iflytekApiSecretSecureKey,
+        value: iflytekApiSecret,
+      );
+    } else {
+      await _storage.delete(key: _iflytekApiSecretSecureKey);
+    }
   }
 
   Future<AppConfig> _withSecureAppConfigFields(AppConfig config) async {
     final results = await Future.wait([
       _storage.read(key: _authTokenKey),
       _storage.read(key: _aiApiKeySecureKey),
+      _storage.read(key: _iflytekApiKeySecureKey),
+      _storage.read(key: _iflytekApiSecretSecureKey),
     ]);
 
     final token = results[0];
     final aiApiKey = results[1];
+    final iflytekApiKey = results[2];
+    final iflytekApiSecret = results[3];
     final hasToken = token?.isNotEmpty ?? false;
     final hasAiApiKey = aiApiKey?.isNotEmpty ?? false;
+    final hasIflytekApiKey = iflytekApiKey?.isNotEmpty ?? false;
+    final hasIflytekApiSecret = iflytekApiSecret?.isNotEmpty ?? false;
     return config.copyWith(
       lastToken: hasToken ? token : config.lastToken,
       aiApiKey: hasAiApiKey ? aiApiKey : config.aiApiKey,
       updateAiApiKey: hasAiApiKey,
+      iflytekApiKey: hasIflytekApiKey ? iflytekApiKey : config.iflytekApiKey,
+      iflytekApiSecret:
+          hasIflytekApiSecret ? iflytekApiSecret : config.iflytekApiSecret,
+      updateIflytekApiKey: hasIflytekApiKey,
+      updateIflytekApiSecret: hasIflytekApiSecret,
     );
   }
 
@@ -130,7 +165,10 @@ class PreferencesService {
     Map<String, dynamic> rawJson,
     AppConfig resolvedConfig,
   ) async {
-    if (rawJson['lastToken'] == null && rawJson['aiApiKey'] == null) {
+    if (rawJson['lastToken'] == null &&
+        rawJson['aiApiKey'] == null &&
+        rawJson['iflytekApiKey'] == null &&
+        rawJson['iflytekApiSecret'] == null) {
       return;
     }
 

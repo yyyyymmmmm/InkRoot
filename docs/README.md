@@ -5,6 +5,7 @@ This directory contains project documentation for users and maintainers.
 ## Start Here
 
 - New users: [Getting Started](user-guide/getting-started.md)
+- Project structure and builds: [Project Structure and Build Guide](PROJECT_STRUCTURE_AND_BUILD.md)
 - Maintainers: [Maintenance](MAINTENANCE.md)
 - Store review: [Store Compliance](STORE_COMPLIANCE.md)
 - Contributors: [Contributing](../CONTRIBUTING.md)
@@ -18,6 +19,7 @@ This directory contains project documentation for users and maintainers.
 
 ## Development
 
+- [Project Structure and Build Guide](PROJECT_STRUCTURE_AND_BUILD.md)
 - [Debugging](development/debugging.md)
 - [Troubleshooting](development/troubleshooting.md)
 - [API Reference](api/README.md)

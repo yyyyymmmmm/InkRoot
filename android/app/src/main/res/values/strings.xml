@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inkroot_quick_note_widget_description">InkRoot quick note</string>
+    <string name="inkroot_random_review_widget_description">InkRoot random review</string>
+</resources>

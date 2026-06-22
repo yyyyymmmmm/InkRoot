@@ -23,6 +23,7 @@ class MemosMarkdownRenderer extends StatelessWidget {
     this.onCheckboxTap,
     this.mode = MemosMarkdownMode.detail,
     this.highlightQuery,
+    this.referenceNotes,
   });
 
   MemosMarkdownRenderer.fromNote({
@@ -36,6 +37,7 @@ class MemosMarkdownRenderer extends StatelessWidget {
     this.onCheckboxTap,
     this.mode = MemosMarkdownMode.detail,
     this.highlightQuery,
+    this.referenceNotes,
     bool appendResourceImages = true,
   })  : note = note,
         content = appendResourceImages
@@ -52,6 +54,7 @@ class MemosMarkdownRenderer extends StatelessWidget {
   final Function(int todoIndex)? onCheckboxTap;
   final MemosMarkdownMode mode;
   final String? highlightQuery;
+  final List<Note>? referenceNotes;
 
   @override
   Widget build(BuildContext context) => SimpleMemoContent(
@@ -64,5 +67,7 @@ class MemosMarkdownRenderer extends StatelessWidget {
         note: note,
         onCheckboxTap: onCheckboxTap,
         highlightQuery: highlightQuery,
+        referenceNotes: referenceNotes,
+        compactHeadings: mode == MemosMarkdownMode.cardPreview,
       );
 }

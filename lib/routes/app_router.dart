@@ -41,7 +41,22 @@ import 'package:inkroot/screens/user_preferences_screen.dart'; // 🧠 用户偏
 import 'package:inkroot/screens/webdav_settings_screen.dart';
 import 'package:inkroot/screens/weread_import_screen.dart';
 import 'package:inkroot/services/preferences_service.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/widgets/desktop_layout.dart';
+
+const bool _screenshotMode = bool.fromEnvironment('INKROOT_SCREENSHOT_MODE');
+const String _screenshotInitialLocation = String.fromEnvironment(
+  'INKROOT_INITIAL_LOCATION',
+  defaultValue: '/',
+);
+
+String _resolvedInitialLocation() {
+  final location = _screenshotInitialLocation.trim();
+  if (location.isEmpty || !location.startsWith('/')) {
+    return '/';
+  }
+  return location;
+}
 
 // 自定义路由，用于实现从上往下的返回动画
 
@@ -235,7 +250,7 @@ class AppRouter {
   final PreferencesService _preferencesService = PreferencesService();
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/', // 🚀 大厂做法：只用Native Splash，直接进入主页
+    initialLocation: _resolvedInitialLocation(),
     routes: [
       // 🚀 大厂标准：移除自定义启动页，只使用系统Native Splash
       // GoRoute(
@@ -325,6 +340,11 @@ class AppRouter {
           // 🔥 接收分享的内容
           final extra = state.extra as Map<String, dynamic>?;
           final sharedContent = extra?['sharedContent'] as String?;
+          final shouldOpenQuickNote =
+              state.uri.queryParameters['quickNote'] == '1';
+          final quickNoteTag = state.uri.queryParameters['tag'];
+          final quickNoteActionToken =
+              state.uri.queryParameters['quickNoteAction'];
 
           // 桌面端使用NoTransitionPage，移动端使用动画
           final isDesktop = !kIsWeb && (Platform.isMacOS || Platform.isWindows);
@@ -333,7 +353,12 @@ class AppRouter {
             return NoTransitionPage<void>(
               key: state.pageKey,
               child: DesktopLayout(
-                child: HomeScreen(sharedContent: sharedContent),
+                child: HomeScreen(
+                  sharedContent: sharedContent,
+                  openQuickNote: shouldOpenQuickNote,
+                  quickNoteTag: quickNoteTag,
+                  quickNoteActionToken: quickNoteActionToken,
+                ),
               ),
             );
           }
@@ -343,7 +368,12 @@ class AppRouter {
             state: state,
             begin: const Offset(-0.15, 0),
             child: DesktopLayout(
-              child: HomeScreen(sharedContent: sharedContent),
+              child: HomeScreen(
+                sharedContent: sharedContent,
+                openQuickNote: shouldOpenQuickNote,
+                quickNoteTag: quickNoteTag,
+                quickNoteActionToken: quickNoteActionToken,
+              ),
             ),
           );
         },
@@ -574,8 +604,10 @@ class AppRouter {
             name: 'tag-notes',
             pageBuilder: (context, state) {
               try {
-                // GoRouter 的 queryParameters 已经是解码后的值。
-                final tagName = state.uri.queryParameters['tag']?.trim() ?? '';
+                final tagName = normalizeIncomingTagPath(
+                      state.uri.queryParameters['tag'] ?? '',
+                    ) ??
+                    '';
 
                 // 🛡️ 防御性检查
                 if (tagName.isEmpty || tagName.trim().isEmpty) {
@@ -848,6 +880,10 @@ class AppRouter {
       ),
     ],
     redirect: (context, state) async {
+      if (_screenshotMode) {
+        return null;
+      }
+
       // 🔒 大厂标准：隐私政策优先级最高（第一次安装时必须先同意）
       final hasAgreedToPrivacy =
           await _preferencesService.hasAgreedToPrivacyPolicy();

@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
+import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/models/sidebar_config.dart';
 import 'package:inkroot/models/user_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/services/tag_stats_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/utils/text_style_helper.dart';
 import 'package:inkroot/widgets/cached_avatar.dart';
 import 'package:inkroot/widgets/heatmap.dart';
@@ -115,6 +117,9 @@ class _SidebarState extends State<Sidebar> {
   final Set<String> _expandedTagPaths = {};
   Future<Map<String, dynamic>>? _tagTreeFuture;
   String? _tagTreeSignature;
+  String? _tagTreeNotesSignature;
+  List<Map<String, dynamic>> _cachedTagTreeNotesJson = const [];
+  int _cachedTagCount = 0;
   String? _lastSelectedTagPath;
 
   static const int _tagPreviewLimit = 12;
@@ -391,14 +396,13 @@ class _SidebarState extends State<Sidebar> {
   Widget _buildAllTagsExpandableItem({
     required BuildContext context,
     required bool isDarkMode,
+    required List<Note> notes,
     required String currentPath,
     required String? selectedTagPath,
     required int index,
     required SidebarMenuItem menuItem,
   }) {
-    final notesJson = context.select<AppProvider, List<Map<String, dynamic>>>(
-      (p) => p.notes.map((n) => n.toJson()).toList(growable: false),
-    );
+    final notesJson = _tagTreeNotesJsonFor(notes);
 
     final isSelected = currentPath == menuItem.path ||
         currentPath.startsWith('${menuItem.path}/');
@@ -408,7 +412,7 @@ class _SidebarState extends State<Sidebar> {
             ? AppTheme.darkTextPrimaryColor.withValues(alpha: 0.85)
             : AppTheme.textPrimaryColor.withValues(alpha: 0.85));
 
-    final tagCount = _countUniqueTagPaths(notesJson);
+    final tagCount = _cachedTagCount;
     final header = Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -826,6 +830,52 @@ class _SidebarState extends State<Sidebar> {
     return _tagTreeFuture!;
   }
 
+  List<Map<String, dynamic>> _tagTreeNotesJsonFor(List<Note> notes) {
+    final signature = _tagTreeSignatureForNotes(notes);
+    if (_tagTreeNotesSignature == signature) {
+      return _cachedTagTreeNotesJson;
+    }
+
+    _tagTreeNotesSignature = signature;
+    final tags = <String>{};
+    _cachedTagTreeNotesJson = notes.map((note) {
+      final normalizedTags = note.tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toList(growable: false);
+      for (final tag in normalizedTags) {
+        final parts = tag
+            .split('/')
+            .map((part) => part.trim())
+            .where((part) => part.isNotEmpty)
+            .toList(growable: false);
+        for (var i = 0; i < parts.length; i++) {
+          tags.add(parts.sublist(0, i + 1).join('/'));
+        }
+      }
+      return <String, dynamic>{
+        'id': note.id,
+        'tags': normalizedTags,
+      };
+    }).toList(growable: false);
+    _cachedTagCount = tags.length;
+    return _cachedTagTreeNotesJson;
+  }
+
+  String _tagTreeSignatureForNotes(List<Note> notes) {
+    final parts = <String>[];
+    for (final note in notes) {
+      final tags = note.tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toList()
+        ..sort();
+      parts.add('${note.id}:${tags.join(',')}');
+    }
+    parts.sort();
+    return parts.join('|');
+  }
+
   String _tagTreeSignatureFor(List<Map<String, dynamic>> notesJson) {
     final parts = <String>[];
     for (final note in notesJson) {
@@ -848,27 +898,6 @@ class _SidebarState extends State<Sidebar> {
     return parts.join('|');
   }
 
-  int _countUniqueTagPaths(List<Map<String, dynamic>> notesJson) {
-    final tags = <String>{};
-    for (final note in notesJson) {
-      final rawTags = note['tags'];
-      if (rawTags is! List) {
-        continue;
-      }
-      for (final tag in rawTags.whereType<String>()) {
-        final parts = tag
-            .split('/')
-            .map((part) => part.trim())
-            .where((part) => part.isNotEmpty)
-            .toList(growable: false);
-        for (var i = 0; i < parts.length; i++) {
-          tags.add(parts.sublist(0, i + 1).join('/'));
-        }
-      }
-    }
-    return tags.length;
-  }
-
   void _toggleTagPath(String path) {
     setState(() {
       if (_expandedTagPaths.contains(path)) {
@@ -880,7 +909,8 @@ class _SidebarState extends State<Sidebar> {
   }
 
   void _openTagDetail(BuildContext context, String tagPath) {
-    if (tagPath.trim().isEmpty) {
+    final normalizedTagPath = normalizeIncomingTagPath(tagPath);
+    if (normalizedTagPath == null) {
       return;
     }
     if (_navigationPending) {
@@ -902,12 +932,12 @@ class _SidebarState extends State<Sidebar> {
         if (isSwitchingTag) {
           router.replaceNamed(
             'tag-notes',
-            queryParameters: {'tag': tagPath},
+            queryParameters: {'tag': normalizedTagPath},
           );
         } else {
           router.pushNamed(
             'tag-notes',
-            queryParameters: {'tag': tagPath},
+            queryParameters: {'tag': normalizedTagPath},
           );
         }
       } finally {
@@ -937,8 +967,8 @@ class _SidebarState extends State<Sidebar> {
       return null;
     }
 
-    final tagPath = uri.queryParameters['tag']?.trim();
-    if (tagPath == null || tagPath.isEmpty) {
+    final tagPath = normalizeIncomingTagPath(uri.queryParameters['tag'] ?? '');
+    if (tagPath == null) {
       _lastSelectedTagPath = null;
       return null;
     }
@@ -1004,6 +1034,7 @@ class _SidebarState extends State<Sidebar> {
     BuildContext context,
     String currentPath,
     SidebarConfig config,
+    List<Note> notes,
   ) {
     final items = <Widget>[];
     final visibleMenuItems = config.getOrderedVisibleItems();
@@ -1021,6 +1052,7 @@ class _SidebarState extends State<Sidebar> {
           _buildAllTagsExpandableItem(
             context: context,
             isDarkMode: Theme.of(context).brightness == Brightness.dark,
+            notes: notes,
             currentPath: currentPath,
             selectedTagPath: _selectedTagPathFromRoute(context),
             index: menuIndex++,
@@ -1346,9 +1378,7 @@ class _SidebarState extends State<Sidebar> {
         context.select<AppProvider, int>((p) => p.unreadAnnouncementsCount);
     final sidebarConfig = context
         .select<AppProvider, SidebarConfig>((p) => p.appConfig.sidebarConfig);
-    final heatmapNotes = context.select<AppProvider, List<dynamic>>(
-      (p) => p.notes,
-    );
+    final notes = context.select<AppProvider, List<Note>>((p) => p.notes);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDarkMode ? AppTheme.darkCardColor : Colors.white;
 
@@ -1769,7 +1799,7 @@ class _SidebarState extends State<Sidebar> {
                               const SizedBox(height: 8),
                               RepaintBoundary(
                                 child: Heatmap(
-                                  notes: heatmapNotes as dynamic,
+                                  notes: notes,
                                   cellColor: isDarkMode
                                       ? Colors.grey[800]
                                       : Colors.grey[100],
@@ -1815,6 +1845,7 @@ class _SidebarState extends State<Sidebar> {
                       context,
                       currentPath,
                       sidebarConfig,
+                      notes,
                     ),
 
                     // 添加间距，使退出登录按钮位于底部

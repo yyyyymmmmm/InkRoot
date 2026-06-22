@@ -33,7 +33,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
   // 不再需要本地状态，直接使用 Consumer 监听 Provider
 
   void _switchTag(String tagName) {
-    final nextTag = normalizeTagPath(tagName);
+    final nextTag = normalizeIncomingTagPath(tagName);
     final currentTag = _normalizedTagName;
     if (nextTag == null || nextTag == currentTag) {
       return;
@@ -74,12 +74,16 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
 
     return Consumer<AppProvider>(
       builder: (context, appProvider, _) {
-        final currentNotes = _notesForCurrentTag(appProvider);
+        final allVisibleNotes = appProvider.notes;
+        final currentNotes = _notesForCurrentTag(
+          appProvider,
+          allVisibleNotes,
+        );
         final childCount = currentNotes
             .where(
               (note) => note.tags.any(
                 (tag) {
-                  final normalizedTag = normalizeTagPath(tag);
+                  final normalizedTag = normalizeIncomingTagPath(tag);
                   return normalizedTag != null &&
                       normalizedTag.startsWith('$tagName/');
                 },
@@ -138,15 +142,21 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
           body: currentNotes.isEmpty
               ? _buildEmptyState(context)
               : ResponsiveLayout(
-                  mobile: _buildNotesList(context, currentNotes),
+                  mobile: _buildNotesList(
+                    context,
+                    currentNotes,
+                    allVisibleNotes,
+                  ),
                   tablet: _buildNotesGrid(
                     context,
                     currentNotes,
+                    referenceNotes: allVisibleNotes,
                     crossAxisCount: 2,
                   ),
                   desktop: _buildNotesGrid(
                     context,
                     currentNotes,
+                    referenceNotes: allVisibleNotes,
                     crossAxisCount: 3,
                   ),
                 ),
@@ -167,10 +177,14 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
     );
   }
 
-  String get _normalizedTagName => normalizeTagPath(widget.tagName) ?? '';
+  String get _normalizedTagName =>
+      normalizeIncomingTagPath(widget.tagName) ?? '';
 
-  List<Note> _notesForCurrentTag(AppProvider appProvider) =>
-      appProvider.notes.where((note) {
+  List<Note> _notesForCurrentTag(
+    AppProvider appProvider,
+    List<Note> allVisibleNotes,
+  ) =>
+      allVisibleNotes.where((note) {
         return note.tags.any(
           (tag) => tagPathMatches(tag, _normalizedTagName),
         );
@@ -310,7 +324,11 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
   }
 
   // 移动端列表布局（与主页完全一致）
-  Widget _buildNotesList(BuildContext context, List<Note> notes) =>
+  Widget _buildNotesList(
+    BuildContext context,
+    List<Note> notes,
+    List<Note> referenceNotes,
+  ) =>
       SlidableAutoCloseBehavior(
         child: ListView.builder(
           scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
@@ -324,6 +342,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
               child: NoteCard(
                 key: ValueKey('card_${note.id}'), // 🚀 与主页一致
                 note: note,
+                referenceNotes: referenceNotes,
                 onTagTap: _switchTag,
                 onEdit: () {
                   // 🎯 与主页完全一致：弹出底部编辑器
@@ -351,6 +370,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
   Widget _buildNotesGrid(
     BuildContext context,
     List<Note> notes, {
+    required List<Note> referenceNotes,
     required int crossAxisCount,
   }) =>
       SlidableAutoCloseBehavior(
@@ -373,6 +393,7 @@ class _TagNotesScreenState extends State<TagNotesScreen> {
                 child: NoteCard(
                   key: ValueKey('card_${note.id}'), // 🚀 与主页一致
                   note: note,
+                  referenceNotes: referenceNotes,
                   onTagTap: _switchTag,
                   onEdit: () {
                     // 🎯 与主页完全一致：弹出底部编辑器

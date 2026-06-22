@@ -389,6 +389,15 @@ class AppLocalizationsSimple {
   String get deleteFailed => _t('deleteFailed', fallback: '删除失败');
   String get showAll => _t('showAll', fallback: '显示全部');
   String get unknown => _t('unknown', fallback: '未知');
+  String get graphShowIsolated => _t('graphShowIsolated', fallback: '显示孤立点');
+  String get graphHideIsolated => _t('graphHideIsolated', fallback: '隐藏孤立点');
+  String get graphBuilding => _t('graphBuilding', fallback: '正在整理图谱');
+  String get graphOpenNote => _t('graphOpenNote', fallback: '打开笔记');
+  String get graphFocusNode => _t('graphFocusNode', fallback: '聚焦关联');
+  String get graphClearSelection => _t('graphClearSelection', fallback: '清除选择');
+  String get graphNoConnections =>
+      _t('graphNoConnections', fallback: '还没有引用关系');
+  String get graphResetView => _t('graphResetView', fallback: '适配视图');
 
   // ===== AI设置 =====
   String get aiSettings => _t('aiSettings', fallback: 'AI 设置');

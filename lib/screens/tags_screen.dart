@@ -77,13 +77,14 @@ class _TagsScreenState extends State<TagsScreen>
 
   // 导航到标签详情页（使用 pushNamed 避免URL特殊字符问题）
   void _navigateToTagNotes(String tag) {
+    final tagPath = normalizeIncomingTagPath(tag);
     Log.ui.debug(
       'Navigate to tag notes',
-      data: {'tag': tag, 'tagLength': tag.length},
+      data: {'tag': tag, 'normalizedTag': tagPath, 'tagLength': tag.length},
     );
 
     // 🛡️ 确保标签不为空
-    if (tag.isEmpty || tag.trim().isEmpty) {
+    if (tagPath == null) {
       Log.ui.warning('Ignored empty tag navigation');
       return;
     }
@@ -92,14 +93,14 @@ class _TagsScreenState extends State<TagsScreen>
     try {
       context.pushNamed(
         'tag-notes',
-        queryParameters: {'tag': tag}, // GoRouter 会自动编码
+        queryParameters: {'tag': tagPath}, // GoRouter 会自动编码
       );
     } on Object catch (e, stackTrace) {
       Log.ui.error(
         'Failed to navigate to tag notes',
         error: e,
         stackTrace: stackTrace,
-        data: {'tag': tag},
+        data: {'tag': tag, 'normalizedTag': tagPath},
       );
       // 显示错误提示
       if (mounted) {
@@ -886,7 +887,7 @@ class _TagsScreenState extends State<TagsScreen>
     final tags = <String>{};
     for (final note in appProvider.notes) {
       for (final tag in note.tags) {
-        final normalized = normalizeTagPath(tag);
+        final normalized = normalizeIncomingTagPath(tag);
         if (normalized != null) {
           tags.add(normalized);
         }
@@ -1171,7 +1172,7 @@ class _TagsScreenState extends State<TagsScreen>
         : TagNode.buildTreeFromNoteTags(
             appProvider.notes.map(
               (note) => note.tags.where((tag) {
-                final normalized = normalizeTagPath(tag);
+                final normalized = normalizeIncomingTagPath(tag);
                 return normalized != null && validTagSet.contains(normalized);
               }),
             ),

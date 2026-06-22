@@ -2,6 +2,8 @@ package com.didichou.inkroot
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -18,6 +20,7 @@ class MainActivity: FlutterActivity() {
     private var methodChannel: MethodChannel? = null
     private var umengChannel: MethodChannel? = null
     private var pendingNoteId: Int? = null
+    private var pendingDeepLink: String? = null
     private var isUmengInitialized = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -113,6 +116,16 @@ class MainActivity: FlutterActivity() {
                     result.success(pendingNoteId)
                     pendingNoteId = null // 清空以避免重复处理
                 }
+                "getInitialDeepLink" -> {
+                    result.success(pendingDeepLink)
+                    pendingDeepLink = null
+                }
+                "saveWidgetSnapshot" -> {
+                    val key = call.argument<String>("key") ?: "inkroot_widget_snapshot"
+                    val snapshot = call.argument<String>("snapshot") ?: ""
+                    saveWidgetSnapshot(key, snapshot)
+                    result.success(true)
+                }
                 "checkPermissions" -> {
                     // 检查所有权限状态
                     val permissions = checkAllPermissions()
@@ -193,9 +206,48 @@ class MainActivity: FlutterActivity() {
             else if (it.action == Intent.ACTION_SEND || it.action == Intent.ACTION_SEND_MULTIPLE) {
                 handleSharedContent(it)
             } 
+            else if (it.data?.scheme == "inkroot") {
+                handleDeepLink(it.data.toString())
+            }
             else {
                 ReleaseLog.e("MainActivity", "⚠️ 未从Intent中获取到noteId或分享内容")
             }
+        }
+    }
+
+    private fun handleDeepLink(url: String) {
+        pendingDeepLink = url
+        try {
+            methodChannel?.invokeMethod("openDeepLink", url)
+        } catch (e: Exception) {
+            ReleaseLog.e("MainActivity", "❌ 处理深链失败: ${e.message}")
+        }
+    }
+
+    private fun saveWidgetSnapshot(key: String, snapshot: String) {
+        try {
+            getSharedPreferences("inkroot_widget", Context.MODE_PRIVATE)
+                .edit()
+                .putString(key, snapshot)
+                .apply()
+
+            notifyWidgetProvider(InkRootQuickNoteWidgetProvider::class.java)
+            notifyWidgetProvider(InkRootRandomReviewWidgetProvider::class.java)
+        } catch (e: Exception) {
+            ReleaseLog.e("MainActivity", "❌ 保存小组件快照失败: ${e.message}")
+        }
+    }
+
+    private fun notifyWidgetProvider(providerClass: Class<*>) {
+        val appWidgetManager = AppWidgetManager.getInstance(this)
+        val componentName = ComponentName(this, providerClass)
+        val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
+        if (widgetIds.isNotEmpty()) {
+            val updateIntent = Intent(this, providerClass).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds)
+            }
+            sendBroadcast(updateIntent)
         }
     }
     

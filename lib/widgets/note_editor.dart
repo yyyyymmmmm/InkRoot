@@ -30,10 +30,12 @@ class NoteEditor extends StatefulWidget {
     super.key,
     this.initialContent,
     this.currentNoteId,
+    this.startWithSpeech = false,
   });
   final Function(String content) onSave;
   final String? initialContent;
   final String? currentNoteId;
+  final bool startWithSpeech;
 
   @override
   State<NoteEditor> createState() => _NoteEditorState();
@@ -487,6 +489,15 @@ class _NoteEditorState extends State<NoteEditor>
     _updateLineCount();
 
     _focusEditorAfterOpen();
+    if (widget.startWithSpeech) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future<void>.delayed(const Duration(milliseconds: 320), () {
+          if (mounted && !_isSpeechListening) {
+            _toggleSpeechRecognition();
+          }
+        });
+      });
+    }
 
     // 监听输入变化，更新保存按钮状态和行数
     _textController.addListener(() {
@@ -2311,6 +2322,7 @@ class _NoteEditorState extends State<NoteEditor>
 
     final success = await _speechService.startListening(
       context: context,
+      appConfig: Provider.of<AppProvider>(context, listen: false).appConfig,
       onResult: (text) async {
         debugPrint('NoteEditor: 收到识别结果 - "$text"');
 

@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import UserNotifications
+import WidgetKit
 
 // ⚠️ iOS版本不使用友盟统计（符合App Store审核要求）
 // Android版本保留友盟统计功能
@@ -9,6 +10,7 @@ import UserNotifications
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   // 🔥 模仿Android的pendingNoteId机制
   private var pendingPayload: String?
+  private var pendingDeepLink: String?
   private var methodChannel: FlutterMethodChannel?
   
   // 🎨 启动页视图（用于淡出动画）
@@ -47,6 +49,24 @@ import UserNotifications
         self?.debugLog("📱 [AppDelegate] Flutter查询初始payload: \(self?.pendingPayload ?? "nil")")
         result(self?.pendingPayload)
         self?.pendingPayload = nil // 清空避免重复
+      } else if call.method == "getInitialDeepLink" {
+        result(self?.pendingDeepLink)
+        self?.pendingDeepLink = nil
+      } else if call.method == "saveWidgetSnapshot" {
+        guard let args = call.arguments as? [String: Any],
+              let key = args["key"] as? String,
+              let snapshot = args["snapshot"] as? String else {
+          result(false)
+          return
+        }
+        let defaults = UserDefaults(suiteName: "group.com.didichou.inkroot")
+        defaults?.set(snapshot, forKey: key)
+        defaults?.synchronize()
+        if #available(iOS 14.0, *) {
+          WidgetCenter.shared.reloadTimelines(ofKind: "InkRootQuickNoteWidget")
+          WidgetCenter.shared.reloadTimelines(ofKind: "InkRootRandomReviewWidget")
+        }
+        result(true)
       } else {
         result(FlutterMethodNotImplemented)
       }
@@ -80,6 +100,23 @@ import UserNotifications
     umengChannel.setMethodCallHandler { (call, result) in
       // iOS平台所有友盟调用返回false（未启用）
       result(false)
+    }
+  }
+
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey : Any] = [:]
+  ) -> Bool {
+    handleDeepLink(url)
+    return true
+  }
+
+  func handleDeepLink(_ url: URL) {
+    let rawUrl = url.absoluteString
+    pendingDeepLink = rawUrl
+    if let channel = methodChannel {
+      channel.invokeMethod("openDeepLink", arguments: rawUrl)
     }
   }
   

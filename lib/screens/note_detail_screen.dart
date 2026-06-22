@@ -15,6 +15,7 @@ import 'package:inkroot/services/intelligent_related_notes_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
 import 'package:inkroot/utils/todo_parser.dart';
 import 'package:inkroot/widgets/annotations_sidebar.dart';
@@ -896,9 +897,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                       _toggleTodoInNote, // 🎯 复选框点击回调（传递索引）
                                   onTagTap: (tagName) {
                                     try {
+                                      final tagPath =
+                                          normalizeIncomingTagPath(tagName);
+                                      if (tagPath == null) {
+                                        return;
+                                      }
                                       context.pushNamed(
                                         'tag-notes',
-                                        queryParameters: {'tag': tagName},
+                                        queryParameters: {'tag': tagPath},
                                       );
                                     } on Object catch (e, stackTrace) {
                                       Log.ui.error(

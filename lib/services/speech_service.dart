@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:inkroot/l10n/app_localizations_simple.dart';
+import 'package:inkroot/models/app_config_model.dart';
 import 'package:inkroot/services/baidu_realtime_speech_service.dart';
 import 'package:inkroot/services/baidu_speech_service.dart';
+import 'package:inkroot/services/iflytek_speech_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -23,6 +25,7 @@ class SpeechService {
   final BaiduSpeechService _baiduSpeech = BaiduSpeechService();
   final BaiduRealtimeSpeechService _baiduRealtime =
       BaiduRealtimeSpeechService();
+  IflytekSpeechService? _iflytekSpeech;
 
   bool _isInitialized = false;
   bool _isListening = false;
@@ -46,6 +49,10 @@ class SpeechService {
 
   /// 百度云识别是否已配置
   bool get isBaiduConfigured => _baiduSpeech.isConfigured();
+
+  /// 讯飞云识别是否已配置
+  bool isIflytekConfigured(AppConfig config) =>
+      IflytekSpeechService(config).isConfigured;
 
   /// 初始化语音识别服务
   Future<bool> initialize() async {
@@ -104,8 +111,19 @@ class SpeechService {
     Function(double)? onSoundLevel, // 🎤 音量变化回调
     Duration? timeout,
     BuildContext? context,
+    AppConfig? appConfig,
   }) async {
     try {
+      if (appConfig?.speechRecognitionMode == AppConfig.SPEECH_MODE_IFLYTEK) {
+        return _startIflytekListening(
+          appConfig: appConfig!,
+          onResult: onResult,
+          onError: onError,
+          onSoundLevel: onSoundLevel,
+          context: context,
+        );
+      }
+
       // 🎯 使用本地识别（已优化，体验很好）
       debugPrint('SpeechService: 使用本地实时识别');
       // iOS: speech_to_text的initialize()方法会自动触发权限请求
@@ -180,6 +198,36 @@ class SpeechService {
     }
   }
 
+  Future<bool> _startIflytekListening({
+    required AppConfig appConfig,
+    Function(String)? onResult,
+    Function(String)? onError,
+    Function(double)? onSoundLevel,
+    BuildContext? context,
+  }) async {
+    _iflytekSpeech = IflytekSpeechService(appConfig);
+    if (!_iflytekSpeech!.isConfigured) {
+      const message = '讯飞语音识别未配置完整，请先到 AI 设置里填写 APPID、APIKey 和 APISecret。';
+      onError?.call(message);
+      if (context != null && context.mounted) {
+        _showIflytekNotConfiguredDialog(context);
+      }
+      return false;
+    }
+
+    debugPrint('SpeechService: 使用讯飞实时识别');
+    final success = await _iflytekSpeech!.startListening(
+      onResult: (text) {
+        _lastRecognizedText = text;
+        onResult?.call(text);
+      },
+      onError: onError,
+      onSoundLevel: onSoundLevel,
+    );
+    _isListening = success;
+    return success;
+  }
+
   /// 识别音频文件（支持云端识别）
   ///
   /// [audioPath] 音频文件路径
@@ -239,6 +287,10 @@ class SpeechService {
         await _baiduRealtime.stopListening();
       }
 
+      if (_iflytekSpeech?.isListening ?? false) {
+        await _iflytekSpeech?.stopListening();
+      }
+
       // 停止本地识别
       if (_speech.isListening) {
         await _speech.stop();
@@ -255,6 +307,9 @@ class SpeechService {
   /// 取消语音识别
   Future<void> cancelListening() async {
     if (_isListening) {
+      if (_iflytekSpeech?.isListening ?? false) {
+        await _iflytekSpeech?.stopListening();
+      }
       await _speech.cancel();
       _isListening = false;
       _lastRecognizedText = '';
@@ -327,6 +382,9 @@ class SpeechService {
       if (_isListening || _speech.isListening) {
         // 🔥 确保完全释放麦克风资源
         await _speech.cancel();
+      }
+      if (_iflytekSpeech?.isListening ?? false) {
+        await _iflytekSpeech?.stopListening();
       }
       _isListening = false;
       _lastRecognizedText = '';
@@ -555,6 +613,24 @@ class SpeechService {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(AppLocalizationsSimple.of(context)?.iKnow ?? '知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showIflytekNotConfiguredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('讯飞语音识别未配置'),
+        content: const Text(
+          '请先在 AI 设置里开启讯飞语音识别，并填写 APPID、APIKey 和 APISecret。密钥只保存在本机，调用费用由你的讯飞账号承担。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(AppLocalizationsSimple.of(context)?.confirm ?? '确定'),
           ),
         ],
       ),

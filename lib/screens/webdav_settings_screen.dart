@@ -469,7 +469,9 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
       ),
       decoration: InputDecoration(
         labelText: l10n?.passwordAppSpecific ?? '密码（应用专用密码）',
-        hintText: l10n?.notLoginPassword ?? '⚠️ 不是登录密码！需在服务商处生成',
+        hintText: _obscurePassword
+            ? null
+            : (l10n?.notLoginPassword ?? '不是登录密码，需在服务商处生成'),
         prefixIcon: const Icon(Icons.lock),
         suffixIcon: IconButton(
           icon:
@@ -481,7 +483,7 @@ class _WebDavSettingsScreenState extends State<WebDavSettingsScreen> {
         ),
         filled: true,
         fillColor: isDarkMode ? AppTheme.darkCardColor : Colors.white,
-        helperText: l10n?.clickHelpIcon ?? '💡 点击右上角 ? 查看如何获取',
+        helperText: l10n?.clickHelpIcon ?? '点击右上角 ? 查看如何获取',
         helperMaxLines: 2,
       ),
     );

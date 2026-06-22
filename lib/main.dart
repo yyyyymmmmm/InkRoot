@@ -23,6 +23,7 @@ import 'package:inkroot/utils/error_handler.dart';
 import 'package:inkroot/utils/image_cache_manager.dart';
 import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
+import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -311,6 +312,13 @@ Future<void> _initializeApp() async {
       final fileName = filePath.split('/').last;
       final content = '分享的文件:\n\n📎 $fileName\n\n路径: $filePath';
       appRouter.router.go('/', extra: {'sharedContent': content});
+    } else if (call.method == 'openDeepLink') {
+      final rawUrl = call.arguments as String?;
+      if (rawUrl == null || rawUrl.isEmpty) {
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+      _handleInkRootDeepLink(appRouter, rawUrl);
     }
   });
 
@@ -328,6 +336,17 @@ Future<void> _initializeApp() async {
     // Cold-start payload is optional and may be unavailable on some platforms.
   }
 
+  try {
+    final initialDeepLink = await platform.invokeMethod('getInitialDeepLink');
+    if (initialDeepLink != null && initialDeepLink is String) {
+      Future.delayed(const Duration(milliseconds: 700), () {
+        _handleInkRootDeepLink(appRouter, initialDeepLink);
+      });
+    }
+  } on Object catch (_) {
+    // Cold-start deep link is optional and may be unavailable on some platforms.
+  }
+
   // 🚀 大厂标准：记录主应用创建
   PerformanceMonitorService().trackAppLaunch('app_created');
 
@@ -336,6 +355,61 @@ Future<void> _initializeApp() async {
 
   // 🚀 大厂标准：记录应用运行
   PerformanceMonitorService().trackAppLaunch('app_running');
+}
+
+void _handleInkRootDeepLink(AppRouter appRouter, String rawUrl) {
+  final uri = Uri.tryParse(rawUrl);
+  if (uri == null) {
+    return;
+  }
+
+  final action = uri.host.isNotEmpty
+      ? uri.host
+      : uri.pathSegments.isNotEmpty
+          ? uri.pathSegments.first
+          : '';
+
+  switch (action) {
+    case 'quick-note':
+      final quickNoteTag =
+          normalizeIncomingTagPath(uri.queryParameters['tag'] ?? '');
+      appRouter.router.go(
+        Uri(
+          path: '/',
+          queryParameters: <String, String>{
+            'quickNote': '1',
+            'quickNoteAction': DateTime.now().millisecondsSinceEpoch.toString(),
+            if (quickNoteTag != null) 'tag': quickNoteTag,
+          },
+        ).toString(),
+      );
+      return;
+    case 'random-review':
+      appRouter.router.go('/random-review');
+      return;
+    case 'note':
+      final noteId = uri.pathSegments.isNotEmpty
+          ? uri.pathSegments.last
+          : uri.queryParameters['id'];
+      if (noteId != null && noteId.trim().isNotEmpty) {
+        appRouter.router.go('/note/${Uri.encodeComponent(noteId.trim())}');
+      }
+      return;
+    case 'tag':
+      final tag = uri.pathSegments.length > 1
+          ? uri.pathSegments.last
+          : uri.queryParameters['name'];
+      final tagPath = tag == null ? null : normalizeIncomingTagPath(tag);
+      if (tagPath != null) {
+        appRouter.router.go(
+          Uri(
+            path: '/tags/detail',
+            queryParameters: {'tag': tagPath},
+          ).toString(),
+        );
+      }
+      return;
+  }
 }
 
 // 创建自定义页面切换动画
@@ -634,18 +708,102 @@ class _MyAppState extends State<MyApp> {
               builder: (context, child) {
                 final clampedFontScale =
                     ResponsiveUtils.clampAppTextScale(fontScale);
+                final routeChild = AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: child ?? const SizedBox.shrink(),
+                );
+
+                if (_usesDesktopVisualScale) {
+                  return _DesktopVisualScale(
+                    scale: clampedFontScale,
+                    mediaQueryData: MediaQuery.of(context).copyWith(
+                      textScaler: TextScaler.noScaling,
+                    ),
+                    child: routeChild,
+                  );
+                }
+
                 return MediaQuery(
                   data: MediaQuery.of(context).copyWith(
                     textScaler: TextScaler.linear(clampedFontScale),
                   ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: child,
-                  ),
+                  child: routeChild,
                 );
               },
             );
           },
         ),
+      );
+}
+
+bool get _usesDesktopVisualScale =>
+    Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+class _DesktopVisualScale extends StatelessWidget {
+  const _DesktopVisualScale({
+    required this.scale,
+    required this.mediaQueryData,
+    required this.child,
+  });
+
+  final double scale;
+  final MediaQueryData mediaQueryData;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (scale == 1) {
+      return MediaQuery(data: mediaQueryData, child: child);
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
+          return MediaQuery(data: mediaQueryData, child: child);
+        }
+
+        final logicalSize = Size(
+          constraints.maxWidth / scale,
+          constraints.maxHeight / scale,
+        );
+        final scaledMediaQuery = mediaQueryData.copyWith(
+          size: logicalSize,
+          padding: _scaleEdgeInsets(mediaQueryData.padding),
+          viewPadding: _scaleEdgeInsets(mediaQueryData.viewPadding),
+          viewInsets: _scaleEdgeInsets(mediaQueryData.viewInsets),
+          systemGestureInsets:
+              _scaleEdgeInsets(mediaQueryData.systemGestureInsets),
+        );
+
+        return ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.topLeft,
+            minWidth: logicalSize.width,
+            maxWidth: logicalSize.width,
+            minHeight: logicalSize.height,
+            maxHeight: logicalSize.height,
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.topLeft,
+              child: MediaQuery(
+                data: scaledMediaQuery,
+                child: SizedBox(
+                  width: logicalSize.width,
+                  height: logicalSize.height,
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  EdgeInsets _scaleEdgeInsets(EdgeInsets insets) => EdgeInsets.fromLTRB(
+        insets.left / scale,
+        insets.top / scale,
+        insets.right / scale,
+        insets.bottom / scale,
       );
 }

@@ -6,17 +6,20 @@ InkRoot is a cross-platform note-taking app for personal knowledge capture. It w
 
 ## Current Version
 
-`1.1.9`
+`1.1.10`
 
-This release focuses on note rendering, search, todos, related notes, tag navigation, brand copy, and release-flow hardening, and fixes cloud iOS unsigned packaging stability.
+This release focuses on desktop scaling, the knowledge graph, home widgets, speech-recognition settings, tag paths, Markdown rendering, and project build documentation.
 
 Highlights:
 
-- Todo completion, home-feed underline/bold rendering, blank search cards, and mismatched search results are fixed.
-- Related notes, AI review, summary, continuation, tag recommendation, and insights are improved.
-- Tag-detail back navigation, sidebar tag behavior, and About/Help/Settings copy are tightened.
-- Brand copy is restored to "Settle patiently, then speak with force."
-- iOS unsigned packaging no longer depends on an unstable third-party mirror.
+- Android and iOS widgets now provide separate quick-note and random-review entry points.
+- Random-review widgets support real note selection, refresh settings, and random switching.
+- Speech recognition now has a user-managed iFlytek configuration entry.
+- The knowledge graph has improved visuals, zooming, node selection, and large-note rendering performance.
+- Windows, macOS, and Linux now treat the font-size preference as whole-interface desktop scaling.
+- Markdown headings, blockquotes, links, underline, and related-note references render more consistently.
+- Tag path parsing, sidebar tag back navigation, and Chinese tag opening behavior are improved.
+- AI settings, model input, custom prompts, and quick-start copy are tightened.
 - Home feed rendering keeps user line breaks and spacing.
 - Expand controls are based on rendered visible content.
 - Image preview supports tap-to-dismiss, original image viewing, and multi-image browsing.
@@ -79,13 +82,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.9+10109
+version: 1.1.10+10110
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.9
+dart tool/inkroot.dart release v1.1.10
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

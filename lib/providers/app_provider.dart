@@ -38,6 +38,7 @@ import 'package:inkroot/services/umeng_analytics_service.dart';
 import 'package:inkroot/services/unified_reference_manager.dart';
 import 'package:inkroot/services/webdav_service.dart';
 import 'package:inkroot/services/webdav_sync_engine.dart';
+import 'package:inkroot/services/widget_snapshot_service.dart';
 import 'package:inkroot/utils/error_handler.dart';
 // 🚀 大厂标准：监控工具
 import 'package:inkroot/utils/logger.dart';
@@ -50,7 +51,15 @@ import 'package:uuid/uuid.dart';
 
 part 'app_provider_sync.part.dart';
 
+const bool _screenshotMode = bool.fromEnvironment('INKROOT_SCREENSHOT_MODE');
+
 class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
+  AppProvider() {
+    if (_screenshotMode) {
+      _initializeScreenshotDemoState(notify: false);
+    }
+  }
+
   User? _user;
   List<Note> _notes = [];
   bool _isLoading = false;
@@ -76,6 +85,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   AppConfig _appConfig = AppConfig();
   bool _mounted = true;
   SortOrder _sortOrder = SortOrder.newest;
+  List<Note>? _visibleNotesCache;
 
   // 🚀 WebDAV 同步相关
   WebDavConfig _webDavConfig = const WebDavConfig();
@@ -94,6 +104,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   String? _syncMessage;
   Future<void>? _syncNotesInFlight;
   final Set<String> _syncingNoteIds = {};
+  int _widgetSnapshotUpdateId = 0;
 
   void _setSyncUi({bool? syncing, String? message, bool notify = true}) {
     if (syncing != null) {
@@ -103,6 +114,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     if (notify) {
       notifyListeners();
     }
+    _scheduleWidgetSnapshotUpdate();
   }
 
   void _setSyncMessage(String? message, {bool notify = true}) {
@@ -110,6 +122,60 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     if (notify) {
       notifyListeners();
     }
+    _scheduleWidgetSnapshotUpdate();
+  }
+
+  void _scheduleWidgetSnapshotUpdate({
+    Duration delay = const Duration(milliseconds: 350),
+  }) {
+    final updateId = ++_widgetSnapshotUpdateId;
+    final isLocalModeSnapshot = isLocalMode;
+    final isLoggedInSnapshot = isLoggedIn;
+    final isSyncingSnapshot = _isSyncing;
+    final syncMessageSnapshot = _syncMessage;
+    final reviewRefreshIntervalMinutes =
+        _appConfig.widgetReviewRefreshIntervalMinutes;
+    final reviewRangeDays = _appConfig.widgetReviewRangeDays;
+
+    Future<void> scheduleWithNotes(List<Note> snapshotNotes) async {
+      if (updateId != _widgetSnapshotUpdateId) {
+        return;
+      }
+      WidgetSnapshotService.scheduleUpdate(
+        notes: snapshotNotes,
+        isLocalMode: isLocalModeSnapshot,
+        isLoggedIn: isLoggedInSnapshot,
+        isSyncing: isSyncingSnapshot,
+        reviewRefreshIntervalMinutes: reviewRefreshIntervalMinutes,
+        reviewRangeDays: reviewRangeDays,
+        syncMessage: syncMessageSnapshot,
+        delay: delay,
+      );
+    }
+
+    unawaited(
+      Future<void>(() async {
+        if (_screenshotMode) {
+          await scheduleWithNotes(notes);
+          return;
+        }
+
+        try {
+          final allNotes =
+              _excludePendingDeletedNotes(await _databaseService.getNotes());
+          await scheduleWithNotes(allNotes);
+        } on Object catch (e) {
+          if (kDebugMode) {
+            debugPrint('AppProvider: 读取小组件全量笔记失败，使用内存笔记: $e');
+          }
+          await scheduleWithNotes(notes);
+        }
+      }),
+    );
+  }
+
+  void refreshWidgetSnapshotNow() {
+    _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
   }
 
   // 🚀 删除队列相关（大厂级批量处理）
@@ -152,10 +218,21 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   // 获取排序后的笔记
   List<Note> _getSortedNotes() => sortedNotesCopy(_notes, _sortOrder);
 
+  void _clearNotesCache() {
+    _visibleNotesCache = null;
+  }
+
+  @override
+  void notifyListeners() {
+    _clearNotesCache();
+    super.notifyListeners();
+  }
+
   // 设置排序方式
   void setSortOrder(SortOrder sortOrder) {
     if (_sortOrder != sortOrder) {
       _sortOrder = sortOrder;
+      _clearNotesCache();
       notifyListeners();
     }
   }
@@ -163,9 +240,15 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
   // Getters
   User? get user => _user;
   // 🔥 过滤掉归档笔记，只返回正常笔记
-  List<Note> get notes => _excludePendingDeletedNotes(
-        _getSortedNotes().where(_isVisibleNote).toList(),
-      );
+  List<Note> get notes {
+    final cached = _visibleNotesCache;
+    if (cached != null) {
+      return cached;
+    }
+
+    final visibleNotes = _getSortedNotes().where(_isVisibleNote).toList();
+    return _visibleNotesCache = List<Note>.unmodifiable(visibleNotes);
+  }
 
   // 🚀 大厂标准：细粒度状态访问
   bool get isLoadingMore => _pagingState.loadMoreState.isLoading;
@@ -228,6 +311,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     final index = _notes.indexWhere((note) => note.id == updatedNote.id);
     if (index != -1) {
       _notes[index] = updatedNote;
+      _clearNotesCache();
       notifyListeners();
       // 内存中的笔记已更新
     }
@@ -290,6 +374,11 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
     // 开始初始化应用
 
     try {
+      if (_screenshotMode) {
+        _initializeScreenshotDemoState();
+        return;
+      }
+
       // 初始化统一引用管理器
       UnifiedReferenceManager().initialize(
         databaseService: _databaseService,
@@ -375,6 +464,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       // 设置初始化标志为true，让UI可以立即显示本地数据
       _isInitialized = true;
       notifyListeners(); // 通知UI更新，此时已经有本地数据可以显示
+      refreshWidgetSnapshotNow();
 
       // 🌐 在后台继续处理网络相关操作，不阻塞UI显示
       unawaited(_initializeNetworkOperationsInBackground());
@@ -386,6 +476,90 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       notifyListeners();
     }
   }
+
+  void _initializeScreenshotDemoState({bool notify = true}) {
+    _appConfig = AppConfig(
+      isLocalMode: true,
+      aiEnabled: true,
+      aiApiUrl: AppConfig.DEEPSEEK_API_URL,
+      useCustomPrompt: true,
+      customReviewPrompt: '指出这条笔记最有价值的一点，并给出一个具体下一步。',
+      customInsightPrompt: '从这些笔记中提炼主题、连接和可行动建议。',
+    );
+    _webDavConfig = WebDavConfig(
+      serverUrl: WebDavPresets.jianguoyun,
+      username: 'demo@inkroot.cn',
+      enabled: true,
+      autoSync: true,
+      lastSyncTime: DateTime(2026, 6, 17, 9, 41),
+    );
+    _notes = _screenshotDemoNotes();
+    _totalNotesCount = _notes.length;
+    _pagingState = _pagingState.copyWith(
+      currentPage: 0,
+      hasMoreData: false,
+      loadMoreState: LoadMoreState.noMore,
+    );
+    _isInitialized = true;
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  List<Note> _screenshotDemoNotes() => [
+        Note(
+          id: 'demo-001',
+          content: '# 今天的产品观察\n\n'
+              '用户并不需要复杂流程，真正重要的是：打开、记录、回看。\n\n'
+              '- [x] 记录一个想法\n'
+              '- [x] 补充上下文\n'
+              '- [ ] 明天复盘\n\n'
+              '#产品/洞察 #工作/复盘',
+          createdAt: DateTime(2026, 6, 17, 8, 30),
+          updatedAt: DateTime(2026, 6, 17, 8, 30),
+          tags: const ['产品/洞察', '工作/复盘'],
+          isPinned: true,
+        ),
+        Note(
+          id: 'demo-002',
+          content: '把临时灵感先放进 InkRoot，等晚上统一整理。\n\n'
+              '**重点：** 不打断当下工作流。\n\n'
+              '#灵感 #效率',
+          createdAt: DateTime(2026, 6, 16, 21, 15),
+          updatedAt: DateTime(2026, 6, 16, 21, 15),
+          tags: const ['灵感', '效率'],
+        ),
+        Note(
+          id: 'demo-003',
+          content: '阅读《长期主义》时的摘录：\n\n'
+              '> 好的系统会让正确行为更容易发生。\n\n'
+              '联想到笔记产品：输入要轻，回看要自然，整理要克制。\n\n'
+              '#阅读/摘录 #方法论',
+          createdAt: DateTime(2026, 6, 15, 19, 40),
+          updatedAt: DateTime(2026, 6, 15, 19, 40),
+          tags: const ['阅读/摘录', '方法论'],
+        ),
+        Note(
+          id: 'demo-004',
+          content: '本周计划\n\n'
+              '- [ ] 完成官网素材\n'
+              '- [ ] 整理 App Store 截图\n'
+              '- [x] 修复待办和 Markdown 渲染\n\n'
+              '#计划 #发布',
+          createdAt: DateTime(2026, 6, 14, 9, 5),
+          updatedAt: DateTime(2026, 6, 14, 9, 5),
+          tags: const ['计划', '发布'],
+        ),
+        Note(
+          id: 'demo-005',
+          content: 'AI 点评要给出具体反馈，而不是模板话。\n\n'
+              '好的点评应该指出：这条笔记真正有价值的部分、可以继续追问的问题，以及和历史笔记的连接。\n\n'
+              '#AI #产品/体验',
+          createdAt: DateTime(2026, 6, 8, 16, 45),
+          updatedAt: DateTime(2026, 6, 8, 16, 45),
+          tags: const ['AI', '产品/体验'],
+        ),
+      ];
 
   // 后台网络操作初始化（新增方法）- 🚀 大厂级启动优化
   Future<void> _initializeNetworkOperationsInBackground() async {
@@ -605,6 +779,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       _refreshAllNoteTags();
 
       notifyListeners();
+      _scheduleWidgetSnapshotUpdate();
 
       // 🚀 大厂标准：成功监控
       await PerformanceTracker().stopTrace(
@@ -649,12 +824,14 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       );
 
       _notes = firstPage;
-      _pagingState = _pagingState.copyWith(
-        currentPage: 0,
-        hasMoreData: firstPage.length >= _pageSize,
+      _pagingState = paging.applyInitialPageResult(
+        state: _pagingState,
+        loadedCount: _notes.length,
+        totalCount: _totalNotesCount,
       );
 
       notifyListeners();
+      _scheduleWidgetSnapshotUpdate();
       if (kDebugMode) {
         debugPrint(
           'AppProvider: ✅ 本地数据加载完成，已加载 ${_notes.length}/$_totalNotesCount 条笔记',
@@ -716,6 +893,8 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       _pagingState = paging.applyLoadMoreResult(
         state: _pagingState,
         itemCount: moreNotes.length,
+        loadedCount: _notes.length,
+        totalCount: _totalNotesCount,
       );
       if (moreNotes.isEmpty) {
         debugPrint(
@@ -1161,6 +1340,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
     // 配置更新成功
     notifyListeners();
+    _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
   }
 
   // 获取当前深色模式状态
@@ -2155,6 +2335,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       _applyCurrentSort();
 
       notifyListeners();
+      _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
 
       // 🚀 自动同步到 Notion（异步执行，不阻塞UI）
       unawaited(_autoSyncToNotion());
@@ -2249,6 +2430,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
             _applyCurrentSort();
             notifyListeners();
+            _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
             debugPrint('AppProvider: 笔记已作为新笔记保存（ID已更改）');
             return true;
           }
@@ -2288,6 +2470,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
           // 应用当前排序并通知UI更新
           _applyCurrentSort();
           notifyListeners();
+          _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
 
           debugPrint('AppProvider: 笔记更新完成（已同步到服务器）');
           return true;
@@ -2304,6 +2487,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
 
           _applyCurrentSort();
           notifyListeners();
+          _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
           debugPrint('AppProvider: 笔记更新完成（仅本地更新）');
 
           // 🚀 自动同步到 Notion（异步执行，不阻塞UI）
@@ -2330,6 +2514,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
         _applyCurrentSort();
         debugPrint('AppProvider: 调用notifyListeners()');
         notifyListeners();
+        _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
         debugPrint('AppProvider: 笔记本地更新完成');
 
         // 🚀 自动同步到 Notion（异步执行，不阻塞UI）
@@ -2365,6 +2550,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       // 应用排序并通知UI更新
       _applyCurrentSort();
       notifyListeners();
+      _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
       debugPrint('AppProvider: 本地更新完成');
 
       return true;
@@ -2388,6 +2574,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       if (index != -1) {
         _notes[index] = optimisticNote;
         notifyListeners();
+        _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
       }
 
       if (_appConfig.isLocalMode || !isLoggedIn || _memosApiService == null) {
@@ -2412,6 +2599,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
         _notes.insert(0, syncedNote);
         _applyCurrentSort();
         notifyListeners();
+        _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
         return syncedNote;
       }
 
@@ -2420,6 +2608,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       if (syncedIndex != -1) {
         _notes[syncedIndex] = syncedNote;
         notifyListeners();
+        _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
       }
       return syncedNote;
     } on Object catch (e) {
@@ -2460,6 +2649,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       }
 
       notifyListeners();
+      _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
       return true;
     } on Object catch (e) {
       debugPrint('AppProvider: 更新笔记标签失败: $e');
@@ -2495,6 +2685,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       await _databaseService.deleteNote(id);
       await _cleanupReferencesForDeletedNote(id);
       notifyListeners(); // ⚡ UI立即刷新
+      _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
 
       debugPrint('AppProvider: ⚡ UI已更新（笔记已从列表移除）');
 
@@ -2617,6 +2808,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
           : _lastDeletedIndex!.clamp(0, _notes.length);
       _notes.insert(restoreIndex, _lastDeletedNote!);
       notifyListeners(); // ⚡ UI立即刷新
+      _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
 
       debugPrint('AppProvider: ⚡ UI已更新（笔记已恢复到列表）');
 
@@ -2648,6 +2840,7 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       await _cleanupReferencesForDeletedNote(id);
 
       notifyListeners();
+      _scheduleWidgetSnapshotUpdate(delay: Duration.zero);
 
       return true;
     } on Object catch (e) {

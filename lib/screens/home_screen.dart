@@ -24,11 +24,22 @@ import 'package:inkroot/widgets/note_editor.dart';
 import 'package:inkroot/widgets/sidebar.dart';
 import 'package:provider/provider.dart';
 
+const bool _screenshotMode = bool.fromEnvironment('INKROOT_SCREENSHOT_MODE');
+
 class HomeScreen extends StatefulWidget {
   // 🔥 接收分享的内容
 
-  const HomeScreen({super.key, this.sharedContent});
+  const HomeScreen({
+    super.key,
+    this.sharedContent,
+    this.openQuickNote = false,
+    this.quickNoteTag,
+    this.quickNoteActionToken,
+  });
   final String? sharedContent;
+  final bool openQuickNote;
+  final String? quickNoteTag;
+  final String? quickNoteActionToken;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -57,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen>
   // 🚀 分页加载相关
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
+  bool _hasHandledWidgetQuickAction = false;
 
   // 🚀 分帧渲染优化
   int _visibleItemsCount = 0; // 初始显示0个NoteCard，首帧只渲染骨架
@@ -99,12 +111,49 @@ class _HomeScreenState extends State<HomeScreen>
             _showAddNoteFormWithContent(widget.sharedContent!);
           }
         });
+      } else if (widget.openQuickNote) {
+        _hasHandledWidgetQuickAction = true;
+        _hasShownEditorInThisSession = true;
+        Future.delayed(const Duration(milliseconds: 220), () {
+          if (mounted) {
+            _showAddNoteFormWithContent(_quickNoteInitialContent());
+          }
+        });
       } else {
         // 🔥 大厂标准：等待 AppProvider 初始化完成后再检查自动弹出设置
         // 解决部分用户配置未生效的问题
         _checkAndShowEditorOnLaunch();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.openQuickNote) {
+      _hasHandledWidgetQuickAction = false;
+      return;
+    }
+    if (_hasHandledWidgetQuickAction &&
+        oldWidget.quickNoteTag == widget.quickNoteTag &&
+        oldWidget.quickNoteActionToken == widget.quickNoteActionToken) {
+      return;
+    }
+    _hasHandledWidgetQuickAction = true;
+    _hasShownEditorInThisSession = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showAddNoteFormWithContent(_quickNoteInitialContent());
+      }
+    });
+  }
+
+  String _quickNoteInitialContent() {
+    final tag = widget.quickNoteTag?.trim();
+    if (tag == null || tag.isEmpty) {
+      return '';
+    }
+    return '#${tag.replaceAll(RegExp('^#+'), '')} ';
   }
 
   // 🚀 分帧渲染：逐步增加可见NoteCard数量
@@ -241,9 +290,16 @@ class _HomeScreenState extends State<HomeScreen>
 
   // 🚀 滚动监听 - 检测底部并加载更多
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 300) {
-      // 距离底部300px时开始加载
+    if (!_scrollController.hasClients || _isSearchActive) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final isActuallyScrollable = position.maxScrollExtent > 0;
+    final isUserScrollingDown =
+        position.userScrollDirection == ScrollDirection.reverse;
+    final nearBottom = position.extentAfter < 300;
+    if (isActuallyScrollable && isUserScrollingDown && nearBottom) {
       _loadMoreNotes();
     }
   }
@@ -322,6 +378,10 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
 
+    if (widget.openQuickNote) {
+      return;
+    }
+
     final appProvider = Provider.of<AppProvider>(context, listen: false);
 
     // 🎯 等待 AppProvider 初始化完成
@@ -370,11 +430,14 @@ class _HomeScreenState extends State<HomeScreen>
 
     // 🔒 大厂标准：隐私政策检查已在路由层完成，这里只需要初始化友盟
     // 能进入这个页面，说明用户已经同意隐私政策
-    await UmengAnalyticsService.init();
-    await UmengAnalyticsService.onAppStart();
+    if (!_screenshotMode) {
+      await UmengAnalyticsService.init();
+      await UmengAnalyticsService.onAppStart();
+    }
 
     // 🎯 检查是否首次启动（路由已处理，这里做二次防御）
-    final isFirstLaunch = await preferencesService.isFirstLaunch();
+    final isFirstLaunch =
+        !_screenshotMode && await preferencesService.isFirstLaunch();
     if (isFirstLaunch) {
       // 🔒 首次启动时清理所有旧数据（防止卸载后重装时残留 Keychain 数据）
       await preferencesService.clearAllSecureData();
@@ -594,53 +657,25 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // 显示添加笔记表单
-  void _showAddNoteForm() {
+  void _showAddNoteForm({bool startWithSpeech = false}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => NoteEditor(
+        startWithSpeech: startWithSpeech,
         onSave: (content) async {
           if (content.trim().isNotEmpty) {
             try {
               final appProvider =
                   Provider.of<AppProvider>(context, listen: false);
               await appProvider.createNote(content);
-              // 🚀 笔记创建成功（静默）
 
-              // 🔧 修复：退出搜索模式，确保新笔记显示
               if (!mounted || !context.mounted) {
                 return;
               }
 
-              if (_isSearchActive) {
-                _exitSearch();
-              }
-
-              // 🐛 修复：确保新笔记可见
-              if (mounted) {
-                setState(() {
-                  // 增加可见笔记数量，至少显示 10 条（如果有的话）
-                  final newCount = _visibleItemsCount + 1;
-                  final minCount = appProvider.notes.length >= 10
-                      ? 10
-                      : appProvider.notes.length;
-                  _visibleItemsCount = newCount < minCount
-                      ? minCount
-                      : newCount.clamp(0, appProvider.notes.length);
-                });
-
-                // 🚀 滚动到顶部，确保用户看到新笔记
-                if (_scrollController.hasClients) {
-                  unawaited(
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    ),
-                  );
-                }
-              }
+              _afterNoteCreated(appProvider);
             } on Object catch (e) {
               if (kDebugMode) {
                 debugPrint('HomeScreen: 创建笔记失败: $e');
@@ -660,6 +695,34 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  void _afterNoteCreated(AppProvider appProvider) {
+    if (_isSearchActive) {
+      _exitSearch();
+    }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      final newCount = _visibleItemsCount + 1;
+      final minCount =
+          appProvider.notes.length >= 10 ? 10 : appProvider.notes.length;
+      _visibleItemsCount = newCount < minCount
+          ? minCount
+          : newCount.clamp(0, appProvider.notes.length);
+    });
+
+    if (_scrollController.hasClients) {
+      unawaited(
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
+  }
+
   // 🔥 显示添加笔记表单（带初始内容）- 用于分享接收
   void _showAddNoteFormWithContent(String initialContent) {
     showModalBottomSheet(
@@ -674,41 +737,12 @@ class _HomeScreenState extends State<HomeScreen>
               final appProvider =
                   Provider.of<AppProvider>(context, listen: false);
               await appProvider.createNote(content);
-              // 🚀 笔记创建成功（静默）
 
-              // 🔧 修复：退出搜索模式，确保新笔记显示
               if (!mounted || !context.mounted) {
                 return;
               }
 
-              if (_isSearchActive) {
-                _exitSearch();
-              }
-
-              // 🐛 修复：确保新笔记可见
-              if (mounted) {
-                setState(() {
-                  // 增加可见笔记数量，至少显示 10 条（如果有的话）
-                  final newCount = _visibleItemsCount + 1;
-                  final minCount = appProvider.notes.length >= 10
-                      ? 10
-                      : appProvider.notes.length;
-                  _visibleItemsCount = newCount < minCount
-                      ? minCount
-                      : newCount.clamp(0, appProvider.notes.length);
-                });
-
-                // 🚀 滚动到顶部，确保用户看到新笔记
-                if (_scrollController.hasClients) {
-                  unawaited(
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    ),
-                  );
-                }
-              }
+              _afterNoteCreated(appProvider);
 
               // 显示成功提示
               if (mounted && context.mounted) {
@@ -1186,9 +1220,10 @@ class _HomeScreenState extends State<HomeScreen>
           // 🚀 极速启动：不等loading，立即显示界面
           // 如果没有数据会显示空白状态，数据加载完立即刷新
 
+          final allVisibleNotes = appProvider.notes;
           final notes = _isSearchActive
               ? (_searchController.text.isEmpty
-                  ? appProvider.notes
+                  ? allVisibleNotes
                   : _searchResults
                       .where(
                         (note) =>
@@ -1196,7 +1231,7 @@ class _HomeScreenState extends State<HomeScreen>
                             note.resourceList.isNotEmpty,
                       )
                       .toList())
-              : appProvider.notes;
+              : allVisibleNotes;
 
           // 🔧 修复：确保至少显示一些笔记，避免创建后不显示
           if (!_isSearchActive && notes.isNotEmpty && _visibleItemsCount == 0) {
@@ -1322,6 +1357,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           'card_${note.id}',
                                         ), // 🚀 为NoteCard添加key
                                         note: note, // 🚀 直接传递Note对象，避免内部查找
+                                        referenceNotes: allVisibleNotes,
                                         highlightQuery: showSearchSummary
                                             ? searchQuery
                                             : null,
@@ -1441,6 +1477,7 @@ class _HomeScreenState extends State<HomeScreen>
               color: Colors.transparent,
               child: InkWell(
                 onTap: _showAddNoteForm,
+                onLongPress: () => _showAddNoteForm(startWithSpeech: true),
                 borderRadius: BorderRadius.circular(30),
                 splashColor: Colors.white.withValues(alpha: 0.2),
                 child: const Center(
@@ -1685,15 +1722,17 @@ class _HomeScreenState extends State<HomeScreen>
       );
     }
 
+    final loadedCount = appProvider.loadedNotesCount;
+
     // 没有更多数据，显示已加载全部
-    if (appProvider.notes.length > 10) {
+    if (loadedCount > 10) {
       // 只有笔记数量大于10才显示
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         alignment: Alignment.center,
         child: Text(
           (AppLocalizationsSimple.of(context)?.loadedAll ?? '已加载全部 {count} 条笔记')
-              .replaceAll('{count}', '${appProvider.notes.length}'),
+              .replaceAll('{count}', '$loadedCount'),
           style: TextStyle(
             fontSize: 12,
             color: textColor.withValues(alpha: 0.6),

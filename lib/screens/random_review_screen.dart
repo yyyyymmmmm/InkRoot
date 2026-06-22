@@ -8,6 +8,7 @@ import 'package:inkroot/l10n/app_localizations_simple.dart';
 import 'package:inkroot/models/note_model.dart';
 import 'package:inkroot/providers/app_provider.dart';
 import 'package:inkroot/services/intelligent_related_notes_service.dart';
+import 'package:inkroot/services/random_review_selector_service.dart';
 import 'package:inkroot/themes/app_theme.dart';
 import 'package:inkroot/utils/snackbar_utils.dart';
 import 'package:inkroot/utils/tag_utils.dart' as tag_utils;
@@ -75,29 +76,13 @@ class _RandomReviewScreenState extends State<RandomReviewScreen> {
       return;
     }
 
-    // 根据时间范围筛选笔记（按最近更新更符合“回顾”直觉）
-    final cutoffDate = DateTime.now().subtract(Duration(days: _reviewDays));
-    var filteredNotes =
-        allNotes.where((note) => note.updatedAt.isAfter(cutoffDate)).toList();
-
-    // 🔥 根据选中的标签筛选笔记（AND关系 - 必须包含所有选中的标签）
-    if (_selectedTags.isNotEmpty) {
-      filteredNotes = filteredNotes.where((note) {
-        // 提取笔记中的标签（使用改进的标签识别规则）
-        final noteTags = tag_utils.extractTagsFromContent(note.content).toSet();
-        // 检查笔记是否包含所有选中的标签（AND关系）
-        return _selectedTags.every(noteTags.contains);
-      }).toList();
-    }
-
-    // 如果筛选后的笔记不足，则使用全部笔记
-    final availableNotes = filteredNotes.isEmpty ? allNotes : filteredNotes;
-
-    // 每次进入/调用都随机一批：
-    // - 即使候选数量 <= _reviewCount，也要 shuffle，避免“看起来不随机”
-    // - 不保留旧的 currentIndex（否则会有“怎么还是那条”的错觉）
-    final shuffled = List<Note>.from(availableNotes)..shuffle(_random);
-    final selectedNotes = shuffled.take(_reviewCount).toList();
+    final selectedNotes = RandomReviewSelectorService.select(
+      notes: allNotes,
+      reviewDays: _reviewDays,
+      reviewCount: _reviewCount,
+      selectedTags: _selectedTags,
+      random: _random,
+    );
 
     setState(() {
       _reviewNotes = selectedNotes;
