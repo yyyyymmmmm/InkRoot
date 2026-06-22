@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InkRoot FAQ</title>
+  <meta name="description" content="InkRoot 常见问题：安装、Memos 登录、WebDAV、iOS unsigned IPA、Android 分享、小组件和数据删除。">
+  <link rel="icon" href="/assets/icons/logo.png">
+  <link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/"><img src="/assets/icons/logo.png" alt="InkRoot"><span>InkRoot</span></a>
+      <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false" data-menu-button>≡</button>
+      <div class="nav-links" data-nav-links>
+        <a href="/">首页</a>
+        <a href="/pages/guide.html">使用指南</a>
+        <a href="/pages/faq.html">FAQ</a>
+        <a href="/pages/changelog.html">更新日志</a>
+        <a class="download-link" href="/pages/download/">下载</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">FAQ</p>
+        <h1>常见问题</h1>
+        <p class="lead">这里保留安装和同步中最常见的问题。没有覆盖到的情况，请带上平台、InkRoot 版本、Memos 版本和错误提示提交 Issue。</p>
+      </div>
+    </section>
+
+    <article class="article">
+      <div class="faq-item">
+        <h3>应该下载哪个包？</h3>
+        <p>Android 用户下载 APK；Google Play 或商店发布流程使用 AAB。iOS 当前提供 unsigned IPA，需要签名或侧载。macOS、Windows、Linux 下载对应压缩包并解压运行。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>iOS unsigned IPA 是正式版吗？</h3>
+        <p>不是 App Store 正式包。unsigned IPA 主要用于测试和签名流程。正式上架前，还需要 Apple Developer 账号、证书、描述文件、TestFlight 测试和 App Store Review。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>自部署 Memos 只用 IP + 端口可以吗？</h3>
+        <p>可以。服务器地址可以是 <code>http://192.168.x.x:5230</code> 这类内网地址，也可以是域名。关键是手机或电脑必须能访问这个地址；如果在外网使用内网 IP，通常无法连接。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>支持哪些 Memos 版本？</h3>
+        <p>当前兼容重点覆盖 Memos 0.21.0 之后的常见版本。不同版本在登录、当前用户、资源、附件和引用接口上有差异，InkRoot 会自动做回退处理。遇到问题请提供 Memos 版本号。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>WebDAV 会备份图片吗？</h3>
+        <p>可以。WebDAV 配置里有图片附件备份选项。图片较多时，首次备份会更慢，也会占用更多空间。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>从浏览器或阅读器分享进来为空白怎么办？</h3>
+        <p>请升级到 v1.1.13 或更高版本。该版本修复了 Android 浏览器 URL 被误判为附件、分享载荷类型异常导致闪退或空白的问题。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>随机回顾小组件为什么显示空？</h3>
+        <p>先打开 InkRoot，让应用生成一次小组件快照。v1.1.13 已修复有笔记却显示占位文案的问题；如果仍为空，检查随机回顾范围和标签筛选是否过窄。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>AI 功能必须配置吗？</h3>
+        <p>不必须。记录、同步、备份、标签、搜索和相关笔记可以在不配置 AI 的情况下使用。AI 功能需要用户自己填写 API 地址、模型名和 Key。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>如何删除账号和数据？</h3>
+        <p>本机数据可在应用内删除。官方服务器账号可通过 <a href="/account-deletion.html">账号与数据删除页面</a> 提交申请。自部署 Memos、WebDAV 或第三方 AI 服务中的数据，需要到对应服务里删除。</p>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>InkRoot 墨鸣笔记</div>
+      <div class="footer-links">
+        <a href="/pages/guide.html">使用指南</a>
+        <a href="/privacy.html">隐私政策</a>
+        <a href="https://github.com/yyyyymmmmm/InkRoot/issues" target="_blank" rel="noopener">GitHub Issues</a>
+      </div>
+    </div>
+  </footer>
+  <script src="/assets/js/site.js"></script>
+</body>
+</html>

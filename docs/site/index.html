@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InkRoot 墨鸣笔记 - 本地优先的 Memos 客户端</title>
+  <meta name="description" content="InkRoot 墨鸣笔记，本地优先的跨平台笔记应用。支持官方服务器、自部署 Memos、WebDAV 备份、系统分享、小组件和可选 AI。">
+  <meta property="og:title" content="InkRoot 墨鸣笔记">
+  <meta property="og:description" content="静待沉淀，蓄势而鸣。本地优先，连接 Memos，保留自己的记录方式。">
+  <meta property="og:image" content="https://inkroot.cn/assets/images/og.png">
+  <link rel="icon" href="/assets/icons/logo.png">
+  <link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/">
+        <img src="/assets/icons/logo.png" alt="InkRoot">
+        <span>InkRoot</span>
+      </a>
+      <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false" data-menu-button>≡</button>
+      <div class="nav-links" data-nav-links>
+        <a href="/">首页</a>
+        <a href="/pages/guide.html">使用指南</a>
+        <a href="/pages/faq.html">FAQ</a>
+        <a href="/pages/changelog.html">更新日志</a>
+        <a class="download-link" href="/pages/download/">下载</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow">InkRoot 墨鸣笔记 · v1.1.13</p>
+          <h1>静待沉淀，蓄势而鸣</h1>
+          <p class="lead">一个本地优先的笔记客户端。你可以离线记录，也可以连接官方服务器或自部署 Memos；图片、标签、分享、备份和小组件都围绕“少打扰地写下来”设计。</p>
+          <div class="hero-actions">
+            <a class="button primary" href="/pages/download/">下载最新版</a>
+            <a class="button" href="https://github.com/yyyyymmmmm/InkRoot" target="_blank" rel="noopener">GitHub 仓库</a>
+          </div>
+          <div class="release-strip">
+            <strong>1.1.13 已发布：</strong>修复 Android 分享闪退，随机回顾小组件改为显示真实笔记快照，并继续校验 Android 正式签名。
+          </div>
+        </div>
+        <div class="hero-card">
+          <img src="/assets/images/hero.png" alt="InkRoot 应用界面">
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>给真正写笔记的人</h2>
+          <p class="lead">InkRoot 不把记录做成复杂系统。默认先保存到本机，需要同步时再接入你选择的服务。</p>
+        </div>
+        <div class="grid three">
+          <article class="card">
+            <h3>本地优先</h3>
+            <p>没有网络也能记录。笔记、图片和设置优先保存在设备上，适合临时灵感、读书摘录和日常备忘。</p>
+          </article>
+          <article class="card">
+            <h3>连接 Memos</h3>
+            <p>支持官方服务器，也支持自部署 Memos。当前兼容重点覆盖 0.21.0 之后的登录、同步、资源和引用接口差异。</p>
+          </article>
+          <article class="card">
+            <h3>备份自己掌握</h3>
+            <p>WebDAV 可备份笔记和图片附件，适合把资料放到自己的云盘或 NAS。导入导出也保留常规迁移路径。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compact">
+      <div class="container split">
+        <div class="section-head">
+          <h2>记录入口更顺手</h2>
+          <p class="lead">记录不应该被打开 App 的流程打断。InkRoot 正在把常用入口补齐：系统分享、桌面小组件、离线发布、图片和文件附件。</p>
+        </div>
+        <div class="note-list">
+          <div class="note"><strong>系统分享</strong><p>Android 支持从浏览器、阅读器、相册、文件等入口分享到 InkRoot。iOS 分享扩展已加入构建链路。</p></div>
+          <div class="note"><strong>桌面小组件</strong><p>记录小组件和随机回顾小组件分开。随机回顾使用应用内真实笔记快照，不再显示占位文案。</p></div>
+          <div class="note"><strong>离线发布</strong><p>网络不稳定时先保存，恢复连接后再同步。适合自部署服务器不在同一网络的场景。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head center">
+          <h2>AI 是可选能力，不是前提</h2>
+          <p class="lead">摘要、续写、标签推荐、点评和洞察可以使用你自己配置的模型。没有配置 AI 时，相关笔记和本地点评仍尽量提供可用结果。</p>
+        </div>
+        <div class="grid three">
+          <article class="card soft">
+            <h3>用户自填模型</h3>
+            <p>模型更新太快，InkRoot 不把选择写死。你可以填写 API 地址、模型名和 Key。</p>
+          </article>
+          <article class="card soft">
+            <h3>相关笔记保留</h3>
+            <p>相关笔记是独立能力，不会因为洞察或点评改造而消失。它更适合在详情页连接上下文。</p>
+          </article>
+          <article class="card soft">
+            <h3>输出少套话</h3>
+            <p>AI 功能的目标是给出和笔记内容相关的具体反馈，不做万能模板式评价。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compact">
+      <div class="container">
+        <div class="section-head">
+          <h2>当前支持的平台</h2>
+          <p class="lead">GitHub Release 会自动构建 Android、iOS unsigned、macOS、Windows 和 Linux 产物。Android 正式包会校验固定发布证书，确保覆盖安装链路一致。</p>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Android APK / AAB</span>
+          <span class="tag">iOS unsigned IPA</span>
+          <span class="tag">macOS</span>
+          <span class="tag">Windows</span>
+          <span class="tag">Linux</span>
+          <span class="tag">WebDAV</span>
+          <span class="tag">Memos 0.21+</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>InkRoot 墨鸣笔记 · 静待沉淀，蓄势而鸣</div>
+      <div class="footer-links">
+        <a href="/privacy.html">隐私政策</a>
+        <a href="/agreement.html">用户协议</a>
+        <a href="/account-deletion.html">账号与数据删除</a>
+        <a href="mailto:inkroot2025@gmail.com">联系</a>
+      </div>
+    </div>
+  </footer>
+  <script src="/assets/js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InkRoot 更新日志</title>
+  <meta name="description" content="InkRoot 更新日志，记录当前正式版本和主要修复。">
+  <link rel="icon" href="/assets/icons/logo.png">
+  <link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/"><img src="/assets/icons/logo.png" alt="InkRoot"><span>InkRoot</span></a>
+      <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false" data-menu-button>≡</button>
+      <div class="nav-links" data-nav-links>
+        <a href="/">首页</a>
+        <a href="/pages/guide.html">使用指南</a>
+        <a href="/pages/faq.html">FAQ</a>
+        <a href="/pages/changelog.html">更新日志</a>
+        <a class="download-link" href="/pages/download/">下载</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Changelog</p>
+        <h1>更新日志</h1>
+        <p class="lead">只保留用户需要知道的变化。完整提交记录和构建产物请查看 GitHub Release。</p>
+      </div>
+    </section>
+
+    <article class="article">
+      <section class="version-card latest">
+        <div class="version-title"><h2>v1.1.13</h2><span>2026-06-22</span></div>
+        <ul>
+          <li>修复 Android 从浏览器、阅读器分享文本或网页到 InkRoot 时可能闪退的问题。</li>
+          <li>修复 Android 分享入口把网页 URL ClipData 误判为附件的问题。</li>
+          <li>修复 iOS/Android 随机回顾小组件明明有笔记却显示占位文案的问题。</li>
+          <li>随机回顾小组件改为按笔记显示时间筛选，避免同步或恢复后被更新时间污染。</li>
+          <li>补齐 iOS 主 App、小组件和分享扩展的 Development Team 配置，便于 Xcode 真机调试。</li>
+          <li>随机回顾小组件设置变更后立即刷新快照。</li>
+          <li>分享载荷解析增强容错，避免平台通道异常类型导致崩溃。</li>
+        </ul>
+        <div class="actions">
+          <a class="button primary" href="/pages/download/">下载 v1.1.13</a>
+          <a class="button" href="https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.1.13" target="_blank" rel="noopener">GitHub Release</a>
+        </div>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.12</h2><span>2026-06-22</span></div>
+        <ul>
+          <li>修复 iOS 分享扩展加入后 unsigned IPA 构建继承 Runner Flutter 链接配置导致发布流程失败的问题。</li>
+        </ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.11</h2><span>2026-06-22</span></div>
+        <ul>
+          <li>新增 iOS 系统分享扩展，支持从浏览器、阅读器、相册和文件 App 分享文本、网页、图片与文件到 InkRoot。</li>
+          <li>优化 Android 系统分享入口，覆盖浏览器、阅读器、相册和文件管理器等来源。</li>
+          <li>增强 Memos 0.21.0 至 0.29.1 的服务器识别、登录 token 字段和当前用户接口回退能力。</li>
+          <li>修复部分 Android App 分享到 InkRoot 后内容为空白的问题。</li>
+        </ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.10</h2><span>2026-06-22</span></div>
+        <ul>
+          <li>新增 Android 和 iOS 桌面小组件基础能力，记录小组件和随机回顾小组件分离。</li>
+          <li>新增随机回顾小组件内容选择与刷新配置。</li>
+          <li>新增讯飞语音识别自定义配置入口。</li>
+          <li>优化知识图谱视觉、缩放、节点点击和大数据量渲染性能。</li>
+          <li>优化桌面端全局缩放、Markdown 标题/引用/链接/下划线渲染和中文标签解析。</li>
+        </ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.8 - v1.1.9</h2><span>2026-06-16</span></div>
+        <ul>
+          <li>修复待办点击完成、下划线和加粗主页渲染、搜索结果空白和相关笔记入口等问题。</li>
+          <li>优化 AI 点评、摘要、续写、标签推荐和洞察输出，减少模板化表达。</li>
+          <li>优化关于页、帮助页、设置页和法律文档内容。</li>
+          <li>修复发布流程中 iOS 依赖下载超时导致的构建中断。</li>
+        </ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.0 - v1.1.7</h2><span>2026-06-14 至 2026-06-15</span></div>
+        <ul>
+          <li>新增统一维护 CLI：<code>dart tool/inkroot.dart</code>。</li>
+          <li>GitHub Actions 支持 Android、iOS 模拟器、macOS、Windows、Linux 验证与构建。</li>
+          <li>新增账号与数据删除入口、隐私政策、用户协议和 iOS 隐私清单。</li>
+          <li>固定官方云验证配置，Android Release 强制签名密钥和证书指纹校验。</li>
+          <li>修复 Memos 登录兼容、Windows 默认图标、Android release 构建等问题。</li>
+        </ul>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>InkRoot 墨鸣笔记</div>
+      <div class="footer-links">
+        <a href="/pages/download/">下载</a>
+        <a href="https://github.com/yyyyymmmmm/InkRoot/releases" target="_blank" rel="noopener">全部 Release</a>
+      </div>
+    </div>
+  </footer>
+  <script src="/assets/js/site.js"></script>
+</body>
+</html>

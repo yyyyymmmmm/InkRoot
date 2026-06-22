@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InkRoot 使用指南</title>
+  <meta name="description" content="InkRoot 使用指南：本地模式、官方服务器、自部署 Memos、WebDAV、分享入口、小组件和 AI 设置。">
+  <link rel="icon" href="/assets/icons/logo.png">
+  <link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/"><img src="/assets/icons/logo.png" alt="InkRoot"><span>InkRoot</span></a>
+      <button class="menu-button" type="button" aria-label="打开导航" aria-expanded="false" data-menu-button>≡</button>
+      <div class="nav-links" data-nav-links>
+        <a href="/">首页</a>
+        <a href="/pages/guide.html">使用指南</a>
+        <a href="/pages/faq.html">FAQ</a>
+        <a href="/pages/changelog.html">更新日志</a>
+        <a class="download-link" href="/pages/download/">下载</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Guide</p>
+        <h1>使用指南</h1>
+        <p class="lead">先选使用模式，再配置同步和备份。InkRoot 可以只做本地笔记，也可以作为 Memos 客户端使用。</p>
+      </div>
+    </section>
+
+    <article class="article">
+      <h2>1. 选择使用模式</h2>
+      <div class="panel">
+        <strong>本地模式</strong>
+        <p>适合先记录、后整理。无需登录，笔记保存在设备本地。建议定期导出或开启 WebDAV 备份。</p>
+      </div>
+      <div class="panel">
+        <strong>官方服务器</strong>
+        <p>适合想快速同步的用户。登录官方服务器后，笔记和附件会同步到官方服务。</p>
+      </div>
+      <div class="panel">
+        <strong>自部署 Memos</strong>
+        <p>适合已有 Memos 服务的用户。服务器地址可以是域名，也可以是内网 IP + 端口；如果使用 HTTP，请确认设备能访问该地址。</p>
+      </div>
+
+      <h2>2. 登录 Memos 或官方服务器</h2>
+      <ol>
+        <li>进入设置中的服务器或账号入口。</li>
+        <li>填写服务器地址、账号和密码。</li>
+        <li>如果是自部署服务，确认浏览器也能打开同一地址。</li>
+        <li>登录后下拉刷新或点击同步，确认笔记能正常读取。</li>
+      </ol>
+      <p>InkRoot 会自动尝试兼容 Memos 0.21.0 之后的常见 API 差异。如果某个自部署版本仍无法登录，请在 GitHub Issue 中提供版本号、服务器地址格式和错误提示。</p>
+
+      <h2>3. 配置 WebDAV 备份</h2>
+      <p>WebDAV 用于把本地数据备份到你自己的云盘或 NAS。当前支持笔记数据和图片附件备份，可在设置中选择是否备份图片。</p>
+      <ul>
+        <li>先测试连接，再执行备份。</li>
+        <li>坚果云等服务通常需要应用专用密码。</li>
+        <li>恢复前建议先导出当前数据，避免误覆盖。</li>
+      </ul>
+
+      <h2>4. 使用系统分享</h2>
+      <p>Android 支持从浏览器、阅读器、相册、文件管理器等入口分享文本、网页、图片和文件到 InkRoot。iOS 分享扩展已进入构建链路，真机表现以系统分享面板为准。</p>
+
+      <h2>5. 使用桌面小组件</h2>
+      <p>小组件分为记录和随机回顾两类。随机回顾显示的是应用生成的笔记快照；如果刚安装或刚恢复数据，先打开 InkRoot 同步一次小组件。</p>
+
+      <h2>6. 配置 AI</h2>
+      <p>AI 功能不是必需项。需要时在设置中填写 API 地址、模型名和 API Key。模型名使用输入框，是为了适配快速变化的模型列表。</p>
+      <ul>
+        <li>摘要：为长笔记生成简短概括。</li>
+        <li>续写：基于当前内容继续补充。</li>
+        <li>标签推荐：从内容中建议标签。</li>
+        <li>点评和洞察：尽量给出和当前笔记相关的具体反馈。</li>
+      </ul>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>InkRoot 墨鸣笔记</div>
+      <div class="footer-links">
+        <a href="/pages/download/">下载</a>
+        <a href="/pages/faq.html">FAQ</a>
+        <a href="mailto:inkroot2025@gmail.com">联系</a>
+      </div>
+    </div>
+  </footer>
+  <script src="/assets/js/site.js"></script>
+</body>
+</html>
