@@ -19,6 +19,7 @@ struct WidgetSnapshot {
   let unsyncedCount: Int
   let quickTags: [String]
   let reviewNotes: [ReviewNote]
+  let generatedAt: Date?
   let reviewRefreshIntervalMinutes: Int
   let reviewRangeDays: Int
 
@@ -28,6 +29,7 @@ struct WidgetSnapshot {
     unsyncedCount: 0,
     quickTags: ["灵感", "工作", "日记"],
     reviewNotes: [],
+    generatedAt: nil,
     reviewRefreshIntervalMinutes: 60,
     reviewRangeDays: 0
   )
@@ -80,6 +82,7 @@ struct InkRootTimelineProvider: TimelineProvider {
     let today = object["today"] as? [String: Any]
     let sync = object["sync"] as? [String: Any]
     let reviewConfig = object["reviewConfig"] as? [String: Any]
+    let generatedAt = (object["generatedAt"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) }
     let quickTags = object["quickTags"] as? [String] ?? []
     let reviewObjects = object["reviewNotes"] as? [[String: Any]] ?? []
     let reviews = reviewObjects.compactMap { item -> ReviewNote? in
@@ -95,6 +98,7 @@ struct InkRootTimelineProvider: TimelineProvider {
       unsyncedCount: sync?["unsyncedCount"] as? Int ?? 0,
       quickTags: Array(quickTags.prefix(5)),
       reviewNotes: reviews,
+      generatedAt: generatedAt,
       reviewRefreshIntervalMinutes: reviewConfig?["refreshIntervalMinutes"] as? Int ?? 60,
       reviewRangeDays: reviewConfig?["rangeDays"] as? Int ?? 0
     )
@@ -197,7 +201,7 @@ struct InkRootRandomReviewView: View {
             .foregroundColor(mutedColor)
         }
 
-        Text(currentReview?.preview ?? "打开 InkRoot 后显示随机回顾")
+        Text(currentReview?.preview ?? emptyReviewText)
           .font(family == .systemSmall ? .footnote : .body)
           .foregroundColor(textColor)
           .lineLimit(family == .systemLarge ? 8 : 5)
@@ -224,6 +228,13 @@ struct InkRootRandomReviewView: View {
   private var refreshText: String {
     let minutes = entry.snapshot.reviewRefreshIntervalMinutes
     return minutes < 60 ? "\(minutes)分钟刷新" : "\(minutes / 60)小时刷新"
+  }
+
+  private var emptyReviewText: String {
+    if entry.snapshot.generatedAt != nil {
+      return "暂无可回顾笔记"
+    }
+    return "打开 InkRoot 同步小组件"
   }
 
   private var rangeText: String {

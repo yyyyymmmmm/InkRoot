@@ -119,9 +119,7 @@ abstract final class WidgetSnapshotService {
     required int reviewRangeDays,
     String? syncMessage,
   }) {
-    final visibleNotes = notes
-        .where((note) => note.rowStatus.toUpperCase() == 'NORMAL')
-        .toList()
+    final visibleNotes = notes.where(_isWidgetVisibleNote).toList()
       ..sort((a, b) => b.displayTime.compareTo(a.displayTime));
 
     final now = DateTime.now();
@@ -200,6 +198,14 @@ abstract final class WidgetSnapshotService {
           : reviewRangeDays,
       random: Random(),
     );
+  }
+
+  static bool _isWidgetVisibleNote(Note note) {
+    final status = note.rowStatus.trim().toUpperCase();
+    return status.isEmpty ||
+        status == 'NORMAL' ||
+        status == 'ROW_STATUS_UNSPECIFIED' ||
+        status == 'STATE_UNSPECIFIED';
   }
 
   static Map<String, Object?> _noteSnapshot(Note note) {

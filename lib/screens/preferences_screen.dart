@@ -851,6 +851,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       widgetReviewRangeDays: rangeDays,
     );
     await appProvider.updateConfig(newConfig);
+    appProvider.refreshWidgetSnapshotNow();
   }
 
   // 构建默认笔记可见性选择器

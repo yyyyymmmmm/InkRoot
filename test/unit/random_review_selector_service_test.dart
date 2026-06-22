@@ -10,12 +10,17 @@ void main() {
     required String id,
     required String content,
     required DateTime updatedAt,
+    DateTime? createdAt,
+    DateTime? displayTime,
+    String rowStatus = 'NORMAL',
   }) =>
       Note(
         id: id,
         content: content,
-        createdAt: updatedAt,
+        createdAt: createdAt ?? updatedAt,
         updatedAt: updatedAt,
+        displayTime: displayTime,
+        rowStatus: rowStatus,
       );
 
   group('RandomReviewSelectorService', () {
@@ -73,6 +78,31 @@ void main() {
       );
 
       expect(selected.map((note) => note.id).toSet(), {'old-a', 'old-b'});
+    });
+
+    test('uses display time instead of updated time for widget range', () {
+      final now = DateTime.now();
+      final selected = RandomReviewSelectorService.select(
+        notes: [
+          note(
+            id: 'old-created-recently-synced',
+            content: '旧笔记最近同步过',
+            createdAt: now.subtract(const Duration(days: 120)),
+            displayTime: now.subtract(const Duration(days: 120)),
+            updatedAt: now,
+          ),
+          note(
+            id: 'recent-created',
+            content: '近期真正写下的笔记',
+            updatedAt: now.subtract(const Duration(days: 2)),
+          ),
+        ],
+        reviewDays: 30,
+        reviewCount: 5,
+        random: Random(0),
+      );
+
+      expect(selected.map((note) => note.id), ['recent-created']);
     });
 
     test('widget mode prefers notes with visible preview text', () {
@@ -140,6 +170,47 @@ void main() {
       expect(reviewNotes, hasLength(1));
       expect(reviewNotes.single, containsPair('id', 'image-only'));
       expect(reviewNotes.single, containsPair('preview', '这是一条含图片的笔记'));
+    });
+
+    test('treats unspecified row status as visible for old local notes', () {
+      final now = DateTime.now();
+      final snapshot = WidgetSnapshotService.debugBuildSnapshot(
+        notes: [
+          note(
+            id: 'old-local',
+            content: '旧数据也应该进入小组件随机回顾',
+            updatedAt: now,
+            rowStatus: 'ROW_STATUS_UNSPECIFIED',
+          ),
+        ],
+        isLocalMode: true,
+        isLoggedIn: false,
+        isSyncing: false,
+      );
+
+      final reviewNotes = snapshot['reviewNotes']! as List;
+      expect(reviewNotes, hasLength(1));
+      expect(reviewNotes.single, containsPair('id', 'old-local'));
+    });
+
+    test('excludes archived notes from widget random review snapshot', () {
+      final now = DateTime.now();
+      final snapshot = WidgetSnapshotService.debugBuildSnapshot(
+        notes: [
+          note(
+            id: 'archived',
+            content: '归档笔记不应该出现在桌面小组件',
+            updatedAt: now,
+            rowStatus: 'ARCHIVED',
+          ),
+        ],
+        isLocalMode: true,
+        isLoggedIn: false,
+        isSyncing: false,
+      );
+
+      final reviewNotes = snapshot['reviewNotes']! as List;
+      expect(reviewNotes, isEmpty);
     });
   });
 }

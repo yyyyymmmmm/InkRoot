@@ -30,6 +30,7 @@ class MainActivity: FlutterActivity() {
     private var pendingSharedPayload: Map<String, Any>? = null
     private var pendingDeepLink: String? = null
     private var isUmengInitialized = false
+    private var flutterReadyForNativeEvents = false
     private val shareExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -141,6 +142,7 @@ class MainActivity: FlutterActivity() {
                     pendingNoteId = null
                 }
                 "getInitialSharedPayload" -> {
+                    flutterReadyForNativeEvents = true
                     result.success(pendingSharedPayload)
                     pendingSharedPayload = null
                 }
@@ -359,7 +361,7 @@ class MainActivity: FlutterActivity() {
                 intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
             }
             if (!streamUris.isNullOrEmpty()) {
-                uris.addAll(streamUris)
+                uris.addAll(streamUris.filter(::isAttachmentUri))
             }
         } else {
             val streamUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -368,14 +370,16 @@ class MainActivity: FlutterActivity() {
                 @Suppress("DEPRECATION")
                 intent.getParcelableExtra(Intent.EXTRA_STREAM)
             }
-            if (streamUri != null) {
+            if (streamUri != null && isAttachmentUri(streamUri)) {
                 uris.add(streamUri)
             }
         }
 
         intent.clipData?.let { clipData ->
             for (index in 0 until clipData.itemCount) {
-                clipData.getItemAt(index).uri?.let { uris.add(it) }
+                clipData.getItemAt(index).uri
+                    ?.takeIf(::isAttachmentUri)
+                    ?.let { uris.add(it) }
             }
         }
 
@@ -384,12 +388,19 @@ class MainActivity: FlutterActivity() {
             .map { uri -> SharedUriItem(uri, isImageShare(intent, uri)) }
     }
 
+    private fun isAttachmentUri(uri: Uri): Boolean {
+        val scheme = uri.scheme?.lowercase().orEmpty()
+        return scheme == "content" || scheme == "file"
+    }
+
     private fun extractSharedText(intent: Intent): String {
         val processText = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
         val extraText = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
         val title = intent.getStringExtra(Intent.EXTRA_TITLE)
-        val candidates = listOf(processText, extraText, subject, title)
+        val clipText = extractClipText(intent)
+        val dataUrl = intent.dataString
+        val candidates = listOf(processText, extraText, subject, title, clipText, dataUrl)
             .mapNotNull { it?.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
@@ -403,6 +414,23 @@ class MainActivity: FlutterActivity() {
         } else {
             candidates.joinToString("\n")
         }
+    }
+
+    private fun extractClipText(intent: Intent): String? {
+        val clipData = intent.clipData ?: return null
+        val parts = mutableListOf<String>()
+        for (index in 0 until clipData.itemCount) {
+            val item = clipData.getItemAt(index)
+            item.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+            item.htmlText?.trim()?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+            item.uri
+                ?.takeUnless(::isAttachmentUri)
+                ?.toString()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { parts.add(it) }
+        }
+        return parts.distinct().joinToString("\n").takeIf { it.isNotBlank() }
     }
 
     private fun isImageShare(intent: Intent, uri: Uri): Boolean {
@@ -481,6 +509,10 @@ class MainActivity: FlutterActivity() {
 
     private fun deliverSharedPayload(payload: Map<String, Any>) {
         pendingSharedPayload = payload
+        if (!flutterReadyForNativeEvents || methodChannel == null) {
+            ReleaseLog.e("MainActivity", "📦 Flutter未就绪，分享内容已缓存")
+            return
+        }
         try {
             methodChannel?.invokeMethod("onSharedPayload", payload)
             ReleaseLog.e("MainActivity", "✅ 已通知Flutter处理分享内容")

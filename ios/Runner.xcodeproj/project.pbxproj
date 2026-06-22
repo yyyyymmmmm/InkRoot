@@ -609,6 +609,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -796,6 +797,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -825,6 +827,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -851,6 +854,7 @@
 				CODE_SIGN_ENTITLEMENTS = InkRootWidgets/InkRootWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = InkRootWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -879,6 +883,7 @@
 				CODE_SIGN_ENTITLEMENTS = InkRootWidgets/InkRootWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = InkRootWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -905,6 +910,7 @@
 				CODE_SIGN_ENTITLEMENTS = InkRootWidgets/InkRootWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = InkRootWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -930,6 +936,7 @@
 				CODE_SIGN_ENTITLEMENTS = InkRootShareExtension/InkRootShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = InkRootShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -956,6 +963,7 @@
 				CODE_SIGN_ENTITLEMENTS = InkRootShareExtension/InkRootShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = InkRootShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -980,6 +988,7 @@
 				CODE_SIGN_ENTITLEMENTS = InkRootShareExtension/InkRootShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = F8WRN47K72;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = InkRootShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;

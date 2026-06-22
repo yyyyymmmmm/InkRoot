@@ -403,10 +403,12 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
           }
           // 🔧 修复：使用双重通知确保UI更新
           notifyListeners();
+          _scheduleWidgetSnapshotUpdate();
           // 添加微延迟后再次通知，确保所有监听器都能收到更新
           Future.microtask(() {
             if (mounted) {
               notifyListeners();
+              _scheduleWidgetSnapshotUpdate();
             }
           });
         },

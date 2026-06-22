@@ -34,6 +34,16 @@ void main() {
       expect(content, contains('file:///tmp/b.png'));
     });
 
+    test('tolerates non-string path values from platform channels', () {
+      final content = sharedPayloadToContent({
+        'type': 'images',
+        'paths': ['/tmp/a.jpg', 42, null],
+      });
+
+      expect(content, contains('file:///tmp/a.jpg'));
+      expect(content, contains('file://42'));
+    });
+
     test('turns shared file into readable file placeholder', () {
       final content = sharedPayloadToContent({
         'type': 'file',

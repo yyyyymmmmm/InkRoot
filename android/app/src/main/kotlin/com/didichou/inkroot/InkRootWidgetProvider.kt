@@ -149,6 +149,7 @@ class InkRootRandomReviewWidgetProvider : BaseInkRootWidgetProvider() {
         val views = RemoteViews(context.packageName, R.layout.inkroot_random_review_widget)
         val reviewNotes = snapshot?.optJSONArray("reviewNotes")
         val reviewConfig = snapshot?.optJSONObject("reviewConfig")
+        val hasSnapshot = snapshot != null && snapshot.optString("generatedAt").isNotBlank()
         val refreshMinutes = reviewConfig?.optInt("refreshIntervalMinutes", 60) ?: 60
         val rangeDays = reviewConfig?.optInt("rangeDays", 0) ?: 0
         val reviewCount = reviewNotes?.length() ?: 0
@@ -160,7 +161,7 @@ class InkRootRandomReviewWidgetProvider : BaseInkRootWidgetProvider() {
             null
         }
         val reviewText = review?.optString("preview")?.takeIf { it.isNotBlank() }
-            ?: "打开 InkRoot 后显示随机回顾"
+            ?: if (hasSnapshot) "暂无可回顾笔记" else "打开 InkRoot 同步小组件"
         val reviewId = review?.optString("id").orEmpty()
 
         views.setTextViewText(R.id.inkroot_widget_review, reviewText)

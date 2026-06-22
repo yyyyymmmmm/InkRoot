@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.13] - 2026-06-22
+
+### 修复
+- 修复 Android 从浏览器、阅读器分享文本或网页到 InkRoot 时可能闪退的问题
+- 修复 Android 分享入口对网页 URL ClipData 的误判，避免把浏览器链接当附件读取
+- 修复 iOS/Android 随机回顾小组件明明有笔记却显示“打开 InkRoot 后显示随机回顾”的问题
+- 修复随机回顾小组件按更新时间筛选导致同步/恢复后回顾范围不准的问题
+- 补齐 iOS 主 App、小组件和分享扩展的 Development Team 配置，便于 Xcode 真机调试
+
+### 优化
+- 随机回顾小组件设置变更后立即刷新快照
+- 分享载荷解析增强容错，避免平台通道传入非标准列表类型导致异常
+
 ## [1.1.12] - 2026-06-22
 
 ### 修复

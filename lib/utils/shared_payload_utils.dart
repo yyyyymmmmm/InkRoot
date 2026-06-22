@@ -17,7 +17,11 @@ String? sharedPayloadToContent(Object? payload) {
       }
       return '来自分享的图片:\n\n![图片](file://$path)';
     case 'images':
-      final paths = (payload['paths'] as List?)?.cast<String>() ?? const [];
+      final paths = (payload['paths'] as List?)
+              ?.map((path) => path?.toString() ?? '')
+              .where((path) => path.isNotEmpty)
+              .toList() ??
+          const [];
       if (paths.isEmpty) {
         return null;
       }

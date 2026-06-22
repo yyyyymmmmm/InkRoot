@@ -35,7 +35,7 @@ abstract final class RandomReviewSelectorService {
     final normalizedDays = reviewDays <= 0 ? allDays : reviewDays;
     final cutoffDate = DateTime.now().subtract(Duration(days: normalizedDays));
     var filteredNotes = sourceNotes
-        .where((note) => note.updatedAt.isAfter(cutoffDate))
+        .where((note) => note.displayTime.isAfter(cutoffDate))
         .toList();
 
     if (selectedTags.isNotEmpty) {
