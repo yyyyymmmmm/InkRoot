@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>InkRoot 更新日志</title>
-  <meta name="description" content="InkRoot 更新日志，记录当前正式版本和主要修复。">
+  <meta name="description" content="InkRoot 完整更新日志，记录每个版本的新功能、修复和维护变化。">
   <link rel="icon" href="/assets/icons/logo.png">
   <link rel="stylesheet" href="/assets/css/site.css">
 </head>
@@ -28,85 +28,921 @@
       <div class="container">
         <p class="eyebrow">Changelog</p>
         <h1>更新日志</h1>
-        <p class="lead">只保留用户需要知道的变化。完整提交记录和构建产物请查看 GitHub Release。</p>
+        <p class="lead">这里保留完整历史版本。顶部是当前最新版本，下载包请前往下载页或 GitHub Release。</p>
+        <div class="actions">
+          <a class="button primary" href="/pages/download/">下载最新版</a>
+          <a class="button" href="https://github.com/yyyyymmmmm/InkRoot/releases" target="_blank" rel="noopener">全部 GitHub Release</a>
+        </div>
       </div>
     </section>
 
     <article class="article">
       <section class="version-card latest">
         <div class="version-title"><h2>v1.1.13</h2><span>2026-06-22</span></div>
-        <ul>
-          <li>修复 Android 从浏览器、阅读器分享文本或网页到 InkRoot 时可能闪退的问题。</li>
-          <li>修复 Android 分享入口把网页 URL ClipData 误判为附件的问题。</li>
-          <li>修复 iOS/Android 随机回顾小组件明明有笔记却显示占位文案的问题。</li>
-          <li>随机回顾小组件改为按笔记显示时间筛选，避免同步或恢复后被更新时间污染。</li>
-          <li>补齐 iOS 主 App、小组件和分享扩展的 Development Team 配置，便于 Xcode 真机调试。</li>
-          <li>随机回顾小组件设置变更后立即刷新快照。</li>
-          <li>分享载荷解析增强容错，避免平台通道异常类型导致崩溃。</li>
-        </ul>
-        <div class="actions">
-          <a class="button primary" href="/pages/download/">下载 v1.1.13</a>
-          <a class="button" href="https://github.com/yyyyymmmmm/InkRoot/releases/tag/v1.1.13" target="_blank" rel="noopener">GitHub Release</a>
-        </div>
+<h3>修复</h3>
+<ul>
+<li>修复 Android 从浏览器、阅读器分享文本或网页到 InkRoot 时可能闪退的问题</li>
+<li>修复 Android 分享入口对网页 URL ClipData 的误判，避免把浏览器链接当附件读取</li>
+<li>修复 iOS/Android 随机回顾小组件明明有笔记却显示“打开 InkRoot 后显示随机回顾”的问题</li>
+<li>修复随机回顾小组件按更新时间筛选导致同步/恢复后回顾范围不准的问题</li>
+<li>补齐 iOS 主 App、小组件和分享扩展的 Development Team 配置，便于 Xcode 真机调试</li>
+</ul>
+<h3>优化</h3>
+<ul>
+<li>随机回顾小组件设置变更后立即刷新快照</li>
+<li>分享载荷解析增强容错，避免平台通道传入非标准列表类型导致异常</li>
+</ul>
       </section>
 
       <section class="version-card">
         <div class="version-title"><h2>v1.1.12</h2><span>2026-06-22</span></div>
-        <ul>
-          <li>修复 iOS 分享扩展加入后 unsigned IPA 构建继承 Runner Flutter 链接配置导致发布流程失败的问题。</li>
-        </ul>
+<h3>修复</h3>
+<ul>
+<li>修复 iOS 分享扩展加入后 unsigned IPA 构建继承 Runner Flutter 链接配置导致发布流程失败的问题</li>
+</ul>
       </section>
 
       <section class="version-card">
         <div class="version-title"><h2>v1.1.11</h2><span>2026-06-22</span></div>
-        <ul>
-          <li>新增 iOS 系统分享扩展，支持从浏览器、阅读器、相册和文件 App 分享文本、网页、图片与文件到 InkRoot。</li>
-          <li>优化 Android 系统分享入口，覆盖浏览器、阅读器、相册和文件管理器等来源。</li>
-          <li>增强 Memos 0.21.0 至 0.29.1 的服务器识别、登录 token 字段和当前用户接口回退能力。</li>
-          <li>修复部分 Android App 分享到 InkRoot 后内容为空白的问题。</li>
-        </ul>
+<h3>新增</h3>
+<ul>
+<li>新增 iOS 系统分享扩展，支持从浏览器、阅读器、相册和文件 App 分享文本、网页、图片与文件到 InkRoot</li>
+</ul>
+<h3>优化</h3>
+<ul>
+<li>优化 Android 系统分享入口，统一支持浏览器/阅读器文本、系统选中文本、相册单图/多图、文件管理器单文件/多文件与混合附件分享</li>
+<li>优化分享附件处理，后台复制 content URI，保留文件名和常见扩展名，降低大图和多文件分享时的卡顿感</li>
+<li>优化 Memos 0.21.0 至 0.29.1 兼容链路，增强服务器识别、登录 token 字段和当前用户接口回退能力</li>
+</ul>
+<h3>修复</h3>
+<ul>
+<li>修复部分 Android App 分享到 InkRoot 后内容为空白的问题</li>
+<li>修复部分自部署 Memos 0.26、0.27、0.29 服务器登录或同步初始化失败的问题</li>
+</ul>
       </section>
 
       <section class="version-card">
         <div class="version-title"><h2>v1.1.10</h2><span>2026-06-22</span></div>
-        <ul>
-          <li>新增 Android 和 iOS 桌面小组件基础能力，记录小组件和随机回顾小组件分离。</li>
-          <li>新增随机回顾小组件内容选择与刷新配置。</li>
-          <li>新增讯飞语音识别自定义配置入口。</li>
-          <li>优化知识图谱视觉、缩放、节点点击和大数据量渲染性能。</li>
-          <li>优化桌面端全局缩放、Markdown 标题/引用/链接/下划线渲染和中文标签解析。</li>
-        </ul>
+<h3>新增</h3>
+<ul>
+<li>新增 Android 和 iOS 桌面小组件基础能力，支持快速记录和随机回顾分离展示</li>
+<li>新增随机回顾小组件内容选择与刷新配置，优先展示真实笔记内容</li>
+<li>新增讯飞语音识别自定义配置入口，语音能力可由用户自行启用和承担服务成本</li>
+</ul>
+<h3>优化</h3>
+<ul>
+<li>优化知识图谱视觉、缩放、节点点击和大数据量渲染性能</li>
+<li>优化 Windows、macOS、Linux 桌面端全局缩放体验，字体大小设置会带动整体界面缩放</li>
+<li>优化 Markdown 标题、引用、链接和下划线等内容的主页与详情渲染</li>
+<li>优化标签路径解析、侧边栏标签返回路径和中文标签打开体验</li>
+<li>优化 AI 设置、模型输入、自定义提示词和快速上手文案</li>
+<li>更新项目结构、构建指南和宣传素材目录，使其与当前项目状态一致</li>
+</ul>
+<h3>修复</h3>
+<ul>
+<li>修复单条笔记下拉刷新可能进入持续加载的问题</li>
+<li>修复随机回顾小组件无法随机切换、无笔记时状态不准确的问题</li>
+<li>修复部分桌面端缩小只影响文字、界面元素不同步的问题</li>
+</ul>
       </section>
 
       <section class="version-card">
-        <div class="version-title"><h2>v1.1.8 - v1.1.9</h2><span>2026-06-16</span></div>
-        <ul>
-          <li>修复待办点击完成、下划线和加粗主页渲染、搜索结果空白和相关笔记入口等问题。</li>
-          <li>优化 AI 点评、摘要、续写、标签推荐和洞察输出，减少模板化表达。</li>
-          <li>优化关于页、帮助页、设置页和法律文档内容。</li>
-          <li>修复发布流程中 iOS 依赖下载超时导致的构建中断。</li>
-        </ul>
+        <div class="version-title"><h2>v1.1.9</h2><span>2026-06-16</span></div>
+<h3>修复</h3>
+<ul>
+<li>修复 GitHub Actions iOS unsigned 包构建时依赖 Gitee 镜像下载 <code>SDWebImage</code> 偶发超时导致发布中断的问题</li>
+</ul>
+<h3>维护</h3>
+<ul>
+<li>iOS Pod 依赖改回 CocoaPods 官方源，并为 unsigned IPA 打包流程增加 <code>pod install</code> 重试</li>
+</ul>
       </section>
 
       <section class="version-card">
-        <div class="version-title"><h2>v1.1.0 - v1.1.7</h2><span>2026-06-14 至 2026-06-15</span></div>
-        <ul>
-          <li>新增统一维护 CLI：<code>dart tool/inkroot.dart</code>。</li>
-          <li>GitHub Actions 支持 Android、iOS 模拟器、macOS、Windows、Linux 验证与构建。</li>
-          <li>新增账号与数据删除入口、隐私政策、用户协议和 iOS 隐私清单。</li>
-          <li>固定官方云验证配置，Android Release 强制签名密钥和证书指纹校验。</li>
-          <li>修复 Memos 登录兼容、Windows 默认图标、Android release 构建等问题。</li>
-        </ul>
+        <div class="version-title"><h2>v1.1.8</h2><span>2026-06-16</span></div>
+<h3>修复</h3>
+<ul>
+<li>修复待办点击完成后状态不生效的问题</li>
+<li>修复下划线和加粗内容在主页渲染异常的问题</li>
+<li>修复搜索结果卡片与打开后的笔记内容不一致、空白卡片等问题</li>
+<li>修复相关笔记入口偶发显示无结果的问题，并保留原有相关笔记体验</li>
+<li>修复标签列表进入详情后返回路径不符合预期的问题</li>
+<li>恢复品牌文案“静待沉淀，蓄势而鸣”，避免设置页和关于页出现偏离品牌的通用描述</li>
+</ul>
+<h3>优化</h3>
+<ul>
+<li>优化 AI 点评、摘要、续写、标签推荐和洞察输出，减少模板化表达</li>
+<li>优化关于页、帮助页、设置页和法律文档内容，使其与当前功能和数据流一致</li>
+<li>优化图片预览、笔记排版、展开判断、WebDAV 备份和同步时间保留逻辑</li>
+<li>强化 CLI 发布流程，继续校验云验证配置、Android 应用 ID 和发布签名证书</li>
+</ul>
+<h3>验证</h3>
+<ul>
+<li>iOS 模拟器完成 Debug 运行验证</li>
+<li><code>flutter analyze</code> 通过</li>
+<li>GitHub Actions Release 继续负责 Android APK/AAB、iOS unsigned、macOS、Windows 和 Linux 产物构建</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.7</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>修正 Android AAB 签名校验方式，使用 JAR 签名证书指纹校验 AAB，避免把 AAB 当作 APK 原始证书字节检查</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.6</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>Android Release 构建改为强制要求完整签名配置，缺少 <code>android/key.properties</code> 或 keystore 时直接失败</li>
+<li>发布流程改为同时校验 APK 和 AAB 是否包含固定发布证书，避免正式包未按发布证书签名</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.5</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>将官方云验证 AppID 固定为源码默认值，避免 Release 环境缺少 AppID 时生成未绑定官方云配置的包</li>
+<li>Android Release 新增签名证书指纹校验，签名证书不一致时直接失败，避免破坏覆盖安装链路</li>
+</ul>
+<h3>维护</h3>
+<ul>
+<li>云验证 AppID 和客户端 AppKey 固定为源码默认值，Release 构建不再依赖 GitHub Secret 才能绑定官方云配置；Android 签名密钥仍通过 GitHub Secrets 注入</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.4</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>修复正式 Release 包未注入云验证 AppID / AppKey，导致官方公告、云配置和更新检查不可用的问题</li>
+</ul>
+<h3>维护</h3>
+<ul>
+<li>GitHub Actions Release 流程保留 Android 签名密钥校验，缺少签名密钥时直接失败</li>
+<li>统一 CLI 发布构建校验，云验证默认绑定官方配置，Android release 构建继续校验证书</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.3</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>修复云端 Android CLI 构建缺少 Flutter <code>applicationName</code> manifest 占位符的问题</li>
+<li>修复 Android 原生代码需要 <code>BuildConfig</code> 时 release 构建失败的问题</li>
+<li>修复 Android Gradle 入口文件异常导致 CI Android 构建失败的问题</li>
+</ul>
+<h3>维护</h3>
+<ul>
+<li>发布前检查新增 Android manifest 占位符和 BuildConfig 生成校验</li>
+<li>确认 main 分支 CI 覆盖 Analyze + Test、Secret scan、Android、iOS simulator、macOS、Windows 和 Linux</li>
+<li>保持 Android 应用 ID 与历史签名配置不变，避免覆盖安装签名链路被破坏</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.2</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>修复部分 Memos 服务器登录成功后读取账号信息失败的问题</li>
+<li>账号信息读取不再依赖单一版本判断，会在 v0.21、v0.22-v0.25、v0.26+ 账号接口之间自动回退</li>
+<li>请求头同时兼容 Bearer Token 与 Memos Cookie 鉴权，提升官方服务器和自部署服务器兼容性</li>
+<li>登录失败提示区分账号密码、Token、网络、TLS、服务器返回异常等原因，不再统一提示检查网络和服务器地址</li>
+<li>新增账号与数据删除入口，并补齐公开删除申请页面</li>
+<li>更新隐私政策、用户协议、iOS 隐私清单和 iOS 权限声明，使其与当前官方服务器、自部署同步、WebDAV、AI 和反馈数据流一致</li>
+</ul>
+<h3>验证</h3>
+<ul>
+<li>iOS 模拟器完成官方服务器登录验证，并成功同步 279 条笔记</li>
+<li><code>flutter analyze</code> 通过</li>
+<li>Memos API 单元测试通过</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.1</h2><span>2026-06-15</span></div>
+<h3>修复</h3>
+<ul>
+<li>提升 Memos 登录兼容性：服务器登录前隐藏版本信息时，自动回退尝试不同 Memos 认证协议</li>
+<li>修复 Windows 桌面端仍显示 Flutter 默认图标的问题</li>
+<li>统一 macOS 与 Windows 桌面端应用图标生成流程</li>
+</ul>
+<h3>维护</h3>
+<ul>
+<li>新增 <code>scripts/generate_desktop_icons.py</code>，统一生成桌面端图标资源</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.1.0</h2><span>2026-06-14</span></div>
+<h3>维护与发布体系</h3>
+<ul>
+<li>新增统一维护 CLI：<code>dart tool/inkroot.dart</code></li>
+<li>GitHub Actions 升级为多平台验证与构建：Android、iOS 模拟器、macOS、Windows、Linux</li>
+<li>新增 PR 模板、Issue 模板、Dependabot 配置和 Gitleaks secret 扫描</li>
+<li>新增 <code>docs/MAINTENANCE.md</code>，统一说明版本、CI、发版和安全基线</li>
+<li>新增 tag 驱动的 Release workflow，通过 CLI 推送版本 tag 后自动发布</li>
+</ul>
+<h3>质量验证</h3>
+<ul>
+<li><code>flutter analyze</code> 当前为 0 issues</li>
+<li><code>flutter test</code> 当前为 300 tests passed</li>
+<li>iOS 模拟器启动验证通过</li>
+</ul>
+<h3>修复</h3>
+<ul>
+<li>云配置接口失败态返回字符串时不再触发 Dart 类型异常</li>
+<li>新增云验证响应模型单元测试，覆盖成功态和失败态</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.9</h2><span>2025-11-22 ~ 2025-11-24</span></div>
+<h3>✨ 重大功能更新</h3>
+<h4>🔄 <strong>Notion 数据同步</strong> - 与 Notion 工作区实时同步（2025-11-24 新增）</h4>
+<ul>
+<li><strong>双向同步支持</strong></li>
+<li>仅同步到 Notion - 本地笔记 → Notion</li>
+<li>仅从 Notion 同步 - Notion → 本地笔记</li>
+<li>双向同步 - 本地笔记 ↔ Notion</li>
+<li>灵活选择同步方向，满足不同使用场景</li>
+</ul>
+<ul>
+<li><strong>自动同步功能</strong></li>
+<li>笔记创建时自动同步至 Notion</li>
+<li>笔记编辑时自动同步至 Notion</li>
+<li>下拉刷新触发同步</li>
+<li>智能防重复同步机制</li>
+</ul>
+<ul>
+<li><strong>Notion 设置页面</strong></li>
+<li>访问令牌配置和测试</li>
+<li>数据库选择和字段映射</li>
+<li>同步方向选择</li>
+<li>自动同步开关</li>
+<li>立即同步按钮</li>
+</ul>
+<ul>
+<li><strong>技术实现</strong></li>
+<li>新增 <code>NotionApiService</code> - Notion API 封装</li>
+<li>新增 <code>NotionSyncService</code> - Notion 同步逻辑</li>
+<li>新增 <code>notion_settings_screen.dart</code> - Notion 设置界面</li>
+<li><code>AppProvider</code> 集成自动同步逻辑</li>
+</ul>
+<h4>📓 <strong>Obsidian 集成</strong> - 通过第三方插件实现双向同步（2025-11-24 新增）</h4>
+<ul>
+<li><strong>插件兼容性</strong></li>
+<li>完全兼容 <a href="https://github.com/RyoJerryYu/obsidian-memos-sync" target="_blank" rel="noopener">obsidian-memos-sync</a> 插件</li>
+<li>支持 Memos API v0.21.0 标准</li>
+<li>支持每日笔记自动集成</li>
+<li>支持增量同步</li>
+</ul>
+<ul>
+<li><strong>导入导出页面集成</strong></li>
+<li>新增 Obsidian 数据同步入口</li>
+<li>点击跳转到插件下载页面</li>
+<li>专业化的功能描述</li>
+<li>统一的UI设计风格</li>
+</ul>
+<h4>📖 <strong>微信读书笔记导入</strong> - 批量导入阅读笔记（2025-11-24 新增）</h4>
+<ul>
+<li><strong>智能解析功能</strong></li>
+<li>自动识别书籍信息（书名、作者）</li>
+<li>自动解析笔记数量和章节</li>
+<li>智能提取笔记内容</li>
+<li>保留原始结构和格式</li>
+</ul>
+<ul>
+<li><strong>导入设置</strong></li>
+<li>自定义标签（默认：微信读书 + 书名）</li>
+<li>章节作为二级标签选项</li>
+<li>导入前预览和检查</li>
+<li>批量导入进度显示</li>
+</ul>
+<ul>
+<li><strong>用户体验</strong></li>
+<li>详细的使用说明</li>
+<li>粘贴区域友好提示</li>
+<li>格式检查和验证</li>
+<li>导入结果统计</li>
+</ul>
+<ul>
+<li><strong>技术实现</strong></li>
+<li>新增 <code>WeReadParser</code> - 微信读书笔记解析服务</li>
+<li>新增 <code>weread_import_screen.dart</code> - 微信读书导入页面</li>
+<li>智能文本解析算法</li>
+<li>支持多种笔记格式</li>
+</ul>
+<h3>🎨 UI/UX 优化</h3>
+<h4>导入导出页面文案优化（2025-11-24 新增）</h4>
+<ul>
+<li><strong>专业化表达</strong></li>
+<li>本地备份与恢复：将笔记数据导出为本地文件，支持从备份文件恢复数据</li>
+<li>Flomo 笔记导入：支持从 Flomo 导出的 HTML 文件批量导入笔记内容</li>
+<li>微信读书笔记导入：支持从微信读书导出的笔记文本批量导入，自动识别书籍信息和标注内容</li>
+<li>Notion 数据同步：与 Notion 工作区实时同步笔记数据，支持双向同步与自动同步功能</li>
+<li>Obsidian 数据同步：通过第三方插件实现与 Obsidian 的双向同步，支持每日笔记自动集成</li>
+<li>Memos 浏览器扩展：第三方浏览器扩展程序，支持 Chrome/Edge，可快速收集网页内容至 Memos</li>
+</ul>
+<ul>
+<li><strong>统一术语</strong></li>
+<li>&quot;插件&quot; → &quot;扩展&quot;</li>
+<li>&quot;保存&quot; → &quot;收集&quot;</li>
+<li>&quot;口语化&quot; → &quot;专业化&quot;</li>
+</ul>
+<ul>
+<li><strong>数据安全提示</strong></li>
+<li>💡 数据安全提示：建议定期备份笔记数据。导入前请确认文件格式正确，避免数据丢失。</li>
+</ul>
+<h3>🌍 国际化支持</h3>
+<h4>新增翻译</h4>
+<ul>
+<li><strong>Notion 同步</strong>（30+条）</li>
+<li>所有 Notion 设置界面文本</li>
+<li>同步方向选项和描述</li>
+<li>自动同步相关文本</li>
+<li>错误提示和成功消息</li>
+</ul>
+<ul>
+<li><strong>Obsidian 集成</strong>（5+条）</li>
+<li>Obsidian 同步标题和描述</li>
+<li>插件下载引导文本</li>
+</ul>
+<ul>
+<li><strong>微信读书导入</strong>（20+条）</li>
+<li>导入页面所有文本</li>
+<li>使用说明和提示</li>
+<li>高级选项说明</li>
+<li>导入结果消息</li>
+</ul>
+<ul>
+<li><strong>导入导出页面</strong>（10+条）</li>
+<li>所有功能卡片标题和描述</li>
+<li>数据安全提示文本</li>
+</ul>
+<h3>🔧 技术改进</h3>
+<h4>新增文件</h4>
+<ul>
+<li><code>lib/services/notion_api_service.dart</code> - Notion API 服务</li>
+<li><code>lib/services/notion_sync_service.dart</code> - Notion 同步服务</li>
+<li><code>lib/services/weread_parser.dart</code> - 微信读书解析服务</li>
+<li><code>lib/screens/notion_settings_screen.dart</code> - Notion 设置页面</li>
+<li><code>lib/screens/weread_import_screen.dart</code> - 微信读书导入页面</li>
+</ul>
+<h4>修改文件</h4>
+<ul>
+<li><code>lib/providers/app_provider.dart</code> - 集成 Notion 自动同步</li>
+<li><code>lib/screens/home_screen.dart</code> - 下拉刷新触发 Notion 同步</li>
+<li><code>lib/screens/import_export_main_screen.dart</code> - 新增 Notion/Obsidian/WeRead 入口</li>
+<li><code>lib/l10n/app_localizations_simple.dart</code> - 新增 80+ 条国际化文本</li>
+</ul>
+<h4>架构优化</h4>
+<ul>
+<li>Notion 同步采用异步非阻塞设计</li>
+<li>防重复同步机制</li>
+<li>智能错误处理和日志记录</li>
+<li>模块化服务设计</li>
+</ul>
+<h3>📊 统计数据</h3>
+<ul>
+<li>新增文件：5个</li>
+<li>修改文件：15+个</li>
+<li>新增代码：约 3500 行</li>
+<li>新增国际化：80+条（中英双语）</li>
+<li>新增功能：3个重大功能（Notion/Obsidian/WeRead）</li>
+</ul>
+<h3>🔗 相关链接</h3>
+<ul>
+<li><a href="https://github.com/RyoJerryYu/obsidian-memos-sync" target="_blank" rel="noopener">Obsidian Memos Sync 插件</a></li>
+<li><a href="https://developers.notion.com/" target="_blank" rel="noopener">Notion API 文档</a></li>
+<li><a href="https://github.com/usememos/memos/releases/tag/v0.21.0" target="_blank" rel="noopener">Memos v0.21.0</a></li>
+</ul>
+<h4>📝 <strong>批注系统</strong> - 专业级笔记批注功能（2025-11-22）</h4>
+<ul>
+<li><strong>批注侧边栏</strong> - 对标主流笔记应用的专业设计</li>
+<li>底部滑出式侧边栏，支持拖动调整高度</li>
+<li>响应式布局，完美适配手机、平板、桌面端</li>
+<li>批注类型筛选（全部/评论/问题/想法/重要/待办）</li>
+<li>批注数量统计和实时更新</li>
+<li>空状态友好提示</li>
+</ul>
+<ul>
+<li><strong>多种批注类型</strong> - 满足不同场景需求</li>
+<li>💬 评论 (Comment) - 一般性批注</li>
+<li>❓ 问题 (Question) - 记录疑问</li>
+<li>💡 想法 (Idea) - 灵感记录</li>
+<li>⭐ 重要 (Important) - 重点标记</li>
+<li>✅ 待办 (To-do) - 任务提醒</li>
+<li>每种类型配有专属图标和颜色</li>
+</ul>
+<ul>
+<li><strong>批注管理功能</strong></li>
+<li>添加批注：支持选择类型和输入内容</li>
+<li>编辑批注：修改内容和类型</li>
+<li>删除批注：确认对话框防止误删</li>
+<li>标记已解决：待办类型可标记完成状态</li>
+<li>时间显示：智能相对时间（刚刚/分钟前/小时前/天前）</li>
+</ul>
+<ul>
+<li><strong>批注入口优化</strong></li>
+<li>主页笔记卡片：右下角显示批注图标和数量</li>
+<li>点击批注图标：直接打开批注侧边栏</li>
+<li>笔记详情页：更多菜单中的&quot;查看批注&quot;选项</li>
+<li>详情页底部：批注区域展示和快速添加</li>
+</ul>
+<h4>🔗 <strong>引用关系侧边栏</strong> - 全新的引用管理体验（2025-11-22）</h4>
+<ul>
+<li><strong>引用侧边栏设计</strong> - 与批注侧边栏保持一致</li>
+<li>底部滑出式设计，可拖动调整</li>
+<li>响应式布局适配多种设备</li>
+<li>引用类型筛选（全部/引用的笔记/被引用）</li>
+<li>引用数量统计</li>
+</ul>
+<ul>
+<li><strong>引用关系可视化</strong></li>
+<li>↗️ 引用的笔记（正向引用）- 蓝色标识</li>
+<li>↙️ 被引用（反向引用）- 绿色标识</li>
+<li>引用卡片显示笔记预览和创建时间</li>
+<li>点击卡片直接跳转到对应笔记</li>
+</ul>
+<ul>
+<li><strong>引用入口优化</strong></li>
+<li>主页笔记卡片：显示引用箭头和数量</li>
+<li>点击箭头：直接打开引用侧边栏</li>
+<li>笔记详情页：更多菜单中的&quot;引用详情&quot;选项</li>
+</ul>
+<h4>🎨 <strong>AI设置增强</strong> - 自定义AI提示词（2025-11-22）</h4>
+<ul>
+<li><strong>自定义提示词支持</strong></li>
+<li>洞察提示词 (Insight Prompt)</li>
+<li>点评提示词 (Review Prompt)</li>
+<li>续写提示词 (Continuation Prompt)</li>
+<li>标签洞察提示词 (Tag Insight Prompt)</li>
+<li>标签推荐提示词 (Tag Recommendation Prompt)</li>
+</ul>
+<ul>
+<li><strong>提示词管理</strong></li>
+<li>每个提示词都有清晰的说明和作用范围</li>
+<li>支持多行输入，方便编写复杂提示词</li>
+<li>留空自动使用系统默认提示词</li>
+<li>实时保存，即改即用</li>
+</ul>
+<h3>🌍 <strong>完整国际化支持</strong> - 中英文双语无缝切换</h3>
+<h4>批注功能国际化</h4>
+<ul>
+<li>批注侧边栏：标题、筛选、空状态、时间格式</li>
+<li>批注类型：评论/问题/想法/重要/待办</li>
+<li>批注对话框：添加、编辑、删除</li>
+<li>成功提示：批注已添加/已更新/已删除/已标记为已解决</li>
+</ul>
+<h4>引用功能国际化</h4>
+<ul>
+<li>引用侧边栏：标题、筛选、空状态</li>
+<li>引用类型：引用的笔记/被引用</li>
+<li>引用卡片：类型标签、时间显示</li>
+</ul>
+<h4>AI设置国际化</h4>
+<ul>
+<li>自定义提示词：所有标题和说明</li>
+<li>输入框提示：所有提示文本</li>
+<li>帮助信息：作用范围说明</li>
+</ul>
+<h4>笔记详情页国际化</h4>
+<ul>
+<li>批注区域：标题、按钮、空状态提示</li>
+</ul>
+<h3>🎨 UI/UX 改进</h3>
+<ul>
+<li><strong>侧边栏统一设计</strong> - 批注和引用使用一致的设计语言</li>
+<li>底部滑出动画流畅自然</li>
+<li>支持拖动调整高度（0.5-0.95屏幕高度）</li>
+<li>圆角设计更现代</li>
+<li>深色模式完美适配</li>
+</ul>
+<ul>
+<li><strong>响应式布局</strong> - 完美适配多种设备</li>
+<li>手机：全屏显示</li>
+<li>平板：80%宽度</li>
+<li>桌面：固定400px宽度</li>
+</ul>
+<ul>
+<li><strong>交互优化</strong></li>
+<li>点击批注/引用图标直接打开侧边栏</li>
+<li>批注类型选择使用ChoiceChip，更直观</li>
+<li>筛选按钮支持图标+文字，更清晰</li>
+<li>空状态提示友好，引导用户操作</li>
+</ul>
+<h3>🐛 Bug修复</h3>
+<ul>
+<li>修复批注对话框在主页显示为方框的问题</li>
+<li>修复AI设置自定义提示词显示为方框的问题</li>
+<li>修复引用箭头点击无响应的问题</li>
+<li>修复批注类型文本未使用国际化的问题</li>
+<li>修复时间格式化方法调用错误</li>
+<li>修复重复声明导致的编译错误</li>
+</ul>
+<h3>🔧 技术改进</h3>
+<ul>
+<li><strong>代码结构优化</strong></li>
+<li>新增 <code>AnnotationsSidebar</code> 组件</li>
+<li>新增 <code>ReferencesSidebar</code> 组件</li>
+<li>优化 <code>NoteActionsService</code> 服务</li>
+<li>完善 <code>AppLocalizationsSimple</code> 国际化</li>
+</ul>
+<ul>
+<li><strong>性能优化</strong></li>
+<li>批注侧边栏使用Provider监听，实时更新</li>
+<li>引用关系计算优化，减少重复查询</li>
+<li>国际化文本缓存，提升渲染性能</li>
+</ul>
+<h3>📊 统计数据</h3>
+<ul>
+<li>新增文件：2个（AnnotationsSidebar、ReferencesSidebar）</li>
+<li>修改文件：10+个</li>
+<li>新增国际化字符串：50+条</li>
+<li>代码行数：+2000行</li>
+<li>支持语言：中文、英文</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.8</h2><span>2025-10-30</span></div>
+<h3>🌍 Added</h3>
+<ul>
+<li><strong>完整国际化支持</strong> - 中文/English 双语切换</li>
+<li>全面国际化：笔记编辑器、笔记卡片、侧边栏</li>
+<li>对话框组件：权限、隐私政策、更新提示</li>
+<li>功能界面：Flomo导入、标签页、WebDAV设置、偏好设置</li>
+<li>账户信息页面：未登录状态引导</li>
+<li>登录注册页面：服务器选择、表单验证</li>
+<li>字体选择：所有字体名称和描述</li>
+<li>侧边栏自定义：菜单项、提示信息</li>
+<li>服务层消息：操作反馈、错误提示</li>
+</ul>
+<ul>
+<li><strong>标签系统增强</strong> - 层级标签和标签管理</li>
+<li>支持多层级标签结构（使用 <code>/</code> 分隔）</li>
+<li>标签树形展示和折叠</li>
+<li>标签颜色自定义</li>
+<li>标签统计和可视化</li>
+<li>相关标签推荐（AI驱动）</li>
+<li>标签搜索和过滤</li>
+</ul>
+<ul>
+<li><strong>Flomo 笔记导入</strong> - 完整的数据迁移方案</li>
+<li>支持从 Flomo 导出的 HTML 文件导入</li>
+<li>智能解析笔记内容和标签</li>
+<li>保留原始创建时间</li>
+<li>图片资源自动迁移</li>
+<li>智能去重功能</li>
+<li>导入进度和结果反馈</li>
+</ul>
+<h3>🐛 Fixed</h3>
+<ul>
+<li><strong>修复图片路径问题</strong> - 升级/重装后图片不显示</li>
+<li>改用相对路径存储图片（<code>images/xxx.jpg</code>）</li>
+<li>避免iOS容器UUID变化导致的路径失效</li>
+<li>自动解析相对路径为完整路径</li>
+<li>添加详细的错误提示</li>
+<li>修复部分界面布局问题</li>
+<li>修复标签解析异常</li>
+<li>修复同步冲突处理</li>
+</ul>
+<h3>🔧 Changed</h3>
+<ul>
+<li><strong>优化项目结构</strong> - 符合GitHub开源规范</li>
+<li>删除编译产物 <code>build/</code> (~300-500MB)</li>
+<li>删除第三方依赖 <code>ios/Pods/</code> (~30-50MB)</li>
+<li>删除备份文件 <code>*.bak*</code></li>
+<li>删除系统文件 <code>.DS_Store</code></li>
+<li>删除自动生成文件</li>
+<li>项目体积减少约 400-600MB</li>
+</ul>
+<ul>
+<li><strong>优化 AI 功能逻辑</strong></li>
+<li>改进 AI 接口调用效率</li>
+<li>优化错误处理和重试机制</li>
+<li>降低 Token 消耗</li>
+<li>增强上下文理解</li>
+</ul>
+<ul>
+<li><strong>优化 WebDAV 同步逻辑</strong></li>
+<li>改进同步性能和稳定性</li>
+<li>优化冲突检测算法</li>
+<li>支持增量同步</li>
+<li>更友好的错误提示</li>
+</ul>
+<h3>🎨 Improved</h3>
+<ul>
+<li>所有UI文本支持英文显示，更适合国际用户</li>
+<li>图片加载错误提示更友好</li>
+<li>代码注释优化，补充交互说明</li>
+<li>标签管理界面更直观</li>
+<li>导入流程更清晰</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.7</h2><span>2025-10-25</span></div>
+<h3>🎉 Added</h3>
+<ul>
+<li><strong>待办事项功能</strong> - 完整的 Markdown 任务列表支持</li>
+<li>支持 <code>- [ ]</code> / <code>- [x]</code> 语法</li>
+<li>点击复选框直接切换完成状态</li>
+<li>精美的动画效果（AnimatedCheckbox 组件）</li>
+<li>触觉反馈（iOS/Android 原生振动）</li>
+<li>自动保存到笔记内容，实时同步</li>
+<li>交互式 Markdown 渲染（InteractiveMarkdown）</li>
+<li>待办事项解析器（TodoParser）</li>
+</ul>
+<ul>
+<li><strong>图片保存功能</strong> - 笔记图片一键保存</li>
+<li>图片长按弹出&quot;保存图片&quot;选项</li>
+<li>智能权限请求和引导</li>
+<li>自动保存到系统相册</li>
+<li>保存成功提示和相册定位</li>
+<li>支持所有图片格式（JPG、PNG、GIF、WebP 等）</li>
+<li>SaveableImage 组件封装</li>
+</ul>
+<ul>
+<li><strong>笔记置顶功能</strong> - 重要笔记置顶显示</li>
+<li>支持客户端置顶</li>
+<li>支持服务器同步（使用 memo_organizer API）</li>
+<li>刷新后状态不丢失</li>
+</ul>
+<ul>
+<li><strong>新增核心组件</strong></li>
+<li><code>animated_checkbox.dart</code> - 动画复选框组件</li>
+<li><code>saveable_image.dart</code> - 可保存图片组件</li>
+<li><code>interactive_markdown.dart</code> - 交互式 Markdown 渲染</li>
+<li><code>note_more_options_menu.dart</code> - 笔记更多选项菜单</li>
+<li><code>intelligent_related_notes_sheet.dart</code> - 智能相关笔记底部表单</li>
+<li><code>todo_parser.dart</code> - 待办事项解析工具</li>
+<li><code>tag_utils.dart</code> - 标签处理工具</li>
+</ul>
+<ul>
+<li><strong>新增服务</strong></li>
+<li><code>ai_insight_engine.dart</code> - AI 洞察引擎</li>
+<li><code>intelligent_related_notes_service.dart</code> - 智能相关笔记服务</li>
+<li><code>ios_update_service.dart</code> - iOS 更新服务</li>
+<li><code>note_actions_service.dart</code> - 笔记操作服务</li>
+<li><code>user_behavior_service.dart</code> - 用户行为服务</li>
+</ul>
+<h3>🎨 Improved</h3>
+<ul>
+<li><strong>AI 功能优化</strong> - 更智能的写作助手</li>
+<li>优化 DeepSeek API 调用流程，响应速度提升</li>
+<li>改进 Prompt 和参数配置，内容生成质量更高</li>
+<li>增强相关笔记推荐准确度</li>
+<li>优化 AI 设置界面交互体验</li>
+</ul>
+<ul>
+<li><strong>更多菜单优化</strong> - 更便捷的操作</li>
+<li>重新设计&quot;更多&quot;菜单样式（NoteMoreOptionsMenu）</li>
+<li>新增置顶/取消置顶功能</li>
+<li>优化分享功能和选项</li>
+<li>改进导出功能的清晰度</li>
+<li>优化菜单布局、图标和文字</li>
+</ul>
+<h3>🐛 Fixed</h3>
+<ul>
+<li><strong>修复刷新后置顶状态丢失</strong> - 改进数据合并逻辑</li>
+<li>优化 <code>fetchNotesFromServer</code> 方法</li>
+<li>合并时保留本地的 <code>isPinned</code> 状态（客户端优先策略）</li>
+<li>添加服务器端同步支持（通过 <code>updateMemoOrganizer</code> API）</li>
+</ul>
+<ul>
+<li><strong>修复 Android Firebase 错误</strong> - 禁用不必要的集成</li>
+<li>在 <code>main.dart</code> 中禁用 Sentry 的自动 Firebase 性能追踪</li>
+<li>在 <code>app_provider.dart</code> 中添加 Firebase 错误过滤</li>
+<li>确保项目不使用 Firebase 时不会报错</li>
+</ul>
+<ul>
+<li><strong>修复图片加载问题</strong> - 优化图片缓存和加载策略</li>
+<li><strong>修复同步冲突</strong> - 改进服务器同步和本地数据合并逻辑</li>
+</ul>
+<h3>🔧 Technical</h3>
+<ul>
+<li>版本号：1.0.7+10007（从 1.0.6+6 升级）</li>
+<li>新增 11 个核心文件</li>
+<li>优化了 54 个文件</li>
+<li>项目大小：110MB（清理后）</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.6</h2><span>2025-10-23</span></div>
+<h3>🐛 Fixed</h3>
+<ul>
+<li><strong>修复 WebDAV 同步问题</strong></li>
+<li>修复同步冲突处理逻辑</li>
+<li>优化同步失败重试机制</li>
+<li>改进文件上传稳定性</li>
+</ul>
+<h3>⚡ Performance</h3>
+<ul>
+<li><strong>优化启动速度</strong> - 启动时间减少 30%</li>
+<li>改进资源加载策略</li>
+<li>优化启动流程</li>
+</ul>
+<h3>🎨 UI/UX</h3>
+<ul>
+<li><strong>新增启动页</strong> - 精美的原生启动页</li>
+<li>支持深色/浅色主题自适应</li>
+<li>优化启动体验</li>
+</ul>
+<ul>
+<li><strong>优化个人中心</strong></li>
+<li>改进个人信息展示界面</li>
+<li>优化头像上传和更新体验</li>
+<li>完善用户信息编辑功能</li>
+</ul>
+<h3>🔧 Other</h3>
+<ul>
+<li>修复部分 Bug</li>
+<li>提升整体稳定性</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.5</h2><span>2025-10-19</span></div>
+<h3>🎉 Added</h3>
+<ul>
+<li><strong>隐私合规功能</strong></li>
+<li>首次启动显示隐私政策弹窗</li>
+<li>符合应用商店审核规范</li>
+</ul>
+<ul>
+<li><strong>友盟统计 SDK</strong></li>
+<li>支持 iOS 和 Android 双平台数据统计</li>
+<li>帮助改进产品体验</li>
+</ul>
+<ul>
+<li><strong>AI 相关笔记服务</strong></li>
+<li>智能分析笔记关联关系</li>
+<li>支持笔记推荐功能</li>
+</ul>
+<ul>
+<li><strong>WebDAV 服务重构</strong></li>
+<li>拆分为独立模块（webdav_service + webdav_sync_engine）</li>
+<li>提升稳定性</li>
+</ul>
+<h3>🎨 UI/UX</h3>
+<ul>
+<li><strong>隐私政策弹窗</strong> - 简洁的隐私确认体验</li>
+<li><strong>相关笔记底部表单</strong> - 优化笔记关联查看体验</li>
+<li><strong>简化备忘录内容展示</strong> - 提升阅读体验</li>
+</ul>
+<h3>🐛 Fixed</h3>
+<ul>
+<li>修复 iOS 模拟器运行时 Umeng SDK 兼容性问题</li>
+<li>修复 Android 端 Umeng 事件上报的 ClassCastException 错误</li>
+<li>修复路由重定向导致 splash 页面被跳过的问题</li>
+<li>修复 onboarding_screen.dart 中的编译错误</li>
+</ul>
+<h3>🔧 Technical</h3>
+<ul>
+<li>版本号：1.0.5+6（从 1.0.4+5 升级）</li>
+<li>新增 5 个服务文件、3 个 Widget 组件</li>
+<li>iOS Podfile 新增 Umeng 依赖</li>
+<li>原生代码更新（AppDelegate.swift、MainActivity.kt）</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.4</h2><span>2025-10-08</span></div>
+<h3>🎉 Added</h3>
+<ul>
+<li><strong>AI 智能助手</strong> - 集成 DeepSeek AI</li>
+<li>智能写作辅助</li>
+<li>内容优化和扩展</li>
+</ul>
+<ul>
+<li><strong>自定义字体</strong></li>
+<li>支持 4 档字体大小（小、标准、大、特大）</li>
+<li>6 种精选字体（SF Pro Display、思源黑体、思源宋体、楷体风格、站酷小薇、站酷庆科）</li>
+</ul>
+<ul>
+<li><strong>英语支持</strong> - 完整的英文界面翻译</li>
+</ul>
+<ul>
+<li><strong>知识图谱功能</strong></li>
+<li>可视化展示笔记关联关系</li>
+<li>构建知识网络</li>
+</ul>
+<ul>
+<li><strong>热力图月份切换</strong> - 支持查看不同月份的笔记活跃度</li>
+</ul>
+<h3>🔧 Improved</h3>
+<ul>
+<li>优化通知中心 UI 设计（时间分组、滑动删除、触觉反馈）</li>
+<li>优化登录/注册页面（新增 FAQ 帮助）</li>
+<li>改进偏好设置页面（新增字体设置分组）</li>
+<li>统一应用主题配色和视觉风格</li>
+</ul>
+<h3>🐛 Fixed</h3>
+<ul>
+<li>修复部分界面显示问题</li>
+<li>修复通知相关 Bug</li>
+<li>修复字体切换后部分界面未刷新的问题</li>
+<li>优化各项功能稳定性</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.3</h2><span>2025-10-06</span></div>
+<h3>🎉 Added</h3>
+<ul>
+<li>更新到 Flutter 3.35.5</li>
+<li>优化 APK 构建配置，支持分架构构建</li>
+<li>更新主题系统，适配最新 Material Design 3</li>
+</ul>
+<h3>🔧 Improved</h3>
+<ul>
+<li>修复头像加载问题</li>
+<li>优化图片缓存机制</li>
+<li>改进网络请求错误处理</li>
+</ul>
+<h3>🐛 Fixed</h3>
+<ul>
+<li>修复部分 Android 设备通知不显示的问题</li>
+<li>修复语音识别在某些设备上崩溃的问题</li>
+<li>修复深色模式下部分文字看不清的问题</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.2</h2><span>2025-09-30</span></div>
+<h3>🎉 Added</h3>
+<ul>
+<li>实验室新增企业微信对接功能</li>
+<li>新增笔记统计功能</li>
+<li>新增随机回顾功能</li>
+</ul>
+<h3>🔧 Improved</h3>
+<ul>
+<li>修复头像加载问题</li>
+<li>优化笔记列表加载性能</li>
+<li>改进同步机制，减少流量消耗</li>
+</ul>
+<h3>🐛 Fixed</h3>
+<ul>
+<li>修复已知 Bug</li>
+<li>修复部分 iOS 设备闪退问题</li>
+</ul>
+      </section>
+
+      <section class="version-card">
+        <div class="version-title"><h2>v1.0.1</h2><span>2025-09-20</span></div>
+<h3>🎉 Initial Release</h3>
+<ul>
+<li>✨ 完整的笔记管理功能</li>
+<li>📱 Android 和 iOS 双平台支持</li>
+<li>🔄 Memos 服务器同步</li>
+<li>🎤 语音识别功能</li>
+<li>🏷️ 标签系统</li>
+<li>⏰ 定时提醒</li>
+<li>🌓 深色模式</li>
+<li>📝 Markdown 支持</li>
+<li>🖼️ 图片管理</li>
+<li>🔍 全文搜索</li>
+<li>📊 笔记统计</li>
+<li>🌍 多语言支持</li>
+</ul>
       </section>
     </article>
   </main>
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <div>InkRoot 墨鸣笔记</div>
-      <div class="footer-links">
-        <a href="/pages/download/">下载</a>
-        <a href="https://github.com/yyyyymmmmm/InkRoot/releases" target="_blank" rel="noopener">全部 Release</a>
+      <div class="footer-main">
+        <div class="footer-brand">
+          <strong>InkRoot 墨鸣笔记</strong>
+          <span>静待沉淀，蓄势而鸣</span>
+        </div>
+        <div class="footer-links">
+          <a href="/pages/download/">下载</a>
+          <a href="/pages/guide.html">使用指南</a>
+          <a href="/pages/faq.html">FAQ</a>
+          <a href="/privacy.html">隐私政策</a>
+          <a href="/agreement.html">用户协议</a>
+          <a href="/account-deletion.html">账号与数据删除</a>
+          <a href="https://github.com/yyyyymmmmm/InkRoot" target="_blank" rel="noopener">GitHub</a>
+          <a href="mailto:inkroot2025@gmail.com">联系我们</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 InkRoot</span>
+        <div class="icp-info">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备20002445号-6</a>
+          <a class="police-link" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=61062902000021" target="_blank" rel="noopener noreferrer">
+            <img src="https://beian.mps.gov.cn/img/logo01.dd7ff50e.png" alt="公安备案">
+            <span>陕公网安备 61011302002176号</span>
+          </a>
+        </div>
       </div>
     </div>
   </footer>

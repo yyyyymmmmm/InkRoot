@@ -384,8 +384,28 @@ h3 {
   font-size: 26px;
 }
 
+.article h3 {
+  margin-top: 22px;
+  font-size: 20px;
+}
+
+.article h4 {
+  margin: 18px 0 8px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
 .article p {
   color: var(--muted);
+}
+
+code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(24, 35, 47, 0.07);
+  color: var(--ink);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
 }
 
 .article .panel {
@@ -476,7 +496,10 @@ h3 {
 .footer-inner {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 34px 24px;
+  padding: 34px 24px 20px;
+}
+
+.footer-main {
   display: flex;
   justify-content: space-between;
   gap: 24px;
@@ -484,10 +507,51 @@ h3 {
   font-size: 14px;
 }
 
+.footer-brand {
+  max-width: 340px;
+}
+
+.footer-brand strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
 .footer-links {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+}
+
+.footer-bottom {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.icp-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.police-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.police-link img {
+  width: 16px;
+  height: 16px;
 }
 
 .warning {
@@ -536,7 +600,13 @@ h3 {
   }
 
   .footer-inner {
+    padding-bottom: 24px;
+  }
+
+  .footer-main,
+  .footer-bottom {
     flex-direction: column;
+    align-items: flex-start;
   }
 }
 
