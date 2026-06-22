@@ -1,19 +1,22 @@
 # InkRoot
 
-InkRoot is a cross-platform note-taking app for personal knowledge capture. It works locally and can also connect to a self-hosted Memos server for sync. The app supports Markdown rendering, images, tags, reminders, search, WebDAV backup, import/export, and AI-assisted writing.
+InkRoot is a cross-platform note-taking app for personal knowledge capture. It works local-first and can also connect to the official server or a self-hosted Memos server for sync. The app supports Memos-compatible Markdown, images, tags, reminders, search, WebDAV backup, import/export, system sharing, widgets, and optional AI-assisted writing.
 
 [Latest release](https://github.com/yyyyymmmmm/InkRoot/releases/latest) · [Issues](https://github.com/yyyyymmmmm/InkRoot/issues) · [中文](README.md)
 
 ## Current Version
 
-`1.1.10`
+`1.1.13`
 
-This release focuses on desktop scaling, the knowledge graph, home widgets, speech-recognition settings, tag paths, Markdown rendering, and project build documentation.
+This release fixes Android share crashes, blank shared content, self-hosted Memos 0.26/0.27/0.29 login or sync initialization failures, random-review widget placeholders, and iOS share-extension packaging issues. It also continues improving widgets, system sharing, Memos compatibility, and cross-platform builds.
 
 Highlights:
 
 - Android and iOS widgets now provide separate quick-note and random-review entry points.
 - Random-review widgets support real note selection, refresh settings, and random switching.
+- Android system sharing supports browsers, readers, selected text, galleries, file managers, and mixed attachments.
+- iOS adds a system share extension for sharing content from browsers, readers, Photos, and Files into InkRoot.
+- The Memos 0.21.0 to 0.29.1 compatibility path is improved for login, account loading, resources, and sync initialization.
 - Speech recognition now has a user-managed iFlytek configuration entry.
 - The knowledge graph has improved visuals, zooming, node selection, and large-note rendering performance.
 - Windows, macOS, and Linux now treat the font-size preference as whole-interface desktop scaling.
@@ -27,18 +30,21 @@ Highlights:
 - Sync and refresh preserve note creation time to keep activity heatmaps stable.
 - Account and data deletion is now available in Settings, with a public deletion request page.
 - The iOS privacy manifest, permission declarations, and legal documents now match the current data flow.
+- The public website now has refreshed product pages, downloads, guide, FAQ, full changelog, and legal pages.
 - The project CLI covers verification, builds, and release tags.
 - GitHub Actions covers Android, iOS, macOS, Windows, and Linux.
 
 ## Features
 
-- Local notes and Memos sync.
+- Local notes, official server sync, and self-hosted Memos sync.
 - Markdown rendering, todos, links, images, and tags.
 - Hierarchical tags such as `#work/projectA`.
 - Full-text search, pinning, reminders, and random review.
 - Image upload, preview, saving, and multi-image browsing.
 - WebDAV backup and restore, with optional image backup.
 - Import from Flomo, WeRead, and other sources.
+- Android and iOS system sharing.
+- Quick-note and random-review widgets.
 - AI-assisted writing and custom prompts.
 - Chinese and English UI.
 - Android, iOS, macOS, Windows, and Linux builds.
@@ -82,13 +88,13 @@ Platform builds require the matching host environment. iOS and macOS require mac
 The app version is managed in `pubspec.yaml`:
 
 ```yaml
-version: 1.1.10+10110
+version: 1.1.13+10113
 ```
 
 Release command:
 
 ```bash
-dart tool/inkroot.dart release v1.1.10
+dart tool/inkroot.dart release v1.1.13
 ```
 
 The command creates and pushes a version tag. GitHub Actions then verifies, builds, and publishes Android APK/AAB, iOS, macOS, Windows, and Linux assets.

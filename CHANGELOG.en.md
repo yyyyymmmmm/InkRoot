@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.13] - 2026-06-22
+
+### Fixed
+- Fixed a possible Android crash when sharing text or web pages from browsers and reading apps into InkRoot
+- Fixed Android share handling that could mistake web page URL ClipData for file attachments
+- Fixed iOS and Android random-review widgets showing "Open InkRoot to show random review" even when notes exist
+- Fixed random-review widget filtering based on updated time, which made restored or synced notes appear in the wrong review range
+- Added Development Team settings for the iOS main app, widget extension, and share extension to support Xcode device debugging
+
+### Improved
+- Random-review widget snapshots now refresh immediately after settings changes
+- Share payload parsing is more tolerant of non-standard list types from platform channels
+
+## [1.1.12] - 2026-06-22
+
+### Fixed
+- Fixed unsigned IPA packaging failure after adding the iOS share extension, where the extension inherited Runner Flutter linker configuration
+
+## [1.1.11] - 2026-06-22
+
+### Added
+- Added an iOS system share extension for sharing text, web pages, images, and files from browsers, reading apps, Photos, and Files into InkRoot
+
+### Improved
+- Improved Android system sharing to support browser and reader text, selected text, single and multiple gallery images, single and multiple file-manager files, and mixed attachments
+- Improved shared attachment handling by copying content URIs in the background, preserving filenames and common extensions, and reducing stalls when sharing large images or many files
+- Improved Memos 0.21.0 to 0.29.1 compatibility for server detection, login token fields, and current-user API fallback
+
+### Fixed
+- Fixed blank content when sharing from some Android apps into InkRoot
+- Fixed login or sync initialization failures on some self-hosted Memos 0.26, 0.27, and 0.29 servers
+
 ## [1.1.10] - 2026-06-22
 
 ### Added

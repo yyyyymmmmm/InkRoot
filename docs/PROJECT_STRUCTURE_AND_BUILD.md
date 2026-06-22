@@ -662,24 +662,24 @@ App Store 正式上架仍需要：
 版本号统一在 `pubspec.yaml`：
 
 ```yaml
-version: 1.1.10+10110
+version: 1.1.13+10113
 ```
 
 含义：
 
-- `1.1.10`：用户看到的版本名。
-- `10110`：构建号，Android versionCode、iOS/macOS build number 等会从这里派生。
+- `1.1.13`：用户看到的版本名。
+- `10113`：构建号，Android versionCode、iOS/macOS build number 等会从这里派生。
 
 发布 tag 必须匹配版本名。比如：
 
 ```yaml
-version: 1.1.10+10110
+version: 1.1.13+10113
 ```
 
 对应 tag：
 
 ```bash
-v1.1.10
+v1.1.13
 ```
 
 不要在 Android、iOS、macOS、Windows、Linux 平台文件里手动重复改版本号，除非明确知道该平台文件不是 Flutter 版本链路的一部分。
