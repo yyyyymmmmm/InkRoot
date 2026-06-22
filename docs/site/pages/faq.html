@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>InkRoot FAQ</title>
-  <meta name="description" content="InkRoot 常见问题：安装、Memos 登录、WebDAV、iOS unsigned IPA、Android 分享、小组件和数据删除。">
+  <title>InkRoot 常见问题</title>
+  <meta name="description" content="InkRoot 常见问题：平台安装、本地记录、Memos 同步、WebDAV 备份、导入导出、系统分享、小组件、AI 设置和账号数据删除。">
   <link rel="icon" href="/assets/icons/logo.png">
   <link rel="stylesheet" href="/assets/css/site.css">
 </head>
@@ -28,11 +28,12 @@
       <div class="container">
         <p class="eyebrow">FAQ</p>
         <h1>常见问题</h1>
-        <p class="lead">这里保留安装和同步中最常见的问题。没有覆盖到的情况，请带上平台、InkRoot 版本、Memos 版本和错误提示提交 Issue。</p>
+        <p class="lead">这里整理 InkRoot 的安装、记录、同步、备份、迁移和隐私问题。没有覆盖到的情况，请带上平台、InkRoot 版本、Memos 版本和错误提示提交 Issue。</p>
       </div>
     </section>
 
     <article class="article">
+      <h2>安装与平台</h2>
       <div class="faq-item">
         <h3>应该下载哪个包？</h3>
         <p>Android 用户下载 APK；Google Play 或商店发布流程使用 AAB。iOS 当前提供 unsigned IPA，需要签名或侧载。macOS、Windows、Linux 下载对应压缩包并解压运行。</p>
@@ -44,6 +45,28 @@
       </div>
 
       <div class="faq-item">
+        <h3>桌面端和移动端的数据会自动互通吗？</h3>
+        <p>本地模式下数据只保存在当前设备。需要跨设备同步时，可以登录官方服务器或自部署 Memos；需要备份和迁移时，可以使用导出或 WebDAV 备份。</p>
+      </div>
+
+      <h2>记录与编辑</h2>
+      <div class="faq-item">
+        <h3>InkRoot 是 Markdown 软件吗？</h3>
+        <p>InkRoot 使用兼容 Memos 的 Markdown 作为存储格式，但编辑体验尽量接近普通富文本：加粗、下划线、链接、待办等操作通过工具栏完成，用户不必先记语法。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>可以离线记录吗？</h3>
+        <p>可以。InkRoot 默认本地优先，网络不可用时仍可记录。连接恢复后，再按你选择的服务器或同步方式处理。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>支持待办、链接、标签和图片吗？</h3>
+        <p>支持。笔记内容可以包含待办、链接、图片和标签；标签支持多级路径；图片支持上传、预览、保存和多图浏览。</p>
+      </div>
+
+      <h2>Memos 与同步</h2>
+      <div class="faq-item">
         <h3>自部署 Memos 只用 IP + 端口可以吗？</h3>
         <p>可以。服务器地址可以是 <code>http://192.168.x.x:5230</code> 这类内网地址，也可以是域名。关键是手机或电脑必须能访问这个地址；如果在外网使用内网 IP，通常无法连接。</p>
       </div>
@@ -54,13 +77,40 @@
       </div>
 
       <div class="faq-item">
+        <h3>官方服务器和自部署 Memos 有什么区别？</h3>
+        <p>官方服务器适合希望快速开始同步的用户；自部署 Memos 适合已经有自己服务器、NAS 或私有化部署需求的用户。无论选择哪种方式，都建议定期备份重要数据。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>为什么登录成功后仍可能同步失败？</h3>
+        <p>常见原因包括服务器地址无法被当前网络访问、Memos 版本接口差异、反向代理路径配置、Token 或 Cookie 鉴权差异、附件资源接口不可用。请先确认浏览器能访问同一地址，再提交具体版本和错误提示。</p>
+      </div>
+
+      <h2>备份、恢复与迁移</h2>
+      <div class="faq-item">
         <h3>WebDAV 会备份图片吗？</h3>
         <p>可以。WebDAV 配置里有图片附件备份选项。图片较多时，首次备份会更慢，也会占用更多空间。</p>
       </div>
 
       <div class="faq-item">
+        <h3>WebDAV 是实时同步吗？</h3>
+        <p>不是。WebDAV 在 InkRoot 中主要用于备份和恢复，不等同于多人协作或实时双向同步。恢复前建议先导出当前数据，避免误覆盖。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>可以从其他笔记工具迁移吗？</h3>
+        <p>当前提供 Flomo、微信读书和本地备份等导入路径。不同工具导出的格式不完全一致，导入前建议保留原始备份文件。</p>
+      </div>
+
+      <h2>分享、图片与小组件</h2>
+      <div class="faq-item">
+        <h3>可以从哪些入口分享到 InkRoot？</h3>
+        <p>Android 支持从浏览器、阅读器、系统选中文本、相册和文件管理器等入口分享文本、网页、图片和文件。iOS 分享扩展已进入构建链路，具体入口以系统分享面板显示为准。</p>
+      </div>
+
+      <div class="faq-item">
         <h3>从浏览器或阅读器分享进来为空白怎么办？</h3>
-        <p>请升级到 v1.1.13 或更高版本。该版本修复了 Android 浏览器 URL 被误判为附件、分享载荷类型异常导致闪退或空白的问题。</p>
+        <p>请升级到 v1.1.13 或更高版本。该版本修复了 Android 浏览器 URL 被误判为附件、分享载荷类型异常导致闪退或空白的问题。如果仍复现，请提供来源 App、分享内容类型和系统版本。</p>
       </div>
 
       <div class="faq-item">
@@ -69,13 +119,35 @@
       </div>
 
       <div class="faq-item">
+        <h3>图片会怎么保存和展示？</h3>
+        <p>图片可以作为笔记附件上传和预览，也可以在图片查看器中放大、浏览多图和保存。自部署 Memos、离线发布和 WebDAV 备份场景下，图片能否远端显示取决于服务器资源接口和备份配置。</p>
+      </div>
+
+      <h2>整理与 AI</h2>
+      <div class="faq-item">
+        <h3>标签、搜索、相关笔记和知识图谱分别解决什么问题？</h3>
+        <p>标签用于主动分类，搜索用于快速找内容，相关笔记用于发现上下文，知识图谱用于观察内容关系。它们是互补能力，不是互相替代。</p>
+      </div>
+
+      <div class="faq-item">
         <h3>AI 功能必须配置吗？</h3>
         <p>不必须。记录、同步、备份、标签、搜索和相关笔记可以在不配置 AI 的情况下使用。AI 功能需要用户自己填写 API 地址、模型名和 Key。</p>
       </div>
 
       <div class="faq-item">
+        <h3>为什么模型选择是输入框？</h3>
+        <p>AI 模型更新很快，固定下拉列表容易过期。InkRoot 让用户直接填写模型名，便于接入自己使用的 OpenAI 兼容接口或其他服务。</p>
+      </div>
+
+      <h2>隐私与账号</h2>
+      <div class="faq-item">
         <h3>如何删除账号和数据？</h3>
         <p>本机数据可在应用内删除。官方服务器账号可通过 <a href="/account-deletion.html">账号与数据删除页面</a> 提交申请。自部署 Memos、WebDAV 或第三方 AI 服务中的数据，需要到对应服务里删除。</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>InkRoot 会读取我的私人笔记做广告分析吗？</h3>
+        <p>不会。隐私政策中明确说明不会出售个人信息，也不会读取或分析私人笔记用于广告画像。只有当你主动登录、同步、备份、启用 AI 或提交反馈时，相关数据才会发送到对应服务。</p>
       </div>
     </article>
   </main>
@@ -84,20 +156,41 @@
     <div class="footer-inner">
       <div class="footer-main">
         <div class="footer-brand">
-          <strong>InkRoot 墨鸣笔记</strong>
+          <div class="footer-brand-row">
+            <img src="/assets/icons/logo.png" alt="InkRoot">
+            <strong>InkRoot 墨鸣笔记</strong>
+          </div>
           <span>静待沉淀，蓄势而鸣</span>
+          <p>本地优先的跨平台笔记应用，支持自部署 Memos、WebDAV 备份、系统分享、小组件和可选 AI。</p>
         </div>
-        <div class="footer-links">
-          <a href="/pages/download/">下载</a>
-          <a href="/pages/guide.html">使用指南</a>
-          <a href="/pages/faq.html">FAQ</a>
-          <a href="/pages/changelog.html">更新日志</a>
-          <a href="/privacy.html">隐私政策</a>
-          <a href="/agreement.html">用户协议</a>
-          <a href="/account-deletion.html">账号与数据删除</a>
-          <a href="https://github.com/yyyyymmmmm/InkRoot" target="_blank" rel="noopener">GitHub</a>
-          <a href="https://github.com/yyyyymmmmm/InkRoot/issues" target="_blank" rel="noopener">问题反馈</a>
-          <a href="mailto:inkroot2025@gmail.com">联系我们</a>
+        <div class="footer-nav" aria-label="站点导航">
+          <div class="footer-column">
+            <h2>产品</h2>
+            <a href="/pages/download/">下载</a>
+            <a href="/pages/guide.html">使用指南</a>
+            <a href="/pages/faq.html">常见问题</a>
+            <a href="/pages/changelog.html">更新日志</a>
+          </div>
+          <div class="footer-column">
+            <h2>数据与同步</h2>
+            <a href="/pages/guide.html#mode">使用模式</a>
+            <a href="/pages/guide.html#memos">Memos 同步</a>
+            <a href="/pages/guide.html#webdav">WebDAV 备份</a>
+            <a href="/pages/guide.html#import">导入与迁移</a>
+          </div>
+          <div class="footer-column">
+            <h2>社区与支持</h2>
+            <a href="https://github.com/yyyyymmmmm/InkRoot" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/yyyyymmmmm/InkRoot/issues" target="_blank" rel="noopener">问题反馈</a>
+            <a href="https://github.com/yyyyymmmmm/InkRoot/releases" target="_blank" rel="noopener">Release</a>
+            <a href="mailto:inkroot2025@gmail.com">联系我们</a>
+          </div>
+          <div class="footer-column">
+            <h2>法律</h2>
+            <a href="/privacy.html">隐私政策</a>
+            <a href="/agreement.html">用户协议</a>
+            <a href="/account-deletion.html">账号与数据删除</a>
+          </div>
         </div>
       </div>
       <div class="footer-bottom">
