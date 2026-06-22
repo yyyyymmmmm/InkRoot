@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.12] - 2026-06-22
+
+### 修复
+- 修复 iOS 分享扩展加入后 unsigned IPA 构建继承 Runner Flutter 链接配置导致发布流程失败的问题
+
 ## [1.1.11] - 2026-06-22
 
 ### 新增
