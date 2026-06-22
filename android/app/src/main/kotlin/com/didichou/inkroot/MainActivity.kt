@@ -7,12 +7,19 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.OpenableColumns
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.umeng.analytics.MobclickAgent
 import com.umeng.commonsdk.UMConfigure
+import java.io.File
+import java.util.UUID
+import java.util.concurrent.Executors
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.didichou.inkroot/native_alarm"
@@ -20,8 +27,21 @@ class MainActivity: FlutterActivity() {
     private var methodChannel: MethodChannel? = null
     private var umengChannel: MethodChannel? = null
     private var pendingNoteId: Int? = null
+    private var pendingSharedPayload: Map<String, Any>? = null
     private var pendingDeepLink: String? = null
     private var isUmengInitialized = false
+    private val shareExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private data class SharedUriItem(
+        val uri: Uri,
+        val isImage: Boolean
+    )
+
+    private data class CopiedSharedFile(
+        val path: String,
+        val isImage: Boolean
+    )
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -116,6 +136,14 @@ class MainActivity: FlutterActivity() {
                     result.success(pendingNoteId)
                     pendingNoteId = null // 清空以避免重复处理
                 }
+                "getInitialPayload" -> {
+                    result.success(pendingNoteId)
+                    pendingNoteId = null
+                }
+                "getInitialSharedPayload" -> {
+                    result.success(pendingSharedPayload)
+                    pendingSharedPayload = null
+                }
                 "getInitialDeepLink" -> {
                     result.success(pendingDeepLink)
                     pendingDeepLink = null
@@ -203,7 +231,11 @@ class MainActivity: FlutterActivity() {
                 ReleaseLog.e("MainActivity", "pendingNoteId已设置为: $pendingNoteId")
             } 
             // 🔥 处理分享内容
-            else if (it.action == Intent.ACTION_SEND || it.action == Intent.ACTION_SEND_MULTIPLE) {
+            else if (
+                it.action == Intent.ACTION_SEND ||
+                it.action == Intent.ACTION_SEND_MULTIPLE ||
+                it.action == Intent.ACTION_PROCESS_TEXT
+            ) {
                 handleSharedContent(it)
             } 
             else if (it.data?.scheme == "inkroot") {
@@ -260,78 +292,205 @@ class MainActivity: FlutterActivity() {
         ReleaseLog.e("MainActivity", "════════════════════════════════")
         
         try {
-            when {
-                // 处理文本分享
-                intent.type?.startsWith("text/") == true -> {
-                    val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
-                    if (!sharedText.isNullOrEmpty()) {
-                        ReleaseLog.e("MainActivity", "📝 收到分享的文本: ${sharedText.take(50)}...")
-                        methodChannel?.invokeMethod("onSharedText", sharedText)
-                    }
+            val sharedText = extractSharedText(intent)
+            val sharedUris = extractSharedUris(intent)
+
+            if (sharedUris.isEmpty()) {
+                if (sharedText.isNotBlank()) {
+                    ReleaseLog.e("MainActivity", "📝 收到分享的文本: ${sharedText.take(50)}...")
+                    deliverSharedPayload(mapOf("type" to "text", "content" to sharedText))
+                } else {
+                    ReleaseLog.e("MainActivity", "⚠️ 分享内容为空")
                 }
-                // 处理图片分享
-                intent.type?.startsWith("image/") == true -> {
-                    if (intent.action == Intent.ACTION_SEND) {
-                        // 单张图片
-                        val imageUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            intent.getParcelableExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            intent.getParcelableExtra(Intent.EXTRA_STREAM)
-                        }
-                        imageUri?.let { uri ->
-                            val path = getRealPathFromURI(uri)
-                            if (path != null) {
-                                ReleaseLog.e("MainActivity", "📷 收到分享的图片: $path")
-                                methodChannel?.invokeMethod("onSharedImage", path)
-                            } else {
-                                ReleaseLog.e("MainActivity", "❌ 无法获取图片路径")
-                            }
-                        }
-                    } else if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
-                        // 多张图片
-                        val imageUris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
-                        }
-                        val paths = imageUris?.mapNotNull { uri ->
-                            getRealPathFromURI(uri)
-                        } ?: emptyList()
-                        if (paths.isNotEmpty()) {
-                            ReleaseLog.e("MainActivity", "📷 收到分享的图片: ${paths.size}张")
-                            methodChannel?.invokeMethod("onSharedImages", paths)
-                        }
-                    }
-                }
-                // 处理其他文件
-                else -> {
-                    val fileUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                return
+            }
+
+            copySharedUrisAsync(sharedUris) { copiedFiles ->
+                if (copiedFiles.isEmpty()) {
+                    if (sharedText.isNotBlank()) {
+                        deliverSharedPayload(mapOf("type" to "text", "content" to sharedText))
                     } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                        ReleaseLog.e("MainActivity", "❌ 无法读取分享附件")
                     }
-                    fileUri?.let { uri ->
-                        val path = getRealPathFromURI(uri)
-                        if (path != null) {
-                            ReleaseLog.e("MainActivity", "📎 收到分享的文件: $path")
-                            methodChannel?.invokeMethod("onSharedFile", path)
-                        } else {
-                            ReleaseLog.e("MainActivity", "❌ 无法获取文件路径")
-                        }
-                    }
+                    return@copySharedUrisAsync
                 }
+
+                val imagePaths = copiedFiles
+                    .filter { it.isImage }
+                    .map { it.path }
+                val filePaths = copiedFiles
+                    .filterNot { it.isImage }
+                    .map { it.path }
+
+                ReleaseLog.e(
+                    "MainActivity",
+                    "✅ 分享附件已读取: 图片 ${imagePaths.size}，文件 ${filePaths.size}"
+                )
+                deliverCombinedSharedPayload(sharedText, imagePaths, filePaths)
             }
         } catch (e: Exception) {
             ReleaseLog.e("MainActivity", "❌ 处理分享内容失败: ${e.message}")
             ReleaseLog.printStackTrace(e)
         }
     }
+
+    private fun copySharedUrisAsync(
+        items: List<SharedUriItem>,
+        callback: (List<CopiedSharedFile>) -> Unit
+    ) {
+        shareExecutor.execute {
+            val files = items.mapNotNull { item ->
+                getRealPathFromURI(item.uri)?.let { path ->
+                    CopiedSharedFile(path, item.isImage)
+                }
+            }
+            mainHandler.post { callback(files) }
+        }
+    }
+
+    private fun extractSharedUris(intent: Intent): List<SharedUriItem> {
+        val uris = mutableListOf<Uri>()
+
+        if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
+            val streamUris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+            }
+            if (!streamUris.isNullOrEmpty()) {
+                uris.addAll(streamUris)
+            }
+        } else {
+            val streamUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
+            if (streamUri != null) {
+                uris.add(streamUri)
+            }
+        }
+
+        intent.clipData?.let { clipData ->
+            for (index in 0 until clipData.itemCount) {
+                clipData.getItemAt(index).uri?.let { uris.add(it) }
+            }
+        }
+
+        return uris
+            .distinctBy { it.toString() }
+            .map { uri -> SharedUriItem(uri, isImageShare(intent, uri)) }
+    }
+
+    private fun extractSharedText(intent: Intent): String {
+        val processText = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+        val extraText = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+        val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
+        val title = intent.getStringExtra(Intent.EXTRA_TITLE)
+        val candidates = listOf(processText, extraText, subject, title)
+            .mapNotNull { it?.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+
+        if (candidates.isEmpty()) {
+            return ""
+        }
+
+        return if (candidates.size == 1) {
+            candidates.first()
+        } else {
+            candidates.joinToString("\n")
+        }
+    }
+
+    private fun isImageShare(intent: Intent, uri: Uri): Boolean {
+        val intentType = intent.type
+        if (intentType?.startsWith("image/") == true) {
+            return true
+        }
+
+        val contentType = runCatching { contentResolver.getType(uri) }.getOrNull()
+        if (contentType?.startsWith("image/") == true) {
+            return true
+        }
+
+        val path = uri.path?.lowercase().orEmpty()
+        return path.endsWith(".jpg") ||
+            path.endsWith(".jpeg") ||
+            path.endsWith(".png") ||
+            path.endsWith(".gif") ||
+            path.endsWith(".webp") ||
+            path.endsWith(".heic") ||
+            path.endsWith(".heif")
+    }
+
+    private fun deliverCombinedSharedPayload(
+        sharedText: String,
+        imagePaths: List<String>,
+        filePaths: List<String>
+    ) {
+        val cleanText = sharedText.trim()
+        val hasText = cleanText.isNotEmpty()
+        val hasImages = imagePaths.isNotEmpty()
+        val hasFiles = filePaths.isNotEmpty()
+
+        when {
+            hasText || (hasImages && hasFiles) || filePaths.size > 1 -> {
+                deliverSharedPayload(
+                    mapOf(
+                        "type" to "text",
+                        "content" to buildContentWithAttachments(
+                            cleanText,
+                            imagePaths,
+                            filePaths
+                        )
+                    )
+                )
+            }
+            imagePaths.size == 1 -> {
+                deliverSharedPayload(mapOf("type" to "image", "path" to imagePaths.first()))
+            }
+            imagePaths.size > 1 -> {
+                deliverSharedPayload(mapOf("type" to "images", "paths" to imagePaths))
+            }
+            filePaths.size == 1 -> {
+                deliverSharedPayload(mapOf("type" to "file", "path" to filePaths.first()))
+            }
+        }
+    }
+
+    private fun buildContentWithAttachments(
+        text: String,
+        imagePaths: List<String>,
+        filePaths: List<String>
+    ): String {
+        val lines = mutableListOf<String>()
+        if (text.isNotBlank()) {
+            lines.add(text)
+        }
+        imagePaths.forEach { path ->
+            lines.add("![图片](file://$path)")
+        }
+        filePaths.forEach { path ->
+            lines.add("📎 ${File(path).name}\n路径: $path")
+        }
+        return lines.joinToString("\n")
+    }
+
+    private fun deliverSharedPayload(payload: Map<String, Any>) {
+        pendingSharedPayload = payload
+        try {
+            methodChannel?.invokeMethod("onSharedPayload", payload)
+            ReleaseLog.e("MainActivity", "✅ 已通知Flutter处理分享内容")
+        } catch (e: Exception) {
+            ReleaseLog.e("MainActivity", "❌ 分享内容通知Flutter失败: ${e.message}")
+        }
+    }
     
     // 🔥 获取文件真实路径（将 content URI 的文件复制到应用目录）
-    private fun getRealPathFromURI(uri: android.net.Uri): String? {
+    private fun getRealPathFromURI(uri: Uri): String? {
         return try {
             // 尝试从 MediaStore 获取真实路径
             val cursor = contentResolver.query(uri, null, null, null, null)
@@ -340,7 +499,7 @@ class MainActivity: FlutterActivity() {
                     val index = it.getColumnIndex(android.provider.MediaStore.Images.ImageColumns.DATA)
                     if (index != -1) {
                         val path = it.getString(index)
-                        if (path != null && java.io.File(path).exists()) {
+                        if (path != null && File(path).exists()) {
                             return path
                         }
                     }
@@ -358,27 +517,20 @@ class MainActivity: FlutterActivity() {
     }
     
     // 🔥 将 URI 的文件复制到缓存目录
-    private fun copyUriToCache(uri: android.net.Uri): String? {
+    private fun copyUriToCache(uri: Uri): String? {
         return try {
-            // 获取文件扩展名
+            val displayName = queryDisplayName(uri)
             val mimeType = contentResolver.getType(uri)
-            val extension = when {
-                mimeType?.startsWith("image/") == true -> {
-                    when {
-                        mimeType.contains("jpeg") || mimeType.contains("jpg") -> "jpg"
-                        mimeType.contains("png") -> "png"
-                        mimeType.contains("gif") -> "gif"
-                        mimeType.contains("webp") -> "webp"
-                        else -> "jpg"
-                    }
-                }
-                else -> "dat"
-            }
+            val extension = extensionFrom(displayName, mimeType)
             
             // 创建缓存文件
-            val timestamp = System.currentTimeMillis()
-            val cacheDir = cacheDir
-            val destFile = java.io.File(cacheDir, "shared_$timestamp.$extension")
+            val safeName = displayName
+                ?.substringBeforeLast('.', displayName)
+                ?.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                ?.take(32)
+                ?.ifBlank { null }
+                ?: "shared"
+            val destFile = File(cacheDir, "${safeName}_${UUID.randomUUID()}.$extension")
             
             // 复制文件
             contentResolver.openInputStream(uri)?.use { input ->
@@ -393,6 +545,48 @@ class MainActivity: FlutterActivity() {
             ReleaseLog.e("MainActivity", "❌ 复制文件失败: ${e.message}")
             ReleaseLog.printStackTrace(e)
             null
+        }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        return try {
+            contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) cursor.getString(index) else null
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun extensionFrom(displayName: String?, mimeType: String?): String {
+        val nameExtension = displayName
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() && it.length <= 8 }
+        if (nameExtension != null) {
+            return nameExtension
+        }
+
+        return when {
+            mimeType?.contains("jpeg") == true || mimeType?.contains("jpg") == true -> "jpg"
+            mimeType?.contains("png") == true -> "png"
+            mimeType?.contains("gif") == true -> "gif"
+            mimeType?.contains("webp") == true -> "webp"
+            mimeType?.contains("heic") == true -> "heic"
+            mimeType?.contains("pdf") == true -> "pdf"
+            mimeType?.contains("text") == true -> "txt"
+            else -> "dat"
         }
     }
     

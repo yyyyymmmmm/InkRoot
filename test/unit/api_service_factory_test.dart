@@ -4,9 +4,20 @@
 // ============================================================
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:inkroot/services/api_service_factory.dart';
+import 'package:inkroot/services/memos_api_service_fixed.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  const baseUrl = 'http://192.168.1.10:5230';
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+  });
+
   group('ApiServiceFactory.normalizeApiUrl', () {
     test('AS-01 已有 https:// 不重复添加', () {
       const url = 'https://memos.example.com';
@@ -141,6 +152,54 @@ void main() {
     test('AS-20 ApiError 不是 StateError', () {
       final e = ApiError('X', 'Y');
       expect(e, isNot(isA<StateError>()));
+    });
+  });
+
+  group('ApiServiceFactory.createApiService', () {
+    test('AS-21a profile 被代理隐藏时 auth/me 可识别服务器', () async {
+      final mock = MockClient((req) async {
+        if (req.url.path.endsWith('/api/v1/workspace/profile') ||
+            req.url.path.endsWith('/api/v1/status')) {
+          return http.Response('Not Found', 404);
+        }
+        if (req.url.path.endsWith('/api/v1/auth/me')) {
+          return http.Response('{"message":"unauthenticated"}', 401);
+        }
+        return http.Response('{}', 404);
+      });
+
+      await http.runWithClient(
+        () => ApiServiceFactory.validateApiUrl(baseUrl),
+        () => mock,
+      );
+    });
+
+    test('AS-21 HTTP IP + v0.27 可识别并创建服务', () async {
+      final mock = MockClient((req) async {
+        if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+          return http.Response('{"version":"v0.27.0"}', 200);
+        }
+        if (req.url.path.endsWith('/api/v1/auth/me')) {
+          return http.Response(
+            '{"user":{"name":"users/alice","username":"alice","role":"USER"}}',
+            200,
+          );
+        }
+        if (req.url.path.endsWith('/api/v1/memos')) {
+          return http.Response('{"error":"list blocked by proxy"}', 500);
+        }
+        return http.Response('{}', 404);
+      });
+
+      final service = await http.runWithClient(
+        () => ApiServiceFactory.createApiService(
+          baseUrl: baseUrl,
+          token: 'tok',
+        ),
+        () => mock,
+      );
+
+      expect(service, isA<MemosApiServiceFixed>());
     });
   });
 }

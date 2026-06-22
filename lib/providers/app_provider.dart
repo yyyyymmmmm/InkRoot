@@ -3836,7 +3836,9 @@ class AppProvider with ChangeNotifier implements NotificationAppProviderBridge {
       if (kDebugMode) {
         debugPrint('AppProvider: API服务初始化失败: $e');
       }
-      throw Exception('API服务初始化失败，无法获取数据');
+      final reason =
+          e.toString().replaceFirst('Exception: ', '').split('\n').first;
+      throw Exception('API服务初始化失败：$reason');
     }
   }
 

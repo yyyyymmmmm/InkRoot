@@ -11,6 +11,7 @@ import WidgetKit
   // 🔥 模仿Android的pendingNoteId机制
   private var pendingPayload: String?
   private var pendingDeepLink: String?
+  private var pendingSharedPayload: [String: Any]?
   private var methodChannel: FlutterMethodChannel?
   
   // 🎨 启动页视图（用于淡出动画）
@@ -52,6 +53,10 @@ import WidgetKit
       } else if call.method == "getInitialDeepLink" {
         result(self?.pendingDeepLink)
         self?.pendingDeepLink = nil
+      } else if call.method == "getInitialSharedPayload" {
+        let payload = self?.pendingSharedPayload ?? self?.consumeSharedPayload()
+        result(payload)
+        self?.pendingSharedPayload = nil
       } else if call.method == "saveWidgetSnapshot" {
         guard let args = call.arguments as? [String: Any],
               let key = args["key"] as? String,
@@ -114,10 +119,24 @@ import WidgetKit
 
   func handleDeepLink(_ url: URL) {
     let rawUrl = url.absoluteString
+    if url.host == "share" || url.pathComponents.contains("share") {
+      pendingSharedPayload = consumeSharedPayload()
+      if let payload = pendingSharedPayload, let channel = methodChannel {
+        channel.invokeMethod("onSharedPayload", arguments: payload)
+      }
+    }
     pendingDeepLink = rawUrl
     if let channel = methodChannel {
       channel.invokeMethod("openDeepLink", arguments: rawUrl)
     }
+  }
+
+  private func consumeSharedPayload() -> [String: Any]? {
+    let defaults = UserDefaults(suiteName: "group.com.didichou.inkroot")
+    let payload = defaults?.dictionary(forKey: "inkroot_pending_share_payload")
+    defaults?.removeObject(forKey: "inkroot_pending_share_payload")
+    defaults?.synchronize()
+    return payload
   }
   
   // 🎨 创建启动页覆盖层（大厂标准方案）

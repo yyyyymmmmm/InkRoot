@@ -23,6 +23,7 @@ import 'package:inkroot/utils/error_handler.dart';
 import 'package:inkroot/utils/image_cache_manager.dart';
 import 'package:inkroot/utils/logger.dart';
 import 'package:inkroot/utils/responsive_utils.dart';
+import 'package:inkroot/utils/shared_payload_utils.dart';
 import 'package:inkroot/utils/tag_path_utils.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -278,6 +279,16 @@ Future<void> _initializeApp() async {
       // 跳转到主页并打开笔记编辑器（内容预填充）
       appRouter.router.go('/', extra: {'sharedContent': sharedText});
     }
+    // 🔥 统一处理Android分享载荷，覆盖冷启动/后台/选中文本菜单
+    else if (call.method == 'onSharedPayload') {
+      final content = sharedPayloadToContent(call.arguments);
+      if (content == null || content.trim().isEmpty) {
+        return;
+      }
+
+      await Future.delayed(const Duration(milliseconds: 500));
+      appRouter.router.go('/', extra: {'sharedContent': content});
+    }
     // 🔥 处理分享的单张图片
     else if (call.method == 'onSharedImage') {
       final imagePath = call.arguments as String;
@@ -337,6 +348,21 @@ Future<void> _initializeApp() async {
   }
 
   try {
+    final initialSharedPayload =
+        await platform.invokeMethod('getInitialSharedPayload');
+    final initialSharedContent = sharedPayloadToContent(initialSharedPayload);
+    if (initialSharedContent != null &&
+        initialSharedContent.trim().isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 700), () {
+        appRouter.router
+            .go('/', extra: {'sharedContent': initialSharedContent});
+      });
+    }
+  } on Object catch (_) {
+    // Cold-start share payload is optional and Android-only.
+  }
+
+  try {
     final initialDeepLink = await platform.invokeMethod('getInitialDeepLink');
     if (initialDeepLink != null && initialDeepLink is String) {
       Future.delayed(const Duration(milliseconds: 700), () {
@@ -370,6 +396,8 @@ void _handleInkRootDeepLink(AppRouter appRouter, String rawUrl) {
           : '';
 
   switch (action) {
+    case 'share':
+      return;
     case 'quick-note':
       final quickNoteTag =
           normalizeIncomingTagPath(uri.queryParameters['tag'] ?? '');

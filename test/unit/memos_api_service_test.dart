@@ -163,6 +163,41 @@ void main() {
   // getMemos
   // ─────────────────────────────────────────────────────────
   group('MemosApiServiceFixed — getMemos', () {
+    test('API-06z v0.21-v0.29 列表路径矩阵保持兼容', () async {
+      final cases = [
+        (version: 'v0.21.0', path: '/api/v1/memo'),
+        (version: 'v0.22.0', path: '/api/v1/memos'),
+        (version: 'v0.25.0', path: '/api/v1/memos'),
+        (version: 'v0.26.0', path: '/api/v1/memos'),
+        (version: 'v0.27.0', path: '/api/v1/memos'),
+        (version: 'v0.29.1', path: '/api/v1/memos'),
+      ];
+
+      for (final item in cases) {
+        await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+        String? calledPath;
+        final mock = MockClient((req) async {
+          if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+            return http.Response(jsonEncode({'version': item.version}), 200);
+          }
+          if (req.url.path.endsWith('/api/v1/memos')) {
+            calledPath = req.url.path;
+            return http.Response(jsonEncode({'memos': []}), 200);
+          }
+          if (req.url.path.endsWith('/api/v1/memo')) {
+            calledPath = req.url.path;
+            return http.Response(jsonEncode([]), 200);
+          }
+          return http.Response('{}', 404);
+        });
+
+        final svc = MemosApiServiceFixed(baseUrl: baseUrl, token: 'tok');
+        await http.runWithClient(() => svc.getMemos(pageSize: 1), () => mock);
+
+        expect(calledPath, item.path);
+      }
+    });
+
     test('API-07 v0.28 正确请求 /api/v1/memos', () async {
       String? calledPath;
       final mock = MockClient((req) async {
@@ -287,6 +322,66 @@ void main() {
   // createAccessToken
   // ─────────────────────────────────────────────────────────
   group('MemosApiServiceFixed — createAccessToken', () {
+    test('API-10z v0.21-v0.29 登录协议矩阵保持兼容', () async {
+      final cases = [
+        (version: 'v0.21.0', tokenKey: 'token', expectedBody: 'legacy'),
+        (version: 'v0.22.0', tokenKey: 'cookie', expectedBody: 'flat'),
+        (version: 'v0.25.0', tokenKey: 'cookie', expectedBody: 'flat'),
+        (version: 'v0.26.0', tokenKey: 'access_token', expectedBody: 'wrapped'),
+        (version: 'v0.27.0', tokenKey: 'access_token', expectedBody: 'wrapped'),
+        (version: 'v0.29.1', tokenKey: 'access_token', expectedBody: 'wrapped'),
+      ];
+
+      for (final item in cases) {
+        await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+        final minor = item.version.split('.')[1];
+        final mock = MockClient((req) async {
+          if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+            return http.Response(jsonEncode({'version': item.version}), 200);
+          }
+          if (req.url.path.endsWith('/api/v1/auth/signin')) {
+            final body = jsonDecode(req.body) as Map<String, dynamic>;
+            switch (item.expectedBody) {
+              case 'legacy':
+                expect(body, containsPair('username', 'alice'));
+                expect(body, isNot(contains('neverExpire')));
+                break;
+              case 'flat':
+                expect(body, containsPair('username', 'alice'));
+                expect(body, containsPair('neverExpire', false));
+                break;
+              case 'wrapped':
+                expect(body['passwordCredentials'], isA<Map>());
+                break;
+            }
+
+            if (item.tokenKey == 'cookie') {
+              return http.Response(
+                '{}',
+                200,
+                headers: {
+                  'set-cookie': 'memos.access-token=tok-$minor; Path=/',
+                },
+              );
+            }
+            return http.Response(
+              jsonEncode({item.tokenKey: 'tok-$minor'}),
+              200,
+            );
+          }
+          return http.Response('{}', 404);
+        });
+
+        final svc = MemosApiServiceFixed(baseUrl: baseUrl);
+        final token = await http.runWithClient(
+          () => svc.createAccessToken('alice', 'pass123'),
+          () => mock,
+        );
+
+        expect(token, 'tok-$minor');
+      }
+    });
+
     test('API-11 v0.26+ 登录返回 accessToken', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       final mock = MockClient((req) async {
@@ -311,6 +406,35 @@ void main() {
         () => mock,
       );
       expect(token, 'my-jwt-token');
+    });
+
+    test('API-11b v0.29 登录兼容 access_token 字段', () async {
+      await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+      final mock = MockClient((req) async {
+        if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+          return http.Response(jsonEncode({'version': 'v0.29.1'}), 200);
+        }
+        if (req.url.path.endsWith('/api/v1/auth/signin')) {
+          final body = jsonDecode(req.body) as Map<String, dynamic>;
+          expect(body.containsKey('passwordCredentials'), isTrue);
+          return http.Response(
+            jsonEncode({
+              'user': {'name': 'users/alice', 'username': 'alice'},
+              'access_token': 'memos-v029-token',
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+
+      final svc = MemosApiServiceFixed(baseUrl: baseUrl);
+      final token = await http.runWithClient(
+        () => svc.createAccessToken('alice', 'pass123'),
+        () => mock,
+      );
+
+      expect(token, 'memos-v029-token');
     });
 
     test('API-12 v0.21 登录使用 token 字段', () async {
@@ -360,6 +484,47 @@ void main() {
   // getUserInfo
   // ─────────────────────────────────────────────────────────
   group('MemosApiServiceFixed — getUserInfo', () {
+    test('API-13z v0.21-v0.29 当前用户接口矩阵保持兼容', () async {
+      final cases = [
+        (version: 'v0.21.0', method: 'GET', path: '/api/v1/user/me'),
+        (version: 'v0.22.0', method: 'POST', path: '/api/v1/auth/status'),
+        (version: 'v0.25.0', method: 'POST', path: '/api/v1/auth/status'),
+        (version: 'v0.26.0', method: 'GET', path: '/api/v1/auth/me'),
+        (version: 'v0.27.0', method: 'GET', path: '/api/v1/auth/me'),
+        (version: 'v0.29.1', method: 'GET', path: '/api/v1/auth/me'),
+      ];
+
+      for (final item in cases) {
+        await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
+        String? called;
+        final mock = MockClient((req) async {
+          if (req.url.path.endsWith('/api/v1/workspace/profile')) {
+            return http.Response(jsonEncode({'version': item.version}), 200);
+          }
+          if (req.url.path.endsWith(item.path)) {
+            called = '${req.method} ${req.url.path}';
+            final user = {
+              'id': '42',
+              'name': 'users/alice',
+              'username': 'alice',
+              'role': 'USER',
+            };
+            final body = item.path.endsWith('/auth/me')
+                ? jsonEncode({'user': user})
+                : jsonEncode(user);
+            return http.Response(body, 200);
+          }
+          return http.Response('{}', 404);
+        });
+
+        final svc = MemosApiServiceFixed(baseUrl: baseUrl, token: 'tok');
+        final user = await http.runWithClient(svc.getUserInfo, () => mock);
+
+        expect(user.username, 'alice');
+        expect(called, '${item.method} ${item.path}');
+      }
+    });
+
     test('API-14 v0.26+ 调用 /api/v1/auth/me', () async {
       await MemosApiServiceFixed.invalidateVersionCache(baseUrl);
       final mock = MockClient((req) async {

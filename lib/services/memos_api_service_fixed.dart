@@ -273,7 +273,7 @@ class MemosApiServiceFixed {
     );
     if (resp.statusCode == 200) {
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      final tok = data['accessToken'] as String?;
+      final tok = _extractBodyToken(data);
       if (tok != null && tok.isNotEmpty) {
         return tok;
       }
@@ -311,8 +311,7 @@ class MemosApiServiceFixed {
     // Fallback: body might carry the token if a proxy or future patch returns it
     try {
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      final bodyTok =
-          data['accessToken'] as String? ?? data['token'] as String?;
+      final bodyTok = _extractBodyToken(data);
       if (bodyTok != null && bodyTok.isNotEmpty) {
         return bodyTok;
       }
@@ -338,7 +337,7 @@ class MemosApiServiceFixed {
     );
     if (resp.statusCode == 200) {
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      final tok = data['token'] as String?;
+      final tok = _extractBodyToken(data);
       if (tok != null && tok.isNotEmpty) {
         return tok;
       }
@@ -377,6 +376,21 @@ class MemosApiServiceFixed {
           }
         }
       }
+    }
+    return null;
+  }
+
+  String? _extractBodyToken(Map<String, dynamic> data) {
+    for (final key in const ['accessToken', 'access_token', 'token']) {
+      final value = data[key];
+      if (value is String && value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    final nested = data['data'];
+    if (nested is Map<String, dynamic>) {
+      return _extractBodyToken(nested);
     }
     return null;
   }
