@@ -118,7 +118,7 @@ dependencies:
   sentry_flutter: ^8.9.0
   
   # 环境变量管理
-  flutter_dotenv: ^5.1.0
+  flutter_dotenv: ^6.0.1
   
   # ⚠️ 移除Firebase依赖（iOS不使用，Android也未真正使用）
   # firebase_performance: ^0.10.0+7
