@@ -112,7 +112,7 @@ dependencies:
   graphview: ^1.5.0
   
   # Google Fonts - 免费商用字体
-  google_fonts: ^6.2.1
+  google_fonts: ^8.1.0
   
   # 错误追踪和监控
   sentry_flutter: ^8.9.0
