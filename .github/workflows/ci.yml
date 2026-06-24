@@ -39,7 +39,7 @@ jobs:
       - run: dart tool/inkroot.dart store-check
       - run: dart tool/inkroot.dart verify --coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-lcov
           path: coverage/lcov.info
@@ -99,7 +99,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_build }}
         run: dart tool/inkroot.dart build android-aab
       - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-package
           path: |
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         run: test -f build/ios/iphonesimulator/Runner.app/PrivacyInfo.xcprivacy
       - name: Upload iOS simulator app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-simulator-app
           path: build/ios/iphonesimulator/Runner.app
@@ -140,7 +140,7 @@ jobs:
       - run: dart tool/inkroot.dart deps
       - run: dart tool/inkroot.dart build macos-debug
       - name: Upload macOS app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-debug-app
           path: build/macos/Build/Products/Debug/*.app
@@ -158,7 +158,7 @@ jobs:
       - run: dart tool/inkroot.dart deps
       - run: dart tool/inkroot.dart build windows-debug
       - name: Upload Windows app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-debug-app
           path: build/windows/x64/runner/Debug/**
@@ -180,7 +180,7 @@ jobs:
       - run: dart tool/inkroot.dart deps
       - run: dart tool/inkroot.dart build linux-debug
       - name: Upload Linux app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-debug-app
           path: build/linux/x64/debug/bundle/**
