@@ -59,7 +59,7 @@ dependencies:
   go_router: ^10.2.0
   
   # Markdown
-  flutter_markdown: ^0.6.23
+  flutter_markdown: ^0.7.7+1
   
   # 分享
   share_plus: ^7.2.2
